@@ -12,4 +12,5 @@ dependencies = [
     "pandas>=2.3.3",
     "python-lsp-server>=1.13.1",
     "pyzmq>=27.1.0",
+    "tobler>=0.12.1",
 ]
