@@ -56,11 +56,7 @@ def _(alameda):
     alameda["county"] = "Alameda"
     alameda["p_id"] = alameda["Precinct_ID"]
     alameda["p_name"] = None
-    return
 
-
-@app.cell
-def _(alameda):
     alameda.drop(
         labels=[
             "Election_Name",
@@ -72,11 +68,7 @@ def _(alameda):
         axis="columns",
         inplace=True,
     )
-    return
 
-
-@app.cell
-def _(alameda):
     alameda.head()
     return
 
@@ -120,11 +112,7 @@ def _(butte):
         inplace=True,
         errors="ignore",
     )
-    return
 
-
-@app.cell
-def _(butte):
     butte.head()
     return
 
@@ -152,11 +140,7 @@ def _(colusa):
         columns={"PRECINCTNU": "p_id", "PRECINCT": "p_name"}, inplace=True
     )
     colusa.drop(labels=["DISTRICT"], axis="columns", inplace=True, errors="ignore")
-    return
 
-
-@app.cell
-def _(colusa):
     colusa.head()
     return
 
@@ -180,11 +164,6 @@ def _(PROJECTED_CRS, gpd):
 @app.cell
 def _(imperial):
     imperial.rename(columns={"precinctid": "p_id", "name": "p_name"}, inplace=True)
-    return
-
-
-@app.cell
-def _(imperial):
     imperial.head()
     return
 
@@ -224,11 +203,6 @@ def _(los_angeles):
         inplace=True,
         errors="ignore",
     )
-    return
-
-
-@app.cell
-def _(los_angeles):
     los_angeles.head()
     return
 
@@ -252,11 +226,6 @@ def _(marin):
     marin["county"] = "Marin"
     marin.rename(columns={"Precinct": "p_id"}, inplace=True)
     marin["p_name"] = None
-    return
-
-
-@app.cell
-def _(marin):
     marin.head()
     return
 
@@ -311,11 +280,6 @@ def _(sacramento):
         inplace=True,
         errors="ignore",
     )
-    return
-
-
-@app.cell
-def _(sacramento):
     sacramento.head()
     return
 
@@ -357,11 +321,6 @@ def _(shasta):
         inplace=True,
         errors="ignore",
     )
-    return
-
-
-@app.cell
-def _(shasta):
     shasta.head()
     return
 
