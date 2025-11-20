@@ -19,6 +19,8 @@ def _(mo):
 
 @app.cell
 def _():
+    from pathlib import Path
+
     import marimo as mo
     import pandas as pd
     import geopandas as gpd
@@ -373,19 +375,9 @@ def _(mo):
 
 
 @app.cell
-def _(
-    alameda,
-    butte,
-    colusa,
-    imperial,
-    los_angeles,
-    marin,
-    pd,
-    sacramento,
-    shasta,
-):
+def _(alameda, butte, colusa, imperial, los_angeles, pd, sacramento, shasta):
     combined = pd.concat(
-        [alameda, butte, colusa, imperial, los_angeles, marin, sacramento, shasta]
+        [alameda, butte, colusa, imperial, los_angeles, sacramento, shasta]
     )
     return (combined,)
 
@@ -398,7 +390,7 @@ def _(combined):
 
 @app.cell
 def _(combined):
-    combined.to_file("outputs/precincts.fgb", driver="FlatGeoBuf")
+    combined.to_file("outputs/precincts.geojson", driver="GeoJSON")
     return
 
 
