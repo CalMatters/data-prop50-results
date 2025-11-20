@@ -350,6 +350,7 @@ def _(combined):
 @app.cell
 def _(combined):
     combined.to_file("outputs/precincts.geojson", driver="GeoJSON")
+    combined
     return
 
 
