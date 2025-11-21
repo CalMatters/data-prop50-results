@@ -54,19 +54,26 @@ def _(
     imperial,
     inyo,
     los_angeles,
+    marin,
     monterey,
     napa,
     orange,
     pd,
     sacramento,
     san_benito,
+    san_bernardino,
+    san_diego,
+    san_francisco,
     san_mateo,
     santa_cruz,
     shasta,
     siskiyou,
+    solano,
+    sonoma,
     sutter,
     tuolumne,
     ventura,
+    yolo,
     yuba,
 ):
     combined = pd.concat(
@@ -77,19 +84,26 @@ def _(
             humboldt,
             imperial,
             inyo,
+            los_angeles,
+            marin,
             monterey,
             napa,
-            los_angeles,
             orange,
             sacramento,
             san_benito,
+            san_bernardino,
+            san_diego,
+            san_francisco,
             san_mateo,
             santa_cruz,
             shasta,
             siskiyou,
+            solano,
+            sonoma,
             sutter,
             tuolumne,
             ventura,
+            yolo,
             yuba,
         ]
     )
@@ -101,6 +115,22 @@ def _(
 def _(COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, combined):
     combined.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
     return
+
+
+@app.function
+def alter_gdf(gdf, county, rename={}, drop=[]):
+    gdf["county"] = county
+    gdf.rename(
+        columns=rename,
+        inplace=True,
+    )
+    gdf.drop(
+        labels=drop,
+        axis="columns",
+        inplace=True,
+        errors="ignore",
+    )
+    return gdf
 
 
 @app.cell(hide_code=True)
@@ -116,29 +146,23 @@ def _(PROJECTED_CRS, gpd):
     alameda = gpd.read_file(
         "inputs/alameda/Consolidated_Precincts_-_November_4%2C_2025_Statewide_Special_Election.geojson"
     ).to_crs(PROJECTED_CRS)
-    return (alameda,)
 
-
-@app.cell
-def _(alameda):
-    alameda["county"] = "Alameda"
-    alameda["precinct_id"] = alameda["Precinct_ID"]
-    alameda["precinct_name"] = None
-
-    alameda.drop(
-        labels=[
+    alameda = alter_gdf(
+        alameda,
+        "Alameda",
+        {"Precinct_ID": "precinct_id"},
+        [
             "Election_Name",
             "Precinct_ID",
             "OBJECTID",
             "Shape__Area",
             "Shape__Length",
         ],
-        axis="columns",
-        inplace=True,
     )
+    alameda["precinct_name"] = None
 
     alameda.head()
-    return
+    return (alameda,)
 
 
 @app.cell(hide_code=True)
@@ -155,12 +179,11 @@ def _(PROJECTED_CRS, gpd):
         PROJECTED_CRS
     )
 
-    butte["county"] = "Butte"
-    butte.rename(
-        columns={"id": "precinct_id", "Name": "precinct_name"}, inplace=True
-    )
-    butte.drop(
-        labels=[
+    butte = alter_gdf(
+        butte,
+        "Butte",
+        {"id": "precinct_id", "Name": "precinct_name"},
+        [
             "id",
             "Name",
             "description",
@@ -174,9 +197,6 @@ def _(PROJECTED_CRS, gpd):
             "drawOrder",
             "icon",
         ],
-        axis="columns",
-        inplace=True,
-        errors="ignore",
     )
 
     butte.head()
@@ -337,7 +357,7 @@ def _(PROJECTED_CRS, gpd):
     marin.rename(columns={"Precinct": "precinct_id"}, inplace=True)
 
     marin.head()
-    return
+    return (marin,)
 
 
 @app.cell(hide_code=True)
@@ -527,6 +547,118 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## San Bernardino
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    san_bernardino = gpd.read_file(
+        "inputs/san bernardino/ROV_Precincts.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    san_bernardino["county"] = "San Bernardino"
+    san_bernardino.rename(
+        columns={"PRECINCTID": "precinct_id", "ABRV_NAME": "precinct_name"},
+        inplace=True,
+    )
+    san_bernardino.drop(
+        columns=[
+            "OBJECTID",
+            "PRECINCT",
+            "PRECINCT_N",
+            "POLLID",
+            "PORTION",
+            "PRCNCT_PRT",
+            "Shape__Are",
+            "Shape__Len",
+        ],
+        inplace=True,
+        errors="ignore",
+    )
+
+    san_bernardino.head()
+    return (san_bernardino,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Diego
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    san_diego = gpd.read_file(
+        "inputs/san diego/Election_Precinct_2025_11_04.json"
+    ).to_crs(PROJECTED_CRS)
+
+    san_diego["county"] = "San Diego"
+    san_diego.rename(
+        columns={"consnum": "precinct_id", "consname": "precinct_name"},
+        inplace=True,
+    )
+    san_diego.drop(
+        columns=[
+            "eid",
+            "bt",
+            "rv_totals",
+            "pvbm",
+            "count",
+            "net_rvs",
+            "SHAPE__Length",
+            "objectid",
+            "SHAPE__Area",
+        ],
+        inplace=True,
+        errors="ignore",
+    )
+
+    san_diego.head()
+    return (san_diego,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Francisco
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    san_francisco = gpd.read_file(
+        "inputs/san francisco/Election Precincts - Current, Defined 2022_20251120.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    san_francisco = alter_gdf(
+        san_francisco,
+        "San Francisco",
+        {"neigh22": "precinct_name", "prec_2022": "precinct_id"},
+        [
+            "supe22",
+            "assemb22",
+            "cong22",
+            "bart22",
+            "boe22",
+            "sen22",
+            "histnhood",
+            "shape_leng",
+            "shape_area",
+        ],
+    )
+
+    san_francisco.head()
+    return (san_francisco,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## San Mateo
     """)
     return
@@ -657,20 +789,76 @@ def _(PROJECTED_CRS, gpd):
         PROJECTED_CRS
     )
 
-    siskiyou["county"] = "Siskiyou"
-    siskiyou.rename(
-        columns={"PRCNCT_11": "precinct_id", "NAME_11": "precinct_name"},
-        inplace=True,
-    )
-    siskiyou.drop(
-        labels=["OBJECTID", "DIST_11", "NAME_NUM", "Shape__Are", "Shape__Len"],
-        axis="columns",
-        inplace=True,
-        errors="ignore",
+    siskiyou = alter_gdf(
+        siskiyou,
+        "Siskiyou",
+        {"PRCNCT_11": "precinct_id", "NAME_11": "precinct_name"},
+        ["OBJECTID", "DIST_11", "NAME_NUM", "Shape__Are", "Shape__Len"],
     )
 
     siskiyou.head()
     return (siskiyou,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Solano
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    solano = gpd.read_file("inputs/solano/Current_Precincts.json").to_crs(
+        PROJECTED_CRS
+    )
+
+    solano = alter_gdf(
+        solano,
+        "Solano",
+        {"precinct": "precinct_id", "pctname": "precinct_name"},
+        [
+            "objectid",
+            "objectid_1",
+            "consol",
+            "pct",
+            "shape_length",
+            "precinct_g",
+            "Shape__Area",
+            "Shape__Length",
+            "shape_leng",
+        ],
+    )
+
+    solano.head()
+    return (solano,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Sonoma
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    sonoma = gpd.read_file("inputs/sonoma/ROVPublic_Precincts.json").to_crs(
+        PROJECTED_CRS
+    )
+
+    sonoma = alter_gdf(
+        sonoma,
+        "Sonoma",
+        {"OBJECTID": "precinct_id"},
+        ["SubPrecinct", "Shape__Area", "Shape__Length"],
+    )
+    sonoma["precinct_name"] = None
+
+    sonoma.head()
+    return (sonoma,)
 
 
 @app.cell(hide_code=True)
@@ -687,13 +875,11 @@ def _(PROJECTED_CRS, gpd):
         PROJECTED_CRS
     )
 
-    sutter["county"] = "Sutter"
-    sutter.rename(
-        columns={"NAME": "precinct_name", "PRECINCTID": "precinct_id"},
-        inplace=True,
-    )
-    sutter.drop(
-        columns=[
+    sutter = alter_gdf(
+        sutter,
+        "Sutter",
+        {"NAME": "precinct_name", "PRECINCTID": "precinct_id"},
+        [
             "OBJECTID",
             "GlobalID",
             "Precinct_1",
@@ -701,8 +887,6 @@ def _(PROJECTED_CRS, gpd):
             "Shape__Are",
             "Shape__Len",
         ],
-        inplace=True,
-        errors="ignore",
     )
 
     sutter.head()
@@ -773,6 +957,41 @@ def _(PROJECTED_CRS, gpd):
 
     ventura.head()
     return (ventura,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Yolo (consolidated)
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    yolo = gpd.read_file(
+        "inputs/yolo/Precincts_Consolidated_Open_Data.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    yolo = alter_gdf(
+        yolo,
+        "Yolo",
+        {"PRECINCTID": "precinct_id"},
+        [
+            "OBJECTID",
+            "Precinct_N",
+            "BOS_Dist",
+            "BallotType",
+            "PollVoters",
+            "Registered",
+            "City",
+            "Shape__Are",
+            "Shape__Len",
+        ],
+    )
+
+    yolo.head()
+    return (yolo,)
 
 
 @app.cell(hide_code=True)
