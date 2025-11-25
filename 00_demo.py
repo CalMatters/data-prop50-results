@@ -29,8 +29,8 @@ def _():
 
 @app.cell
 def _():
-    PRECINCT_GIS_FP = "./inputs/shasta/Consolidated_Precincts.zip"
-    PRECINCT_RESULTS_FP = "./inputs/shasta/detail.xlsx"
+    PRECINCT_GIS_FP = "./inputs/counties/shasta/Consolidated_Precincts.zip"
+    PRECINCT_RESULTS_FP = "./inputs/counties/shasta/detail.xlsx"
     PROP_50_RESULTS_SHEET = 2
 
     CENSUS_CVAP_ZIPPED_DATA = "./inputs/census/CVAP_2019-2023_ACS_csv_files.zip"
