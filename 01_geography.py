@@ -53,11 +53,13 @@ def _(
     alameda,
     butte,
     colusa,
+    fresno,
     humboldt,
     imperial,
     inyo,
     los_angeles,
     marin,
+    mendocino,
     monterey,
     napa,
     orange,
@@ -85,11 +87,13 @@ def _(
             alameda,
             butte,
             colusa,
+            fresno,
             humboldt,
             imperial,
             inyo,
             los_angeles,
             marin,
+            mendocino,
             monterey,
             napa,
             orange,
@@ -249,6 +253,39 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Fresno
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    fresno = gpd.read_file(
+        "inputs/counties/fresno/ELECTIONS_NOV2024_VOTING_PRECINCTS_VW.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    fresno = alter_df(
+        fresno,
+        "Fresno",
+        {"VP": "precinct_id"},
+        [
+            "OBJECTID_1",
+            "SUM_Poll_C",
+            "SUM_lTotal",
+            "SUM_lSpeci",
+            "Shape_Leng",
+            "Shape__Are",
+            "Shape__Len",
+        ],
+    )
+
+    fresno.head()
+    return (fresno,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Humbodlt
     """)
     return
@@ -370,6 +407,30 @@ def _(PROJECTED_CRS, gpd):
 
     marin.head()
     return (marin,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Mendocino
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    mendocino = gpd.read_file(
+        "inputs/counties/mendocino/voterprecincts.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    mendocino = alter_df(
+        mendocino,
+        "Mendocino",
+        {"NUMBER": "precinct_id", "VOTE_DIST": "precinct_name"},
+    )
+
+    mendocino.head()
+    return (mendocino,)
 
 
 @app.cell(hide_code=True)
