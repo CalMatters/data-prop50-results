@@ -53,6 +53,7 @@ def _(
     alameda,
     butte,
     colusa,
+    contra_costa,
     fresno,
     humboldt,
     imperial,
@@ -69,6 +70,7 @@ def _(
     san_bernardino,
     san_diego,
     san_francisco,
+    san_luis_obispo,
     san_mateo,
     santa_barbara,
     santa_cruz,
@@ -90,6 +92,7 @@ def _(
             alameda,
             butte,
             colusa,
+            contra_costa,
             fresno,
             humboldt,
             imperial,
@@ -105,6 +108,7 @@ def _(
             san_bernardino,
             san_diego,
             san_francisco,
+            san_luis_obispo,
             san_mateo,
             santa_barbara,
             santa_cruz,
@@ -254,6 +258,48 @@ def _(PROJECTED_CRS, gpd):
 
     colusa.head()
     return (colusa,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Contra Costa
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    contra_costa = gpd.read_file(
+        "inputs/counties/contra costa/PrecinctSet_PDMJ017.json"
+    ).to_crs(PROJECTED_CRS)
+
+    contra_costa = alter_df(
+        contra_costa,
+        "Contra Costa",
+        {"sPrecinctID": "precinct_id", "szPrecinctName": "precinct_name"},
+        [
+            "OBJECTID",
+            "sPrecinctPortion",
+            "sMapNumber",
+            "szRemarks",
+            "szCityName",
+            "iZeroRegistrationPct",
+            "iLanguageTargetedPct",
+            "geomPrecinct",
+            "szPrecinctSetDesc",
+            "created_user",
+            "created_date",
+            "last_edited_user",
+            "last_edited_date",
+            "GlobalID",
+            "Shape__Area",
+            "Shape__Length",
+        ],
+    )
+
+    contra_costa.head()
+    return (contra_costa,)
 
 
 @app.cell(hide_code=True)
@@ -716,6 +762,31 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## San Luis Obispo
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    san_luis_obispo = gpd.read_file(
+        "inputs/counties/san luis obispo/Voter_Precincts_-_2023.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    san_luis_obispo = alter_df(
+        san_luis_obispo,
+        "San Luis Obispo",
+        { "PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
+        ["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"]
+    )
+
+    san_luis_obispo.head()
+    return (san_luis_obispo,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## San Mateo
     """)
     return
@@ -1004,7 +1075,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    tulare = gpd.read_file("inputs/counties/tulare/tulare-precincts.json").to_crs(PROJECTED_CRS)
+    tulare = gpd.read_file("inputs/counties/tulare/tulare-precincts.json").to_crs(
+        PROJECTED_CRS
+    )
 
     tulare = alter_df(
         tulare,
