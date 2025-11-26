@@ -70,12 +70,15 @@ def _(
     san_diego,
     san_francisco,
     san_mateo,
+    santa_barbara,
     santa_cruz,
     shasta,
     siskiyou,
     solano,
     sonoma,
     sutter,
+    tehama,
+    tulare,
     tuolumne,
     ventura,
     yolo,
@@ -103,12 +106,15 @@ def _(
             san_diego,
             san_francisco,
             san_mateo,
+            santa_barbara,
             santa_cruz,
             shasta,
             siskiyou,
             solano,
             sonoma,
             sutter,
+            tehama,
+            tulare,
             tuolumne,
             ventura,
             yolo,
@@ -733,6 +739,31 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Santa Barbara
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    santa_barbara = gpd.read_file(
+        "inputs/counties/santa barbara/PrecinctsAug2025.json"
+    ).to_crs(PROJECTED_CRS)
+
+    santa_barbara = alter_df(
+        santa_barbara,
+        "Santa Barbara",
+        {"PRECINCTID": "precinct_id", "ABRV_NAME": "precinct_name"},
+        ["PRECINCT_N", "PRCNCT_PRT", "OBJECTID", "Shape__Area", "Shape__Length"],
+    )
+
+    santa_barbara.head()
+    return (santa_barbara,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Santa Cruz
     """)
     return
@@ -936,6 +967,77 @@ def _(PROJECTED_CRS, gpd):
 
     sutter.head()
     return (sutter,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Tehama
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    tehama = gpd.read_file("inputs/counties/tehama/tehama-precincts.json").to_crs(
+        PROJECTED_CRS
+    )
+
+    tehama = alter_df(
+        tehama,
+        "Tehema",
+        {"PRECINCTID": "precinct_id", "NAME": "precinct_name"},
+        ["OBJECTID"],
+    )
+
+    tehama.head()
+    return (tehama,)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## Tulare
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    tulare = gpd.read_file("inputs/counties/tulare/tulare-precincts.json").to_crs(PROJECTED_CRS)
+
+    tulare = alter_df(
+        tulare,
+        "Tulare",
+        {"VotingPctID": "precinct_id"},
+        [
+            "OBJECTID_12",
+            "OBJECTID_1",
+            "OBJECTID_2",
+            "OBJECTID",
+            "C",
+            "WARD",
+            "SECTION",
+            "TRA",
+            "PrecNum",
+            "BOS",
+            "Shape_Leng",
+            "Change",
+            "changedPRE",
+            "match",
+            "Shape_Le_1",
+            "Pollsite",
+            "PollingSiteID",
+            "BallotTypeList",
+            "PrecNum1",
+            "Precincts_UPDATE_LOCAL_VotingPc",
+            "Shape__Area",
+            "Shape__Length",
+        ],
+    )
+
+    tulare.head()
+    return (tulare,)
 
 
 @app.cell(hide_code=True)
