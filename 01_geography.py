@@ -62,6 +62,7 @@ def _(
     lake,
     los_angeles,
     marin,
+    mariposa,
     mendocino,
     monterey,
     napa,
@@ -103,6 +104,7 @@ def _(
             lake,
             los_angeles,
             marin,
+            mariposa,
             mendocino,
             monterey,
             napa,
@@ -525,6 +527,31 @@ def _(PROJECTED_CRS, gpd):
 
     marin.head()
     return (marin,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Mariposa
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    mariposa = gpd.read_file(
+        "inputs/counties/mariposa/Voting_Precincts_2021_public_view_-5183800690768860583.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    mariposa = alter_df(
+        mariposa,
+        "Mariposa",
+        {"Name": "precinct_name", "PrecinctID": "precinct_id"},
+        ["District", "Supervisor", "YEAR_CREAT"],
+    )
+
+    mariposa.head()
+    return (mariposa,)
 
 
 @app.cell(hide_code=True)
