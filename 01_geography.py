@@ -79,6 +79,7 @@ def _(
     santa_barbara,
     santa_cruz,
     shasta,
+    sierra,
     siskiyou,
     solano,
     sonoma,
@@ -121,6 +122,7 @@ def _(
             santa_barbara,
             santa_cruz,
             shasta,
+            sierra,
             siskiyou,
             solano,
             sonoma,
@@ -1049,6 +1051,29 @@ def _(PROJECTED_CRS, gpd):
     )
     shasta.head()
     return (shasta,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Sierra
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    sierra = gpd.read_file(
+        "inputs/counties/sierra/Sierra_County_2021_Voter_Jurisdiction_Data.zip",
+        layer="Sierra_County_Voter_Precincts_2021",
+    ).to_crs(PROJECTED_CRS)
+
+    sierra = alter_df(
+        sierra, "Sierra", {"PRECINCT": "precinct_id", "NAME": "precinct_name"}
+    )
+
+    sierra.head()
+    return (sierra,)
 
 
 @app.cell(hide_code=True)
