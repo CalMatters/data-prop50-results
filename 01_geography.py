@@ -64,6 +64,7 @@ def _(
     marin,
     mariposa,
     mendocino,
+    mono,
     monterey,
     napa,
     nevada,
@@ -109,6 +110,7 @@ def _(
             marin,
             mariposa,
             mendocino,
+            mono,
             monterey,
             napa,
             nevada,
@@ -582,6 +584,43 @@ def _(PROJECTED_CRS, gpd):
 
     mendocino.head()
     return (mendocino,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Mono
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    mono = gpd.read_file("inputs/counties/mono/Voting_Precincts.zip").to_crs(
+        PROJECTED_CRS
+    )
+
+    mono = alter_df(
+        mono,
+        "Mono",
+        {"VotingPrct": "precinct_id"},
+        [
+            "OBJECTID",
+            "SupDist",
+            "Supervisor",
+            "PollingPla",
+            "PollingAdd",
+            "PollingCom",
+            "PollingZip",
+            "last_edite",
+            "Number",
+            "ShapeSTAre",
+            "ShapeSTLen",
+        ],
+    )
+
+    mono.head()
+    return (mono,)
 
 
 @app.cell(hide_code=True)
