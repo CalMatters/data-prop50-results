@@ -55,6 +55,7 @@ def _(
     colusa,
     contra_costa,
     fresno,
+    glenn,
     humboldt,
     imperial,
     inyo,
@@ -94,6 +95,7 @@ def _(
             colusa,
             contra_costa,
             fresno,
+            glenn,
             humboldt,
             imperial,
             inyo,
@@ -333,6 +335,41 @@ def _(PROJECTED_CRS, gpd):
 
     fresno.head()
     return (fresno,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Glenn
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    glenn = gpd.read_file("inputs/counties/glenn/Precincts_9_3_2.json").to_crs(
+        PROJECTED_CRS
+    )
+
+    glenn = alter_df(
+        glenn,
+        "Glenn",
+        {"PREC": "precinct_id"},
+        [
+            "OBJECTID",
+            "P00C58RB_I",
+            "COUNTY",
+            "SUP",
+            "Consolidat",
+            "Shape_Leng",
+            "Shape_Le_1",
+            "Shape__Area",
+            "Shape__Length",
+        ],
+    )
+
+    glenn.head()
+    return (glenn,)
 
 
 @app.cell(hide_code=True)
@@ -776,8 +813,8 @@ def _(PROJECTED_CRS, gpd):
     san_luis_obispo = alter_df(
         san_luis_obispo,
         "San Luis Obispo",
-        { "PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
-        ["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"]
+        {"PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
+        ["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"],
     )
 
     san_luis_obispo.head()
