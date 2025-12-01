@@ -66,6 +66,7 @@ def _(
     mendocino,
     monterey,
     napa,
+    nevada,
     orange,
     pd,
     sacramento,
@@ -110,6 +111,7 @@ def _(
             mendocino,
             monterey,
             napa,
+            nevada,
             orange,
             sacramento,
             san_benito,
@@ -645,6 +647,31 @@ def _(PROJECTED_CRS, gpd):
 
     napa.head()
     return (napa,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Nevada
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    nevada = gpd.read_file("inputs/counties/nevada/Voter Precincts.json").to_crs(
+        PROJECTED_CRS
+    )
+
+    nevada = alter_df(
+        nevada,
+        "Nevada",
+        {"PRECINCT": "precinct_id", "PREC_NAME": "precinct_name"},
+        ["GlobalID", "Shape__Area", "Shape__Length", "EditDate", "CONS_PREC"],
+    )
+
+    nevada.head()
+    return (nevada,)
 
 
 @app.cell(hide_code=True)
