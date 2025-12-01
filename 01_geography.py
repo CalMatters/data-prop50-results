@@ -59,6 +59,7 @@ def _(
     humboldt,
     imperial,
     inyo,
+    lake,
     los_angeles,
     marin,
     mendocino,
@@ -99,6 +100,7 @@ def _(
             humboldt,
             imperial,
             inyo,
+            lake,
             los_angeles,
             marin,
             mendocino,
@@ -347,8 +349,10 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    glenn = gpd.read_file("inputs/counties/glenn/Precincts_9_3_2.json").to_crs(
-        PROJECTED_CRS
+    glenn = (
+        gpd.read_file("inputs/counties/glenn/Precincts_9_3_2.json")
+        .to_crs(PROJECTED_CRS)
+        .to_crs(PROJECTED_CRS)
     )
 
     glenn = alter_df(
@@ -444,6 +448,31 @@ def _(PROJECTED_CRS, gpd):
 
     inyo.head()
     return (inyo,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Lake
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    lake = gpd.read_file("inputs/counties/lake/precincts.zip").to_crs(
+        PROJECTED_CRS
+    )
+
+    lake = alter_df(
+        lake,
+        "Lake",
+        rename={"PRECINCT": "precinct_id"},
+        drop=["NUMBER", "Shape_Leng", "Shape_Area"],
+    )
+
+    lake.head()
+    return (lake,)
 
 
 @app.cell(hide_code=True)
