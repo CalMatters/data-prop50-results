@@ -70,6 +70,7 @@ def _(
     nevada,
     orange,
     pd,
+    placer,
     sacramento,
     san_benito,
     san_bernardino,
@@ -115,6 +116,7 @@ def _(
             napa,
             nevada,
             orange,
+            placer,
             sacramento,
             san_benito,
             san_bernardino,
@@ -733,6 +735,31 @@ def _(PROJECTED_CRS, gpd):
 
     orange.head()
     return (orange,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Placer
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    placer = gpd.read_file(
+        "inputs/counties/placer/PlacerCo_VotingPrecincts_2025Spec/PlacerCo_VotingPrecincts_2025Spec.shp"
+    ).to_crs(PROJECTED_CRS)
+
+    placer = alter_df(
+        placer,
+        "Placer",
+        {"VOTINGPREC": "precinct_id"},
+        ["SHAPE_Leng", "SHAPE_Area"],
+    )
+
+    placer.head()
+    return (placer,)
 
 
 @app.cell(hide_code=True)
