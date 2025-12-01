@@ -73,6 +73,7 @@ def _(
     san_bernardino,
     san_diego,
     san_francisco,
+    san_joaquin,
     san_luis_obispo,
     san_mateo,
     santa_barbara,
@@ -114,6 +115,7 @@ def _(
             san_bernardino,
             san_diego,
             san_francisco,
+            san_joaquin,
             san_luis_obispo,
             san_mateo,
             santa_barbara,
@@ -850,6 +852,40 @@ def _(PROJECTED_CRS, gpd):
 
     san_francisco.head()
     return (san_francisco,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Joaquin
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    san_joaquin = gpd.read_file(
+        "inputs/counties/san joaquin/Precincts_2025.json"
+    ).to_crs(PROJECTED_CRS)
+
+    san_joaquin = alter_df(
+        san_joaquin,
+        "San Joaquin",
+        {"PRECINCT": "precinct_id"},
+        [
+            "OBJECTID_1",
+            "OBJECTID",
+            "PERIMETER",
+            "Sub_ID_00",
+            "GlobalID",
+            "Shape__Area",
+            "Area",
+            "Shape__Length",
+        ],
+    )
+
+    san_joaquin.head(200)
+    return (san_joaquin,)
 
 
 @app.cell(hide_code=True)
