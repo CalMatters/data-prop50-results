@@ -153,8 +153,6 @@ def _(
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
 
-    # show the data on the screen
-    print(combined_reordered)
     return (combined_reordered,)
 
 
