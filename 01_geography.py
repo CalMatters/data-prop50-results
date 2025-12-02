@@ -191,7 +191,7 @@ def _(PROJECTED_CRS, gpd):
 
     # read in the source file with geopandas and reproject to PROJECTED_CRS
     alameda = gpd.read_file(
-        "inputs/counties/alameda/Consolidated_Precincts_-_November_4%2C_2025_Statewide_Special_Election.geojson"
+        "inputs/counties/alameda/precincts/Consolidated_Precincts_-_November_4%2C_2025_Statewide_Special_Election.geojson"
     ).to_crs(PROJECTED_CRS)
 
     # use alter_df to clean, renaming some columns and dropping others
@@ -223,9 +223,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    butte = gpd.read_file("inputs/counties/butte/Butte Precincts 2025.kmz").to_crs(
-        PROJECTED_CRS
-    )
+    butte = gpd.read_file(
+        "inputs/counties/butte/precincts/Butte Precincts 2025.kmz"
+    ).to_crs(PROJECTED_CRS)
 
     butte = alter_df(
         butte,
@@ -262,7 +262,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     colusa = gpd.read_file(
-        "inputs/counties/colusa/Voting Precincts - 2020.shp"
+        "inputs/counties/colusa/precincts/Voting Precincts - 2020.shp"
     ).to_crs(PROJECTED_CRS)
 
     colusa = alter_df(
@@ -287,7 +287,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     contra_costa = gpd.read_file(
-        "inputs/counties/contra costa/PrecinctSet_PDMJ017.json"
+        "inputs/counties/contra_costa/precincts/PrecinctSet_PDMJ017.json"
     ).to_crs(PROJECTED_CRS)
 
     contra_costa = alter_df(
@@ -329,7 +329,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     fresno = gpd.read_file(
-        "inputs/counties/fresno/ELECTIONS_NOV2024_VOTING_PRECINCTS_VW.zip"
+        "inputs/counties/fresno/precincts/ELECTIONS_NOV2024_VOTING_PRECINCTS_VW.zip"
     ).to_crs(PROJECTED_CRS)
 
     fresno = alter_df(
@@ -362,7 +362,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     glenn = (
-        gpd.read_file("inputs/counties/glenn/Precincts_9_3_2.json")
+        gpd.read_file("inputs/counties/glenn/precincts/Precincts_9_3_2.json")
         .to_crs(PROJECTED_CRS)
         .to_crs(PROJECTED_CRS)
     )
@@ -399,7 +399,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     humboldt = gpd.read_file(
-        "inputs/counties/humboldt/precincts17sp_202507111714287445.zip"
+        "inputs/counties/humboldt/precincts/precincts17sp_202507111714287445.zip"
     ).to_crs(PROJECTED_CRS)
 
     humboldt = alter_df(
@@ -424,7 +424,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     imperial = gpd.read_file(
-        "inputs/counties/imperial/Voting_Precincts.shp"
+        "inputs/counties/imperial/precincts/Voting_Precincts.shp"
     ).to_crs(PROJECTED_CRS)
 
     imperial = alter_df(
@@ -447,7 +447,7 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    inyo = gpd.read_file("inputs/counties/inyo/consolidated.zip").to_crs(
+    inyo = gpd.read_file("inputs/counties/inyo/precincts/consolidated.zip").to_crs(
         PROJECTED_CRS
     )
 
@@ -472,7 +472,7 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    lake = gpd.read_file("inputs/counties/lake/precincts.zip").to_crs(
+    lake = gpd.read_file("inputs/counties/lake/precincts/precincts.zip").to_crs(
         PROJECTED_CRS
     )
 
@@ -498,7 +498,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     los_angeles = gpd.read_file(
-        "inputs/counties/los angeles/Registrar_Recorder_Election_Precincts_.shp"
+        "inputs/counties/los_angeles/precincts/Registrar_Recorder_Election_Precincts_.shp"
     ).to_crs(PROJECTED_CRS)
 
     los_angeles = alter_df(
@@ -531,7 +531,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    marin = gpd.read_file("inputs/counties/marin/Marin.shp").to_crs(PROJECTED_CRS)
+    marin = gpd.read_file("inputs/counties/marin/precincts/Marin.shp").to_crs(
+        PROJECTED_CRS
+    )
 
     marin = alter_df(marin, "Marin", {"Precinct": "precinct_id"})
 
@@ -550,7 +552,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     mariposa = gpd.read_file(
-        "inputs/counties/mariposa/Voting_Precincts_2021_public_view_-5183800690768860583.zip"
+        "inputs/counties/mariposa/precincts/Voting_Precincts_2021_public_view_-5183800690768860583.zip"
     ).to_crs(PROJECTED_CRS)
 
     mariposa = alter_df(
@@ -575,7 +577,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     mendocino = gpd.read_file(
-        "inputs/counties/mendocino/voterprecincts.zip"
+        "inputs/counties/mendocino/precincts/voterprecincts.zip"
     ).to_crs(PROJECTED_CRS)
 
     mendocino = alter_df(
@@ -598,9 +600,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    mono = gpd.read_file("inputs/counties/mono/Voting_Precincts.zip").to_crs(
-        PROJECTED_CRS
-    )
+    mono = gpd.read_file(
+        "inputs/counties/mono/precincts/Voting_Precincts.zip"
+    ).to_crs(PROJECTED_CRS)
 
     mono = alter_df(
         mono,
@@ -636,7 +638,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     monterey = gpd.read_file(
-        "inputs/counties/monterey/2024-11-05 Precincts.zip"
+        "inputs/counties/monterey/precincts/2024-11-05 Precincts.zip"
     ).to_crs(PROJECTED_CRS)
 
     monterey = alter_df(
@@ -660,7 +662,7 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    napa = gpd.read_file("inputs/counties/napa/Precincts.zip").to_crs(
+    napa = gpd.read_file("inputs/counties/napa/precincts/Precincts.zip").to_crs(
         PROJECTED_CRS
     )
 
@@ -700,9 +702,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    nevada = gpd.read_file("inputs/counties/nevada/Voter Precincts.json").to_crs(
-        PROJECTED_CRS
-    )
+    nevada = gpd.read_file(
+        "inputs/counties/nevada/precincts/Voter Precincts.json"
+    ).to_crs(PROJECTED_CRS)
 
     nevada = alter_df(
         nevada,
@@ -725,9 +727,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    orange = gpd.read_file("inputs/counties/orange/OC_Precinct_2024GE.zip").to_crs(
-        PROJECTED_CRS
-    )
+    orange = gpd.read_file(
+        "inputs/counties/orange/precincts/OC_Precinct_2024GE.zip"
+    ).to_crs(PROJECTED_CRS)
 
     orange = alter_df(
         orange, "Orange", {"Precinct": "precinct_id"}, ["Shape_Leng", "Shape_Area"]
@@ -748,7 +750,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     placer = gpd.read_file(
-        "inputs/counties/placer/PlacerCo_VotingPrecincts_2025Spec/PlacerCo_VotingPrecincts_2025Spec.shp"
+        "inputs/counties/placer/precincts/PlacerCo_VotingPrecincts_2025Spec/PlacerCo_VotingPrecincts_2025Spec.shp"
     ).to_crs(PROJECTED_CRS)
 
     placer = alter_df(
@@ -773,7 +775,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     sacramento = gpd.read_file(
-        "inputs/counties/sacramento/Voter_Registration_Precincts.shp"
+        "inputs/counties/sacramento/precincts/Voter_Registration_Precincts.shp"
     ).to_crs(PROJECTED_CRS)
 
     sacramento = alter_df(
@@ -812,7 +814,7 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## San Benito
+    ## san_Benito
     """)
     return
 
@@ -820,7 +822,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     san_benito = gpd.read_file(
-        "inputs/counties/san benito/San_Benito_Base_Precincts_2025.zip"
+        "inputs/counties/san_benito/precincts/San_Benito_Base_Precincts_2025.zip"
     ).to_crs(PROJECTED_CRS)
 
     san_benito = alter_df(
@@ -856,7 +858,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     san_bernardino = gpd.read_file(
-        "inputs/counties/san bernardino/ROV_Precincts.zip"
+        "inputs/counties/san_bernardino/precincts/ROV_Precincts.zip"
     ).to_crs(PROJECTED_CRS)
 
     san_bernardino = alter_df(
@@ -890,7 +892,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     san_diego = gpd.read_file(
-        "inputs/counties/san diego/Election_Precinct_2025_11_04.json"
+        "inputs/counties/san_diego/precincts/Election_Precinct_2025_11_04.json"
     ).to_crs(PROJECTED_CRS)
 
     san_diego = alter_df(
@@ -925,7 +927,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     san_francisco = gpd.read_file(
-        "inputs/counties/san francisco/Election Precincts - Current, Defined 2022_20251120.zip"
+        "inputs/counties/san_francisco/precincts/Election Precincts - Current, Defined 2022_20251120.zip"
     ).to_crs(PROJECTED_CRS)
 
     san_francisco = alter_df(
@@ -960,7 +962,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     san_joaquin = gpd.read_file(
-        "inputs/counties/san joaquin/Precincts_2025.json"
+        "inputs/counties/san_joaquin/precincts/Precincts_2025.json"
     ).to_crs(PROJECTED_CRS)
 
     san_joaquin = alter_df(
@@ -994,7 +996,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     san_luis_obispo = gpd.read_file(
-        "inputs/counties/san luis obispo/Voter_Precincts_-_2023.zip"
+        "inputs/counties/san_luis_obispo/precincts/Voter_Precincts_-_2023.zip"
     ).to_crs(PROJECTED_CRS)
 
     san_luis_obispo = alter_df(
@@ -1019,7 +1021,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     san_mateo = gpd.read_file(
-        "inputs/counties/san mateo/ELECTION_PRECINCTS.shp"
+        "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
     ).to_crs(PROJECTED_CRS)
 
 
@@ -1042,7 +1044,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     santa_barbara = gpd.read_file(
-        "inputs/counties/santa barbara/PrecinctsAug2025.json"
+        "inputs/counties/santa_barbara/precincts/PrecinctsAug2025.json"
     ).to_crs(PROJECTED_CRS)
 
     santa_barbara = alter_df(
@@ -1067,7 +1069,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     santa_cruz = gpd.read_file(
-        "inputs/counties/santa cruz/Precincts_5962167425846516299.zip"
+        "inputs/counties/santa_cruz/precincts/Precincts_5962167425846516299.zip"
     ).to_crs(PROJECTED_CRS)
 
     santa_cruz = alter_df(
@@ -1124,7 +1126,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     shasta = gpd.read_file(
-        "inputs/counties/shasta/Consolidated_Precincts.shp"
+        "inputs/counties/shasta/precincts/Consolidated_Precincts.shp"
     ).to_crs(PROJECTED_CRS)
 
     shasta = alter_df(
@@ -1157,7 +1159,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     sierra = gpd.read_file(
-        "inputs/counties/sierra/Sierra_County_2021_Voter_Jurisdiction_Data.zip",
+        "inputs/counties/sierra/precincts/Sierra_County_2021_Voter_Jurisdiction_Data.zip",
         layer="Sierra_County_Voter_Precincts_2021",
     ).to_crs(PROJECTED_CRS)
 
@@ -1180,7 +1182,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     siskiyou = gpd.read_file(
-        "inputs/counties/siskiyou/Election_Precincts.zip"
+        "inputs/counties/siskiyou/precincts/Election_Precincts.zip"
     ).to_crs(PROJECTED_CRS)
 
     siskiyou = alter_df(
@@ -1204,9 +1206,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    solano = gpd.read_file("inputs/counties/solano/Current_Precincts.json").to_crs(
-        PROJECTED_CRS
-    )
+    solano = gpd.read_file(
+        "inputs/counties/solano/precincts/Current_Precincts.json"
+    ).to_crs(PROJECTED_CRS)
 
     solano = alter_df(
         solano,
@@ -1240,7 +1242,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     sonoma = gpd.read_file(
-        "inputs/counties/sonoma/ROVPublic_Precincts.json"
+        "inputs/counties/sonoma/precincts/ROVPublic_Precincts.json"
     ).to_crs(PROJECTED_CRS)
 
     sonoma = alter_df(
@@ -1266,7 +1268,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     sutter = gpd.read_file(
-        "inputs/counties/sutter/Elections_Precincts.zip"
+        "inputs/counties/sutter/precincts/Elections_Precincts.zip"
     ).to_crs(PROJECTED_CRS)
 
     sutter = alter_df(
@@ -1297,9 +1299,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    tehama = gpd.read_file("inputs/counties/tehama/tehama-precincts.json").to_crs(
-        PROJECTED_CRS
-    )
+    tehama = gpd.read_file(
+        "inputs/counties/tehama/precincts/tehama-precincts.json"
+    ).to_crs(PROJECTED_CRS)
 
     tehama = alter_df(
         tehama,
@@ -1322,9 +1324,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    tulare = gpd.read_file("inputs/counties/tulare/tulare-precincts.json").to_crs(
-        PROJECTED_CRS
-    )
+    tulare = gpd.read_file(
+        "inputs/counties/tulare/precincts/tulare-precincts.json"
+    ).to_crs(PROJECTED_CRS)
 
     tulare = alter_df(
         tulare,
@@ -1371,7 +1373,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     tuolumne = gpd.read_file(
-        "inputs/counties/tuolumne/TC_VotingPrecincts_Sept2022/TuolumneCounty_VotingPrecincts_consolidationNov2022.shp"
+        "inputs/counties/tuolumne/precincts/TC_VotingPrecincts_Sept2022/TuolumneCounty_VotingPrecincts_consolidationNov2022.shp"
     ).to_crs(PROJECTED_CRS)
 
     tuolumne = alter_df(
@@ -1396,7 +1398,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     ventura = gpd.read_file(
-        "inputs/counties/ventura/Election_Precinct.zip"
+        "inputs/counties/ventura/precincts/Election_Precinct.zip"
     ).to_crs(PROJECTED_CRS)
 
     ventura = alter_df(
@@ -1433,7 +1435,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     yolo = gpd.read_file(
-        "inputs/counties/yolo/Precincts_Consolidated_Open_Data.zip"
+        "inputs/counties/yolo/precincts/Precincts_Consolidated_Open_Data.zip"
     ).to_crs(PROJECTED_CRS)
 
     yolo = alter_df(
@@ -1468,7 +1470,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     yuba = gpd.read_file(
-        "inputs/counties/yuba/YubaCountyCA_2024_03_21_001/VotingPrecincts.shp"
+        "inputs/counties/yuba/precincts/YubaCountyCA_2024_03_21_001/VotingPrecincts.shp"
     ).to_crs(PROJECTED_CRS)
 
     yuba = alter_df(
