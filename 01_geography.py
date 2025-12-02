@@ -64,6 +64,7 @@ def _(
     marin,
     mariposa,
     mendocino,
+    modoc,
     mono,
     monterey,
     napa,
@@ -111,6 +112,7 @@ def _(
             marin,
             mariposa,
             mendocino,
+            modoc,
             mono,
             monterey,
             napa,
@@ -152,7 +154,6 @@ def _(
 
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
-
     return (combined_reordered,)
 
 
@@ -586,6 +587,31 @@ def _(PROJECTED_CRS, gpd):
 
     mendocino.head()
     return (mendocino,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Modoc
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    modoc = gpd.read_file(
+        "inputs/counties/modoc/precincts/Modoc_Voter_Precincts_2024.json"
+    ).to_crs(PROJECTED_CRS)
+
+    modoc = alter_df(
+        modoc,
+        "Modoc",
+        {"Name": "precinct_name", "Precinct_ID": "precinct_id"},
+        ["OBJECTID", "Id", "Disclaimer", "Shape__Area", "Shape__Length"],
+    )
+
+    modoc.head()
+    return (modoc,)
 
 
 @app.cell(hide_code=True)
