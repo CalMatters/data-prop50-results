@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.17.8"
+__generated_with = "0.18.0"
 app = marimo.App(width="medium")
 
 
@@ -24,8 +24,8 @@ def _():
     PROJECTED_CRS = (
         "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
     )
-    COMBINED_OUTPUT_PATH = "outputs/precincts.geojson"
-    COMBINED_OUTPUT_DRIVER = "GeoJSON"
+    COMBINED_OUTPUT_PATH = "outputs/precincts.gpkg"
+    COMBINED_OUTPUT_DRIVER = "GPKG"
     return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, PROJECTED_CRS
 
 
@@ -213,9 +213,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    colusa = gpd.read_file("inputs/counties/colusa/Voting Precincts - 2020.shp").to_crs(
-        PROJECTED_CRS
-    )
+    colusa = gpd.read_file(
+        "inputs/counties/colusa/Voting Precincts - 2020.shp"
+    ).to_crs(PROJECTED_CRS)
 
     colusa["county"] = "Colusa"
     colusa.rename(
@@ -267,9 +267,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    imperial = gpd.read_file("inputs/counties/imperial/Voting_Precincts.shp").to_crs(
-        PROJECTED_CRS
-    )
+    imperial = gpd.read_file(
+        "inputs/counties/imperial/Voting_Precincts.shp"
+    ).to_crs(PROJECTED_CRS)
 
     imperial.rename(
         columns={"precinctid": "precinct_id", "name": "precinct_name"},
@@ -290,7 +290,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    inyo = gpd.read_file("inputs/counties/inyo/consolidated.zip").to_crs(PROJECTED_CRS)
+    inyo = gpd.read_file("inputs/counties/inyo/consolidated.zip").to_crs(
+        PROJECTED_CRS
+    )
 
     inyo["county"] = "Inyo"
     inyo.rename(columns={"cons_prec": "precinct_id"}, inplace=True)
@@ -370,9 +372,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    monterey = gpd.read_file("inputs/counties/monterey/2024-11-05 Precincts.zip").to_crs(
-        PROJECTED_CRS
-    )
+    monterey = gpd.read_file(
+        "inputs/counties/monterey/2024-11-05 Precincts.zip"
+    ).to_crs(PROJECTED_CRS)
 
     monterey["county"] = "Monterey"
     monterey.rename(
@@ -397,7 +399,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    napa = gpd.read_file("inputs/counties/napa/Precincts.zip").to_crs(PROJECTED_CRS)
+    napa = gpd.read_file("inputs/counties/napa/Precincts.zip").to_crs(
+        PROJECTED_CRS
+    )
 
     napa["county"] = "Napa"
     napa["precinct_name"] = None
@@ -666,9 +670,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    san_mateo = gpd.read_file("inputs/counties/san mateo/ELECTION_PRECINCTS.shp").to_crs(
-        PROJECTED_CRS
-    )
+    san_mateo = gpd.read_file(
+        "inputs/counties/san mateo/ELECTION_PRECINCTS.shp"
+    ).to_crs(PROJECTED_CRS)
 
     san_mateo["county"] = "San Mateo"
     san_mateo.rename(columns={"PrecinctID": "precinct_id"}, inplace=True)
@@ -747,9 +751,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    shasta = gpd.read_file("inputs/counties/shasta/Consolidated_Precincts.shp").to_crs(
-        PROJECTED_CRS
-    )
+    shasta = gpd.read_file(
+        "inputs/counties/shasta/Consolidated_Precincts.shp"
+    ).to_crs(PROJECTED_CRS)
 
     shasta["county"] = "Shasta"
     shasta.rename(
@@ -785,9 +789,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    siskiyou = gpd.read_file("inputs/counties/siskiyou/Election_Precincts.zip").to_crs(
-        PROJECTED_CRS
-    )
+    siskiyou = gpd.read_file(
+        "inputs/counties/siskiyou/Election_Precincts.zip"
+    ).to_crs(PROJECTED_CRS)
 
     siskiyou = alter_gdf(
         siskiyou,
@@ -845,9 +849,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    sonoma = gpd.read_file("inputs/counties/sonoma/ROVPublic_Precincts.json").to_crs(
-        PROJECTED_CRS
-    )
+    sonoma = gpd.read_file(
+        "inputs/counties/sonoma/ROVPublic_Precincts.json"
+    ).to_crs(PROJECTED_CRS)
 
     sonoma = alter_gdf(
         sonoma,
@@ -871,9 +875,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    sutter = gpd.read_file("inputs/counties/sutter/Elections_Precincts.zip").to_crs(
-        PROJECTED_CRS
-    )
+    sutter = gpd.read_file(
+        "inputs/counties/sutter/Elections_Precincts.zip"
+    ).to_crs(PROJECTED_CRS)
 
     sutter = alter_gdf(
         sutter,
@@ -930,9 +934,9 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    ventura = gpd.read_file("inputs/counties/ventura/Election_Precinct.zip").to_crs(
-        PROJECTED_CRS
-    )
+    ventura = gpd.read_file(
+        "inputs/counties/ventura/Election_Precinct.zip"
+    ).to_crs(PROJECTED_CRS)
 
     ventura["county"] = "Ventura"
     ventura["precinct_name"] = None
