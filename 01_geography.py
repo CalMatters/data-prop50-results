@@ -62,6 +62,7 @@ def _(
     inyo,
     lake,
     los_angeles,
+    madera,
     marin,
     mariposa,
     mendocino,
@@ -111,6 +112,7 @@ def _(
             inyo,
             lake,
             los_angeles,
+            madera,
             marin,
             mariposa,
             mendocino,
@@ -562,6 +564,24 @@ def _(PROJECTED_CRS, gpd):
 
     los_angeles.head()
     return (los_angeles,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Madera
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    madera = gpd.read_file('inputs/counties/madera/precincts/VotingPrecincts_2025SpecialElection.zip').to_crs(PROJECTED_CRS)
+
+    madera = alter_df(madera, "Madera", { "VotingPrec": "precinct_id" }, ['CreatedBy', 'CreatedDat', 'ModifyBy', 'ModifyDate'])
+
+    madera.head()
+    return (madera,)
 
 
 @app.cell(hide_code=True)
