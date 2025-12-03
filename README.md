@@ -1,6 +1,11 @@
 # data-prop50-results
 An analysis of 2025 election results for Prop. 50 using precinct-level data from counties. We are keeping track of what each county publishes and where [in this Google spreadsheet](https://docs.google.com/spreadsheets/d/1TRuXAbeOSlQe1VakQSi42ijHQiILivoAg4rlw7vG0fY/edit?gid=1241525250#gid=1241525250). 
 
+## Data sources
+* Precinct results and geographic files - [from each county](https://docs.google.com/spreadsheets/d/1TRuXAbeOSlQe1VakQSi42ijHQiILivoAg4rlw7vG0fY/edit?gid=0#gid=0)
+* Current congressional district geographic files - [We Draw the Lines, the independent redistricting commission](https://wedrawthelines.ca.gov)
+* Census Voting Age Population (CVAP) - [Census](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html)
+
 ## Quick Start
 
 This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) and [uv](https://github.com/astral-sh/uv) (a fast Python package manager). This project uses [just](https://github.com/casey/just) to quickly run project scripts.
