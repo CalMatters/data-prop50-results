@@ -27,7 +27,7 @@ This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) 
 
 1. **Generate statewide precincts data file**:
    ```bash
-   just 01_geography.py
+   just generate-precincts-file
    ```
 
 ### Notebooks
