@@ -51,6 +51,7 @@ def _(
     COMBINED_OUTPUT_DRIVER,
     COMBINED_OUTPUT_PATH,
     alameda,
+    amador,
     butte,
     colusa,
     contra_costa,
@@ -99,6 +100,7 @@ def _(
     combined = pd.concat(
         [
             alameda,
+            amador,
             butte,
             colusa,
             contra_costa,
@@ -210,6 +212,46 @@ def _(PROJECTED_CRS, gpd):
     # look at the first five rows
     alameda.head()
     return (alameda,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Amador
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    amador = gpd.read_file(
+        "inputs/counties/amador/precincts/VotingDistricts_2021_Updated3-18-22.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    # the spatial data is more granular than the results so we should combine
+    # features based on the value in the "CP" column
+    amador = amador.dissolve(by="CP")
+
+    amador = alter_df(
+        amador,
+        "Amador",
+        {"CP": "precinct_id"},
+        [
+            "PRECINCT",
+            "LOCATION",
+            "SUPDIST",
+            "POLLPLACE",
+            "POLLADDR",
+            "POLLCITY",
+            "POLLSTATE",
+            "POLLZIP",
+            "SHAPE_Leng",
+            "SHAPE_Area",
+        ],
+    )
+
+    amador.head()
+    return (amador,)
 
 
 @app.cell(hide_code=True)
