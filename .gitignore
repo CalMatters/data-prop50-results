@@ -209,5 +209,6 @@ __marimo__/
 # MacOS
 .DS_Store
 
-# generated output files
+# Generated output files
 outputs/results.csv
+outputs/precincts.*
