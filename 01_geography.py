@@ -149,6 +149,7 @@ def _(
 
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
+    print(f"Saved combined precincts to {COMBINED_OUTPUT_PATH}")
 
     return (combined_reordered,)
 
