@@ -8,18 +8,26 @@ An analysis of 2025 election results for Prop. 50 using precinct-level data from
 
 ## Quick Start
 
-This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) and [uv](https://github.com/astral-sh/uv) (a fast Python package manager).
+This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) and [uv](https://github.com/astral-sh/uv) (a fast Python package manager). This project uses [just](https://github.com/casey/just) to quickly run project scripts.
 
 ### Setup (First Time Only)
 
-1. **Install uv** (if you don't have it):
+1. **Install uv and just** (if not already installed):
    ```bash
    brew install uv
+   brew install just
    ```
 
 2. **Install dependencies**:
    ```bash
    uv sync
+   ```
+
+### Generate intermediary data files
+
+1. **Generate statewide precincts data file**:
+   ```bash
+   just generate-precincts-file
    ```
 
 ### Notebooks
@@ -67,3 +75,11 @@ Reproject the voting precincts from each county into NAD83/California Albers and
 
 Produces a GIS file containing [Citizen Voting Age Population](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) (CVAP) data by census tract for California.
 
+#### `02_results.py` - Precinct result data cleaning
+
+Make sure that the precinct-level results data has the following columns for consistency:
+* `county` - The county containing the precinct
+* `precinct_id` - Unique ID for the precinct
+* `yes_votes` - the number of votes for "Yes" on Prop. 50 in the precinct
+* `no_votes` - the number of votes for "No" on Prop. 50 in the precinct
+* `turnout` - the percent of the voters who cast a ballot in the precinct, included if included by the county; range is 0 to 100

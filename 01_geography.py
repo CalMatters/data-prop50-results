@@ -20,14 +20,11 @@ def _(mo):
 
 @app.cell
 def _():
-    # NAD83 / California Albers (good for area calculations in CA)
-    PROJECTED_CRS = "EPSG:3310"
-
-    # the path for the output file
-    COMBINED_OUTPUT_PATH = "outputs/precincts.geojson"
-
-    # the driver to match the file type of COMBINED_OUTPUT_PATH, passed to df.to_file function
-    COMBINED_OUTPUT_DRIVER = "GeoJSON"
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    COMBINED_OUTPUT_PATH = "outputs/precincts.gpkg"
+    COMBINED_OUTPUT_DRIVER = "GPKG"
     return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, PROJECTED_CRS
 
 
@@ -51,6 +48,7 @@ def _(
     COMBINED_OUTPUT_DRIVER,
     COMBINED_OUTPUT_PATH,
     alameda,
+    amador,
     butte,
     colusa,
     contra_costa,
@@ -61,6 +59,7 @@ def _(
     inyo,
     lake,
     los_angeles,
+    madera,
     marin,
     mariposa,
     mendocino,
@@ -99,6 +98,7 @@ def _(
     combined = pd.concat(
         [
             alameda,
+            amador,
             butte,
             colusa,
             contra_costa,
@@ -109,6 +109,7 @@ def _(
             inyo,
             lake,
             los_angeles,
+            madera,
             marin,
             mariposa,
             mendocino,
@@ -154,6 +155,8 @@ def _(
 
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
+    print(f"Saved combined precincts to {COMBINED_OUTPUT_PATH}")
+
     return (combined_reordered,)
 
 
@@ -210,6 +213,48 @@ def _(PROJECTED_CRS, gpd):
     # look at the first five rows
     alameda.head()
     return (alameda,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Amador
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    amador = gpd.read_file(
+        "inputs/counties/amador/precincts/VotingDistricts_2021_Updated3-18-22.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    # the spatial data is more granular than the results so we should combine
+    # features based on the value in the "CP" column
+    # spatial data is likely voting precincts, and the results data is reported using Consolidated Precincts. 
+    # We are (safely) assuming "CP" is consolidated precincts and dissolving the data appropriately
+    amador = amador.dissolve(by="CP")
+
+    amador = alter_df(
+        amador,
+        "Amador",
+        {"CP": "precinct_id"},
+        [
+            "PRECINCT",
+            "LOCATION",
+            "SUPDIST",
+            "POLLPLACE",
+            "POLLADDR",
+            "POLLCITY",
+            "POLLSTATE",
+            "POLLZIP",
+            "SHAPE_Leng",
+            "SHAPE_Area",
+        ],
+    )
+
+    amador.head()
+    return (amador,)
 
 
 @app.cell(hide_code=True)
@@ -518,6 +563,24 @@ def _(PROJECTED_CRS, gpd):
 
     los_angeles.head()
     return (los_angeles,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Madera
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    madera = gpd.read_file('inputs/counties/madera/precincts/VotingPrecincts_2025SpecialElection.zip').to_crs(PROJECTED_CRS)
+
+    madera = alter_df(madera, "Madera", { "VotingPrec": "precinct_id" }, ['CreatedBy', 'CreatedDat', 'ModifyBy', 'ModifyDate'])
+
+    madera.head()
+    return (madera,)
 
 
 @app.cell(hide_code=True)
