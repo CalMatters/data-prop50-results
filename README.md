@@ -8,18 +8,26 @@ An analysis of 2025 election results for Prop. 50 using precinct-level data from
 
 ## Quick Start
 
-This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) and [uv](https://github.com/astral-sh/uv) (a fast Python package manager).
+This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) and [uv](https://github.com/astral-sh/uv) (a fast Python package manager). This project uses [just](https://github.com/casey/just) to quickly run project scripts.
 
 ### Setup (First Time Only)
 
-1. **Install uv** (if you don't have it):
+1. **Install uv and just** (if not already installed):
    ```bash
    brew install uv
+   brew install just
    ```
 
 2. **Install dependencies**:
    ```bash
    uv sync
+   ```
+
+### Generate intermediary data files
+
+1. **Generate statewide precincts data file**:
+   ```bash
+   just generate-precincts-file
    ```
 
 ### Notebooks

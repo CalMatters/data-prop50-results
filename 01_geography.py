@@ -20,14 +20,11 @@ def _(mo):
 
 @app.cell
 def _():
-    # NAD83 / California Albers (good for area calculations in CA)
-    PROJECTED_CRS = "EPSG:3310"
-
-    # the path for the output file
-    COMBINED_OUTPUT_PATH = "outputs/precincts.geojson"
-
-    # the driver to match the file type of COMBINED_OUTPUT_PATH, passed to df.to_file function
-    COMBINED_OUTPUT_DRIVER = "GeoJSON"
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    COMBINED_OUTPUT_PATH = "outputs/precincts.gpkg"
+    COMBINED_OUTPUT_DRIVER = "GPKG"
     return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, PROJECTED_CRS
 
 
@@ -158,6 +155,8 @@ def _(
 
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
+    print(f"Saved combined precincts to {COMBINED_OUTPUT_PATH}")
+
     return (combined_reordered,)
 
 
