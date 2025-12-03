@@ -230,6 +230,8 @@ def _(PROJECTED_CRS, gpd):
 
     # the spatial data is more granular than the results so we should combine
     # features based on the value in the "CP" column
+    # spatial data is likely voting precincts, and the results data is reported using Consolidated Precincts. 
+    # We are (safely) assuming "CP" is consolidated precincts and dissolving the data appropriately
     amador = amador.dissolve(by="CP")
 
     amador = alter_df(
