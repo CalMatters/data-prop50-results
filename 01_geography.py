@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.0"
+__generated_with = "0.18.1"
 app = marimo.App(width="medium")
 
 
@@ -71,6 +71,7 @@ def _(
     orange,
     pd,
     placer,
+    riverside,
     sacramento,
     san_benito,
     san_bernardino,
@@ -120,6 +121,7 @@ def _(
             nevada,
             orange,
             placer,
+            riverside,
             sacramento,
             san_benito,
             san_bernardino,
@@ -156,7 +158,6 @@ def _(
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
     print(f"Saved combined precincts to {COMBINED_OUTPUT_PATH}")
-
     return (combined_reordered,)
 
 
@@ -231,7 +232,7 @@ def _(PROJECTED_CRS, gpd):
 
     # the spatial data is more granular than the results so we should combine
     # features based on the value in the "CP" column
-    # spatial data is likely voting precincts, and the results data is reported using Consolidated Precincts. 
+    # spatial data is likely voting precincts, and the results data is reported using Consolidated Precincts.
     # We are (safely) assuming "CP" is consolidated precincts and dissolving the data appropriately
     amador = amador.dissolve(by="CP")
 
@@ -575,9 +576,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    madera = gpd.read_file('inputs/counties/madera/precincts/VotingPrecincts_2025SpecialElection.zip').to_crs(PROJECTED_CRS)
+    madera = gpd.read_file(
+        "inputs/counties/madera/precincts/VotingPrecincts_2025SpecialElection.zip"
+    ).to_crs(PROJECTED_CRS)
 
-    madera = alter_df(madera, "Madera", { "VotingPrec": "precinct_id" }, ['CreatedBy', 'CreatedDat', 'ModifyBy', 'ModifyDate'])
+    madera = alter_df(
+        madera,
+        "Madera",
+        {"VotingPrec": "precinct_id"},
+        ["CreatedBy", "CreatedDat", "ModifyBy", "ModifyDate"],
+    )
 
     madera.head()
     return (madera,)
@@ -849,6 +857,44 @@ def _(PROJECTED_CRS, gpd):
 
     placer.head()
     return (placer,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Riverside
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    riverside = gpd.read_file(
+        "inputs/counties/riverside/precincts/Final Voting Precincts.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    riverside = alter_df(
+        riverside,
+        "Riverside",
+        {"PRIMARY_NE": "precinct_id"},
+        [
+            "SUM_lTotal",
+            "sVotingPre",
+            "SUM_lTot_1",
+            "VPMapping",
+            "sVotingP_1",
+            "iMailBallo",
+            "Shape_Leng",
+            "Shape_Area",
+            "iBalType",
+            "iMailBal_1",
+            "Shape_Le_1",
+            "Shape_Ar_1",
+        ],
+    )
+
+    riverside.head()
+    return (riverside,)
 
 
 @app.cell(hide_code=True)
