@@ -209,5 +209,6 @@ __marimo__/
 # MacOS
 .DS_Store
 
-# Large files
-precincts.*
+# Generated output files
+outputs/results.csv
+outputs/precincts.*
