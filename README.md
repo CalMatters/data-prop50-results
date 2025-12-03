@@ -61,3 +61,12 @@ Reproject the voting precincts from each county into NAD83/California Albers and
  * `county` - The county containing the precinct
  * `precinct_id` - The precinct ID from the county
  * `precinct_name` - The human-readable name included by the county, otherwise `None`
+
+#### `02_results.py` - Precinct result data cleaning
+
+Make sure that the precinct-level results data has the following columns for consistency:
+* `county` - The county containing the precinct
+* `precinct_id` - Unique ID for the precinct
+* `yes_votes` - the number of votes for "Yes" on Prop. 50 in the precinct
+* `no_votes` - the number of votes for "No" on Prop. 50 in the precinct
+* `turnout` - the percent of the voters who cast a ballot in the precinct, included if included by the county; range is 0 to 100
