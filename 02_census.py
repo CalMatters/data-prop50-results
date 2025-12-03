@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.0"
+__generated_with = "0.18.1"
 app = marimo.App(width="columns")
 
 
@@ -54,10 +54,11 @@ def _(df_ca_cvap_est_by_tract, gdf_ca_tracts):
 
 
 @app.cell
-def _(CA_FIPS, TRACTS_GIS_FP, gpd):
+def _(TRACTS_GIS_FP, gpd, is_ca_geoid):
     GDF_TRACTS = gpd.read_file(TRACTS_GIS_FP)
-    is_ca_geoid = GDF_TRACTS["GEOID"].str.startswith(CA_FIPS)
-    gdf_ca_tracts = GDF_TRACTS[is_ca_geoid][["GEOID", "geometry"]].copy()
+    gdf_ca_tracts = GDF_TRACTS[is_ca_geoid(GDF_TRACTS["GEOID"])][
+        ["GEOID", "geometry"]
+    ].copy()
     gdf_ca_tracts = gdf_ca_tracts.rename(columns={"GEOID": "geoid"})
     del GDF_TRACTS
     gdf_ca_tracts.plot()
@@ -66,11 +67,11 @@ def _(CA_FIPS, TRACTS_GIS_FP, gpd):
 
 @app.cell
 def _(
-    CA_FIPS,
     CVAP_TRACT_DATA_FP,
     CVAP_ZIPPED_DATA_FP,
     TRACT_FIPS_LEN,
     filter_moe_from_wide_df,
+    is_ca_geoid,
     read_csv_from_zip,
     transform_cvap_format,
 ):
@@ -80,9 +81,11 @@ def _(
     DF_CVAP_BY_TRACT["geoid"] = DF_CVAP_BY_TRACT["geoid"].str.slice(
         -1 * TRACT_FIPS_LEN
     )
-    is_ca_tract = DF_CVAP_BY_TRACT["geoid"].str.startswith(CA_FIPS)
-    df_ca_cvap_by_tract = DF_CVAP_BY_TRACT[is_ca_tract].copy()
-    del DF_CVAP_BY_TRACT, is_ca_tract
+
+    df_ca_cvap_by_tract = DF_CVAP_BY_TRACT[
+        is_ca_geoid(DF_CVAP_BY_TRACT["geoid"])
+    ].copy()
+    del DF_CVAP_BY_TRACT
 
     df_ca_cvap_by_tract = transform_cvap_format(df_ca_cvap_by_tract)
     df_ca_cvap_est_by_tract = filter_moe_from_wide_df(df_ca_cvap_by_tract)
@@ -282,8 +285,26 @@ def _(pd):
 
 
 @app.cell
-def _():
-    return
+def _(CA_FIPS, pd):
+    def is_ca_geoid(geoid_series: pd.Series) -> pd.Series:
+        """
+        Check if each GEOID in the series corresponds to California.
+
+        California FIPS code is '06', and this function checks whether each
+        GEOID string in the input series starts with this prefix.
+
+        Parameters
+        ----------
+        geoid_series : pd.Series
+            A pandas Series containing GEOID strings.
+
+        Returns
+        -------
+        pd.Series
+            A boolean Series indicating whether each GEOID starts with '06'.
+        """
+        return geoid_series.str.startswith(CA_FIPS)
+    return (is_ca_geoid,)
 
 
 if __name__ == "__main__":
