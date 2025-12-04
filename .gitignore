@@ -212,3 +212,6 @@ __marimo__/
 # Generated output files
 outputs/results.csv
 outputs/precincts.*
+
+# Ignore debug outputs
+debug/*.csv
