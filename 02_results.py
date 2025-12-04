@@ -142,7 +142,7 @@ def _(pd):
         csv.replace("****", 0, inplace=True)
 
         # and then add in a calculated turnout column
-        csv["turnout"] = (csv["Total Votes"] / csv["Registered \nVoters"]) * 100
+        csv["turnout"] = round((csv["Total Votes"] / csv["Registered \nVoters"]) * 100, 1)
 
         # make the index a column so we can drop it
         csv.reset_index(inplace=True)
