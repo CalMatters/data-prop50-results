@@ -58,7 +58,7 @@ def _(pd):
             inplace=True,
         )
         csv["county"] = "Butte"
-        csv["turnout"] = (csv["Total"] / csv["Registered Voters"]) * 100
+        csv["turnout"] = round((csv["Total"] / csv["Registered Voters"]) * 100, 1)
         csv.drop(
             columns=[
                 "Live",
