@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.1"
+__generated_with = "0.18.2"
 app = marimo.App(width="medium")
 
 
@@ -155,10 +155,34 @@ def _(
         ["county", "precinct_id", "precinct_name", "geometry"]
     ]
 
+    check_duplicates(combined_reordered)
+
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
     print(f"Saved combined precincts to {COMBINED_OUTPUT_PATH}")
     return (combined_reordered,)
+
+
+@app.function
+def check_duplicates(df):
+    """
+    Check for duplicate entries in the DataFrame based on ["county", "precinct_id"].
+    If duplicates are found, print a descriptive message listing the counties with duplicate IDs.
+    """
+    # Identify duplicate rows based on "county" and "precinct_id"
+    duplicates = df[
+        df.duplicated(subset=["county", "precinct_id"], keep=False)
+    ]
+
+    if not duplicates.empty:
+        # Get the list of counties that have duplicate precinct IDs
+        duplicate_counties = duplicates["county"].unique().tolist()
+        print(
+            f"Duplicate precinct IDs found in the following counties: {', '.join(sorted(duplicate_counties))}"
+        )
+        return True
+    else:
+        return False
 
 
 @app.function
