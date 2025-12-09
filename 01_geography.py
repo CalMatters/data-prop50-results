@@ -180,7 +180,7 @@ def check_duplicates(df):
         print(
             f"Duplicate precinct IDs found in the following counties: {', '.join(sorted(duplicate_counties))}"
         )
-        return True
+        return duplicates
     else:
         return False
 
