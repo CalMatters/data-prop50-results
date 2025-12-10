@@ -982,7 +982,9 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## san_Benito
+    ## San Benito
+
+    A dissolve operation is executed to join all the records with `precinct_id` `0`. These are associated with unpopulated areas such as water treatment plant, farmland, parks, open fields. [Read more issue #32](https://github.com/CalMatters/data-prop50-results/issues/32)
     """)
     return
 
@@ -1010,6 +1012,22 @@ def _(PROJECTED_CRS, gpd):
             "Shape__L_1",
         ],
     )
+
+    assert len(check_duplicates(san_benito)) > 0, (
+        "Expected duplicates but found none"
+    )
+    unpopulated_precinct_count = (san_benito["precinct_id"] == "0").sum()
+    predissolve_precinct_count = len(san_benito)
+    san_benito = san_benito.dissolve("precinct_id", as_index=False)
+    expected_count = predissolve_precinct_count - (unpopulated_precinct_count - 1)
+    actual_count = len(san_benito)
+    assert actual_count == expected_count, (
+        f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
+    )
+    assert check_duplicates(san_benito) is None, (
+        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
+    )
+    print("San Benito duplicate resolved using dissolve operation")
 
     san_benito.head()
     return (san_benito,)
