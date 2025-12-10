@@ -155,7 +155,7 @@ def _(
         ["county", "precinct_id", "precinct_name", "geometry"]
     ]
 
-    check_duplicates(combined_reordered)
+    dupes = check_duplicates(combined_reordered)
 
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
@@ -174,7 +174,7 @@ def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
         columns_to_check (list): List of column names to identify duplicates. Defaults to ["county", "precinct_id"].
 
     Returns:
-        pd.DataFrame or bool: DataFrame of duplicate rows if found (sorted if possible), otherwise False.
+        pd.DataFrame or bool: DataFrame of duplicate rows if found (sorted if possible), otherwise None.
     """
     # Identify duplicate rows based on "county" and "precinct_id"
     duplicates = df[df.duplicated(subset=columns_to_check, keep=False)]
@@ -194,7 +194,7 @@ def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
             )
             return duplicates  # Return unsorted if sorting fails
     else:
-        return False
+        return None
 
 
 @app.function
