@@ -29,10 +29,12 @@ def _():
 
 
 @app.cell
-def _(butte, contra_costa, imperial, pd):
-    combined = pd.concat([butte, contra_costa, imperial]).reset_index(drop=True)
+def _(butte, contra_costa, el_dorado, glenn, imperial, pd):
+    combined = pd.concat(
+        [butte, contra_costa, el_dorado, glenn, imperial]
+    ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
-    combined.head()
+    combined.head(None)
     return
 
 
@@ -50,17 +52,17 @@ def _(pd):
         csv = pd.read_excel(
             "inputs/counties/butte/detail.xlsx", sheet_name="2", skiprows=2
         )
-        csv.rename(
+        csv = csv.rename(
             columns={
                 "Precinct": "precinct_id",
                 "Total Votes": "no_votes",
                 "Total Votes.1": "yes_votes",
-            },
-            inplace=True,
+                "Total": "total_votes"
+            }
         )
         csv["county"] = "Butte"
-        csv["turnout"] = round((csv["Total"] / csv["Registered Voters"]) * 100, 1)
-        csv.drop(
+        csv["turnout"] = round((csv["total_votes"] / csv["Registered Voters"]) * 100, 1)
+        csv = csv.drop(
             columns=[
                 "Live",
                 "Vote By Mail",
@@ -69,15 +71,13 @@ def _(pd):
                 "Live.1",
                 "Vote By Mail.1",
                 "Provisional.1",
-                "Total",
             ],
-            inplace=True,
         )
         return csv
 
 
     butte = butte_df()
-    butte.head()
+    butte.head(None)
     return (butte,)
 
 
@@ -102,7 +102,7 @@ def _(pd):
         csv["county"] = "Contra Costa"
 
         # drop some columns we don't need
-        csv.drop(
+        csv = csv.drop(
             columns=[
                 "Times Cast",
                 "Unnamed: 3",
@@ -112,54 +112,60 @@ def _(pd):
                 "Unnamed: 10",
                 "Unnamed: 11",
                 "Unnamed: 12",
-            ],
-            inplace=True,
+            ]
         )
 
         # there are four rows per precinct so let's drop two of them
         # "In-person" and "Vote By Mail"
-        csv.drop(csv[csv["Precinct"] == "In-Person"].index, inplace=True)
-        csv.drop(csv[csv["Precinct"] == "Vote By Mail"].index, inplace=True)
+        csv = csv[csv["Precinct"] != "In-Person"]
+        csv = csv[csv["Precinct"] != "Vote By Mail"]
 
         # get rid of the first two rows
-        csv.drop([0, 1], inplace=True)
+        csv = csv.drop([0, 1])
 
         # backfill the values from the rows where "Precinct" is "Total" to the rows
         # that have proper precinct IDs
-        csv.bfill(limit=1, inplace=True)
+        csv = csv.bfill(limit=1)
 
-        # and now get rid of that extra row for Total
-        csv.drop(csv[csv["Precinct"] == "Total"].index, inplace=True)
-        csv.rename(
+        # and now get rid of the total per precinct row
+        csv = csv[csv["Precinct"] != "Total"]
+
+        # remove county total rows
+        csv = csv[csv["Precinct"] != "Contra Costa County - Total"]
+        csv = csv[csv["Precinct"] != "Cumulative"]
+        csv = csv[csv["Precinct"] != "Cumulative - Total"]
+        csv = csv[csv["Precinct"] != "County - Total"]
+    
+        csv = csv.rename(
             columns={
                 "Precinct": "precinct_id",
                 "Yes\n ": "yes_votes",
                 "No\n ": "no_votes",
-            },
-            inplace=True,
+                "Total Votes": "total_votes"
+            }
         )
 
         # replaced masked values with 0 for turnout calculations
-        csv.replace("****", 0, inplace=True)
+        csv = csv.replace("****", 0)
 
         # and then add in a calculated turnout column
         csv["turnout"] = round(
-            (csv["Total Votes"] / csv["Registered \nVoters"]) * 100, 1
+            (csv["total_votes"] / csv["Registered \nVoters"]) * 100, 1
         )
 
         # make the index a column so we can drop it
-        csv.reset_index(inplace=True)
+        csv = csv.reset_index()
 
         # get rid of remaining columns
-        csv.drop(
-            columns=["index", "Registered \nVoters", "Total Votes"], inplace=True
+        csv = csv.drop(
+            columns=["index", "Registered \nVoters"]
         )
 
         return csv
 
 
     contra_costa = contra_costa_df()
-    contra_costa.head(20)
+    contra_costa.head(None)
     return (contra_costa,)
 
 
@@ -173,51 +179,137 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
-    el_dorado = None
-    with pdfplumber.open(
-        "inputs/counties/el_dorado/SOS - EDC - StatementOfVotestCastRPT-Precinct.pdf"
-    ) as pdf:
-        extracted_pages = []
-        prop_50_pages = pdf.pages[26:47]
+    def el_dorado_df():
+        el_dorado = None
+        with pdfplumber.open(
+            "inputs/counties/el_dorado/SOS - EDC - StatementOfVotestCastRPT-Precinct.pdf"
+        ) as pdf:
+            extracted_pages = []
+            prop_50_pages = pdf.pages[26:47]
 
-        for page in prop_50_pages:
-            cropped = page.crop((396, 50, 792, 612))
-            table = cropped.extract_table()
-            df = pd.DataFrame(table[1:])
-            extracted_pages.append(df)
+            for page in prop_50_pages:
+                cropped = page.crop((396, 50, 792, 612))
+                table = cropped.extract_table()
+                df = pd.DataFrame(table[1:])
+                extracted_pages.append(df)
 
-        el_dorado = pd.concat(extracted_pages)
+            el_dorado = pd.concat(extracted_pages)
 
-    # rename columns
-    el_dorado.columns = ["precinct_id", "yes_votes", "Yes_Blank", "no_votes", "No_Blank", "total_votes"]
+        # rename columns
+        el_dorado.columns = [
+            "precinct_id",
+            "yes_votes",
+            "Yes_Blank",
+            "no_votes",
+            "No_Blank",
+            "total_votes",
+        ]
 
-    # drop some empty columns that were part of the spreadsheet structure
-    el_dorado.drop(columns=["Yes_Blank", "No_Blank"], inplace=True)
+        # drop some empty columns that were part of the spreadsheet structure
+        el_dorado.drop(columns=["Yes_Blank", "No_Blank"], inplace=True)
 
-    # get rid of four values associated with each precinct
-    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Mail'].copy()
-    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Vote Center'].copy()
-    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Election Day'].copy()
-    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Provisional'].copy()
+        # get rid of total count rows
+        el_dorado = el_dorado[el_dorado["precinct_id"] != "Electionwide - Total"].copy()
+        el_dorado = el_dorado[el_dorado["precinct_id"] != "Cumulative"].copy()
+    
+        # get rid of four values associated with each precinct
+        el_dorado = el_dorado[el_dorado["precinct_id"] != "Mail"].copy()
+        el_dorado = el_dorado[el_dorado["precinct_id"] != "Vote Center"].copy()
+        el_dorado = el_dorado[el_dorado["precinct_id"] != "Election Day"].copy()
+        el_dorado = el_dorado[el_dorado["precinct_id"] != "Provisional"].copy()
 
-    # some values are white space so replace that with None
-    el_dorado = el_dorado.replace(r'^\s*$', None, regex=True)
+        # some values are white space so replace that with None
+        el_dorado = el_dorado.replace(r"^\s*$", None, regex=True)
 
-    # backfill missing values
-    el_dorado = el_dorado.bfill(limit = 1)
+        # backfill missing values
+        el_dorado = el_dorado.bfill(limit=1)
 
-    # and then drop the "Total" value rows that were used to backfill
-    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Total'].copy()
+        # and then drop the "Total" value rows that were used to backfill
+        el_dorado = el_dorado[el_dorado["precinct_id"] != "Total"].copy()
 
-    # don't forget to add the county
-    el_dorado['county'] = 'El Dorado'
+        # don't forget to add the county
+        el_dorado["county"] = "El Dorado"
 
-    # and get rid of the index column
-    el_dorado = el_dorado.reset_index()
-    el_dorado = el_dorado.drop(columns=['index'])
+        # and get rid of the index column
+        el_dorado = el_dorado.reset_index()
+        el_dorado = el_dorado.drop(columns=["index"])
+        return el_dorado
 
-    el_dorado.head()
+
+    el_dorado = el_dorado_df()
+    el_dorado.head(None)
+    return (el_dorado,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Glenn
+    """)
     return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def glenn_df():
+        glenn = None
+        with pdfplumber.open(
+            "inputs/counties/glenn/Statement of Votes 2025.pdf"
+        ) as pdf:
+            extracted_pages = []
+            prop_50_pages = pdf.pages[13:41][::2]
+
+            for page in prop_50_pages:
+                cropped = page.crop((396, 50, 792, 612))
+                table = cropped.extract_table()
+                df = pd.DataFrame(table[1:])
+                extracted_pages.append(df)
+
+            glenn = pd.concat(extracted_pages)
+
+        # rename columns
+        glenn.columns = [
+            "precinct_id",
+            "yes_votes",
+            "Yes_Blank",
+            "no_votes",
+            "No_Blank",
+            "total_votes",
+        ]
+
+        # drop some empty columns that were part of the spreadsheet structure
+        glenn.drop(columns=["Yes_Blank", "No_Blank"], inplace=True)
+
+        # get rid of total rows
+        glenn = glenn[glenn["precinct_id"] != "Electionwide - Total"].copy()
+    
+        # get rid of four values associated with each precinct
+        glenn = glenn[glenn["precinct_id"] != "Electionwide"].copy()
+        glenn = glenn[glenn["precinct_id"] != "Vote by Mail"].copy()
+        glenn = glenn[glenn["precinct_id"] != "Election Day"].copy()
+        # glenn = glenn[glenn['precinct_id'] != 'Provisional'].copy()
+
+        # some values are white space so replace that with None
+        glenn = glenn.replace(r"^\s*$", None, regex=True)
+
+        # backfill missing values
+        glenn = glenn.bfill(limit=1)
+
+        # and then drop the "Total" value rows that were used to backfill
+        glenn = glenn[glenn["precinct_id"] != "Total"].copy()
+
+        # don't forget to add the county
+        glenn["county"] = "Glenn"
+
+        # and get rid of the index column
+        glenn = glenn.reset_index()
+        glenn = glenn.drop(columns=["index"])
+        return glenn
+
+
+    glenn = glenn_df()
+    glenn.head(None)
+    return (glenn,)
 
 
 @app.cell(hide_code=True)
@@ -261,14 +353,20 @@ def _(pd):
         )
 
         prop_50_altered["county"] = "Imperial"
+        prop_50_altered['total_votes'] = prop_50_altered['yes_votes'] + prop_50_altered['no_votes']
 
         return prop_50_altered
 
 
     imperial = imperial_df()
 
-    imperial.head()
+    imperial.head(None)
     return (imperial,)
+
+
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":
