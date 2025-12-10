@@ -168,6 +168,7 @@ def check_duplicates(df):
     """
     Check for duplicate entries in the DataFrame based on ["county", "precinct_id"].
     If duplicates are found, print a descriptive message listing the counties with duplicate IDs.
+    Returns the duplicate rows sorted by precinct_id if possible; otherwise, returns unsorted duplicates.
     """
     # Identify duplicate rows based on "county" and "precinct_id"
     duplicates = df[
@@ -180,7 +181,11 @@ def check_duplicates(df):
         print(
             f"Duplicate precinct IDs found in the following counties: {', '.join(sorted(duplicate_counties))}"
         )
-        return duplicates.sort_values("precinct_id")
+        # Attempt to sort by precinct_id, but handle unsortable cases (e.g., mixed str/float)
+        try:
+            return duplicates.sort_values("precinct_id")
+        except TypeError:
+            return duplicates  # Return unsorted if sorting fails
     else:
         return False
 
