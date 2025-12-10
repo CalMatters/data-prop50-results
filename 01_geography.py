@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.1"
+__generated_with = "0.18.2"
 app = marimo.App(width="medium")
 
 
@@ -155,10 +155,46 @@ def _(
         ["county", "precinct_id", "precinct_name", "geometry"]
     ]
 
+    dupes = check_duplicates(combined_reordered)
+
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
     print(f"Saved combined precincts to {COMBINED_OUTPUT_PATH}")
     return (combined_reordered,)
+
+
+@app.function
+def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
+    """
+    Check for duplicate entries in the DataFrame based on specified columns.
+    If duplicates are found, print a descriptive message listing the counties with duplicate IDs.
+    Returns the duplicate rows sorted by the specified columns if possible; otherwise, returns unsorted duplicates.
+    Parameters:
+        df (pd.DataFrame): The input DataFrame to check for duplicates.
+        columns_to_check (list): List of column names to identify duplicates. Defaults to ["county", "precinct_id"].
+
+    Returns:
+        pd.DataFrame or bool: DataFrame of duplicate rows if found (sorted if possible), otherwise None.
+    """
+    # Identify duplicate rows based on "county" and "precinct_id"
+    duplicates = df[df.duplicated(subset=columns_to_check, keep=False)]
+
+    if not duplicates.empty:
+        # Get the list of counties that have duplicate precinct IDs
+        duplicate_counties = duplicates["county"].unique().tolist()
+        print(
+            f"Duplicate precinct IDs found in the following counties: {', '.join(sorted(duplicate_counties))}"
+        )
+        # Attempt to sort by precinct_id, but handle unsortable cases (e.g., mixed str/float)
+        try:
+            return duplicates.sort_values(columns_to_check)
+        except TypeError:
+            print(
+                "Sorting by (county, precinct_id) threw a type error, returning unsorted dupe data"
+            )
+            return duplicates  # Return unsorted if sorting fails
+    else:
+        return None
 
 
 @app.function
