@@ -1429,6 +1429,8 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## Sutter
+
+    Sutter requires a dissolve operation to resolve an issue with a data artifact. [Read more issue #35](https://github.com/CalMatters/data-prop50-results/issues/35)
     """)
     return
 
@@ -1452,6 +1454,18 @@ def _(PROJECTED_CRS, gpd):
             "Shape__Len",
         ],
     )
+
+    assert len(check_duplicates(sutter)) > 1, "Expected duplicates but found none"
+    predissolve_precinct_count = len(sutter)
+    sutter = sutter.dissolve(by="precinct_id", as_index=False)
+    assert (predissolve_precinct_count - 1) == len(sutter), (
+        f"Expected {predissolve_precinct_count - 1} precincts after dissolve, but got {len(sutter)}"
+    )
+    assert check_duplicates(sutter) is None, (
+        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
+    )
+    print("Sutter duplicate resolved using dissolve operation")
+
 
     sutter.head()
     return (sutter,)
