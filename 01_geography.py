@@ -183,8 +183,11 @@ def check_duplicates(df):
         )
         # Attempt to sort by precinct_id, but handle unsortable cases (e.g., mixed str/float)
         try:
-            return duplicates.sort_values("precinct_id")
+            return duplicates.sort_values(["county", "precinct_id"])
         except TypeError:
+            print(
+                "Sorting by (county, precinct_id) threw a type error, returning unsorted dupe data"
+            )
             return duplicates  # Return unsorted if sorting fails
     else:
         return False
