@@ -29,9 +29,9 @@ def _():
 
 
 @app.cell
-def _(butte, calaveras, contra_costa, el_dorado, glenn, imperial, pd):
+def _(butte, calaveras, colusa, contra_costa, el_dorado, glenn, imperial, pd):
     combined = pd.concat(
-        [butte, calaveras, contra_costa, el_dorado, glenn, imperial]
+        [butte, calaveras, colusa, contra_costa, el_dorado, glenn, imperial]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
     combined.head(None)
@@ -124,6 +124,83 @@ def _(pd, pdfplumber):
     calaveras = calaveras_df()
     calaveras.head(None)
     return (calaveras,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Colusa
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def colusa_df():
+        colusa = None
+        with pdfplumber.open("inputs/counties/colusa/precinct SOV.pdf") as pdf:
+            extracted_pages = []
+            prop_50_pages = pdf.pages[4:5]
+
+            for page in prop_50_pages:
+                cropped = page.crop((396, 50, 792, 612))
+                table = cropped.extract_table()
+                df = pd.DataFrame(table[1:])
+                extracted_pages.append(df)
+
+            colusa = pd.concat(extracted_pages)
+
+        # rename columns
+        colusa.columns = [
+            "precinct_id",
+            "yes_votes",
+            "Yes_Blank",
+            "no_votes",
+            "No_Blank",
+        ]
+
+        # drop some empty columns that were part of the spreadsheet structure
+        colusa.drop(columns=["Yes_Blank", "No_Blank"], inplace=True)
+
+        # get rid of total rows
+        colusa = colusa[colusa["precinct_id"] != "Electionwide - Total"].copy()
+
+        # get rid of four values associated with each precinct
+        colusa = colusa[colusa["precinct_id"] != "Electionwide"].copy()
+        colusa = colusa[colusa["precinct_id"] != "Vote by Mail"].copy()
+        colusa = colusa[colusa["precinct_id"] != "Election Day"].copy()
+
+        # get rid of the total value row
+        colusa = colusa[colusa["precinct_id"] != "California - Total"].copy()
+
+        # some values are white space so replace that with None
+        colusa = colusa.replace(r"^\s*$", None, regex=True)
+
+        # backfill missing values
+        colusa = colusa.bfill(limit=1)
+
+        # and then drop the "Total" value rows that were used to backfill
+        colusa = colusa[colusa["precinct_id"] != "Total"].copy()
+
+        # don't forget to add the county
+        colusa["county"] = "Colusa"
+
+        # make sure vote columns are numbers
+        colusa = colusa.astype({"yes_votes": int, "no_votes": int})
+
+        # add total_votes column
+        colusa["total_votes"] = colusa["yes_votes"] + colusa["no_votes"]
+
+        # and get rid of the index column
+        colusa = colusa.reset_index()
+        colusa = colusa.drop(columns=["index"])
+
+        return colusa
+
+
+    colusa = colusa_df()
+    colusa.head(None)
+    return (colusa,)
 
 
 @app.cell(hide_code=True)
