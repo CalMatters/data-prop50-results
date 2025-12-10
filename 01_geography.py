@@ -1499,7 +1499,7 @@ def _(PROJECTED_CRS, gpd):
     tulare = alter_df(
         tulare,
         "Tulare",
-        {"VotingPctID": "precinct_id"},
+        {"PrecNum1": "precinct_id"},
         [
             "OBJECTID_12",
             "OBJECTID_1",
@@ -1519,7 +1519,7 @@ def _(PROJECTED_CRS, gpd):
             "Pollsite",
             "PollingSiteID",
             "BallotTypeList",
-            "PrecNum1",
+            "VotingPctID",
             "Precincts_UPDATE_LOCAL_VotingPc",
             "Shape__Area",
             "Shape__Length",
