@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.1"
+__generated_with = "0.18.2"
 app = marimo.App(width="medium")
 
 
@@ -24,7 +24,8 @@ def _(mo):
 def _():
     import marimo as mo
     import pandas as pd
-    return mo, pd
+    import pdfplumber
+    return mo, pd, pdfplumber
 
 
 @app.cell
@@ -142,7 +143,9 @@ def _(pd):
         csv.replace("****", 0, inplace=True)
 
         # and then add in a calculated turnout column
-        csv["turnout"] = round((csv["Total Votes"] / csv["Registered \nVoters"]) * 100, 1)
+        csv["turnout"] = round(
+            (csv["Total Votes"] / csv["Registered \nVoters"]) * 100, 1
+        )
 
         # make the index a column so we can drop it
         csv.reset_index(inplace=True)
@@ -158,6 +161,63 @@ def _(pd):
     contra_costa = contra_costa_df()
     contra_costa.head(20)
     return (contra_costa,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## El Dorado
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    el_dorado = None
+    with pdfplumber.open(
+        "inputs/counties/el_dorado/SOS - EDC - StatementOfVotestCastRPT-Precinct.pdf"
+    ) as pdf:
+        extracted_pages = []
+        prop_50_pages = pdf.pages[26:47]
+
+        for page in prop_50_pages:
+            cropped = page.crop((396, 50, 792, 612))
+            table = cropped.extract_table()
+            df = pd.DataFrame(table[1:])
+            extracted_pages.append(df)
+
+        el_dorado = pd.concat(extracted_pages)
+
+    # rename columns
+    el_dorado.columns = ["precinct_id", "yes_votes", "Yes_Blank", "no_votes", "No_Blank", "total_votes"]
+
+    # drop some empty columns that were part of the spreadsheet structure
+    el_dorado.drop(columns=["Yes_Blank", "No_Blank"], inplace=True)
+
+    # get rid of four values associated with each precinct
+    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Mail'].copy()
+    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Vote Center'].copy()
+    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Election Day'].copy()
+    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Provisional'].copy()
+
+    # some values are white space so replace that with None
+    el_dorado = el_dorado.replace(r'^\s*$', None, regex=True)
+
+    # backfill missing values
+    el_dorado = el_dorado.bfill(limit = 1)
+
+    # and then drop the "Total" value rows that were used to backfill
+    el_dorado = el_dorado[el_dorado['precinct_id'] != 'Total'].copy()
+
+    # don't forget to add the county
+    el_dorado['county'] = 'El Dorado'
+
+    # and get rid of the index column
+    el_dorado = el_dorado.reset_index()
+    el_dorado = el_dorado.drop(columns=['index'])
+
+    el_dorado.head()
+    return
 
 
 @app.cell(hide_code=True)
