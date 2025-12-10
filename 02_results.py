@@ -29,9 +29,19 @@ def _():
 
 
 @app.cell
-def _(butte, calaveras, colusa, contra_costa, el_dorado, glenn, imperial, pd):
+def _(
+    butte,
+    calaveras,
+    colusa,
+    contra_costa,
+    el_dorado,
+    glenn,
+    imperial,
+    pd,
+    sutter,
+):
     combined = pd.concat(
-        [butte, calaveras, colusa, contra_costa, el_dorado, glenn, imperial]
+        [butte, calaveras, colusa, contra_costa, el_dorado, glenn, imperial, sutter]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
     combined.head(None)
@@ -488,9 +498,61 @@ def _(pd):
     return (imperial,)
 
 
-@app.cell
-def _():
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Sutter
+    """)
     return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def sutter_df():
+        sutter = None
+        with pdfplumber.open(
+            "inputs/counties/sutter/Statement Of Votes Cast  Countywide.pdf"
+        ) as pdf:
+            extracted = None
+            prop_50_page = pdf.pages[2]
+            cropped = prop_50_page.crop((396, 50, 792, 612))
+            table = cropped.extract_table()
+            sutter = pd.DataFrame(table)
+
+        # # rename columns
+        sutter.columns = [
+            "precinct_id",
+            "yes_votes",
+            "Yes_%",
+            "no_votes",
+            "No_%",
+            "total_votes",
+        ]
+
+        # # drop some empty columns that were part of the spreadsheet structure
+        sutter.drop(columns=["Yes_%", "No_%"], inplace=True)
+
+        # get rid of total rows
+        sutter = sutter[sutter["precinct_id"] != "Precinct"].copy()
+        sutter = sutter[sutter["precinct_id"] != "County"].copy()
+        sutter = sutter[sutter["precinct_id"] != "Electionwide"].copy()
+        sutter = sutter[sutter["precinct_id"] != "Electionwide - Total"].copy()
+        sutter = sutter[sutter["precinct_id"] != "Cumulative"].copy()
+        sutter = sutter[sutter["precinct_id"] != "Cumulative - Total"].copy()
+        sutter = sutter[sutter["precinct_id"] != "County - Total"].copy()
+
+        # don't forget to add the county
+        sutter["county"] = "Sutter"
+
+        # and get rid of the index column
+        sutter = sutter.reset_index()
+        sutter = sutter.drop(columns=["index"])
+        return sutter
+
+
+    sutter = sutter_df()
+    sutter.head(None)
+    return (sutter,)
 
 
 if __name__ == "__main__":
