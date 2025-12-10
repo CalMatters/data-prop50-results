@@ -29,9 +29,9 @@ def _():
 
 
 @app.cell
-def _(butte, contra_costa, el_dorado, glenn, imperial, pd):
+def _(butte, calaveras, contra_costa, el_dorado, glenn, imperial, pd):
     combined = pd.concat(
-        [butte, contra_costa, el_dorado, glenn, imperial]
+        [butte, calaveras, contra_costa, el_dorado, glenn, imperial]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
     combined.head(None)
@@ -57,11 +57,13 @@ def _(pd):
                 "Precinct": "precinct_id",
                 "Total Votes": "no_votes",
                 "Total Votes.1": "yes_votes",
-                "Total": "total_votes"
+                "Total": "total_votes",
             }
         )
         csv["county"] = "Butte"
-        csv["turnout"] = round((csv["total_votes"] / csv["Registered Voters"]) * 100, 1)
+        csv["turnout"] = round(
+            (csv["total_votes"] / csv["Registered Voters"]) * 100, 1
+        )
         csv = csv.drop(
             columns=[
                 "Live",
@@ -79,6 +81,49 @@ def _(pd):
     butte = butte_df()
     butte.head(None)
     return (butte,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Calaveras
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def calaveras_df():
+        all = []
+        with pdfplumber.open(
+            "inputs/counties/calaveras/Official Precinct Report-12-1-2025 01-27-49 PM.pdf"
+        ) as pdf:
+            for page in pdf.pages:
+                d = {}
+                d["precinct_id"] = page.crop((0, 135, 60, 160)).extract_text()
+                d["yes_votes"] = int(
+                    page.crop((532, 200, 556, 215)).extract_text().replace(",", "")
+                )
+                d["no_votes"] = int(
+                    page.crop((532, 220, 556, 235)).extract_text().replace(",", "")
+                )
+                d["registered_voters"] = int(
+                    page.crop((445, 140, 470, 155))
+                    .extract_text()
+                    .replace(",", "")
+                    .replace("of", "")
+                    .strip()
+                )
+                all.append(d)
+        df = pd.DataFrame(all)
+        df["total_votes"] = df["yes_votes"] + df["no_votes"]
+        df["county"] = "Calaveras"
+        return df
+
+
+    calaveras = calaveras_df()
+    calaveras.head(None)
+    return (calaveras,)
 
 
 @app.cell(hide_code=True)
@@ -135,13 +180,13 @@ def _(pd):
         csv = csv[csv["Precinct"] != "Cumulative"]
         csv = csv[csv["Precinct"] != "Cumulative - Total"]
         csv = csv[csv["Precinct"] != "County - Total"]
-    
+
         csv = csv.rename(
             columns={
                 "Precinct": "precinct_id",
                 "Yes\n ": "yes_votes",
                 "No\n ": "no_votes",
-                "Total Votes": "total_votes"
+                "Total Votes": "total_votes",
             }
         )
 
@@ -157,9 +202,7 @@ def _(pd):
         csv = csv.reset_index()
 
         # get rid of remaining columns
-        csv = csv.drop(
-            columns=["index", "Registered \nVoters"]
-        )
+        csv = csv.drop(columns=["index", "Registered \nVoters"])
 
         return csv
 
@@ -209,9 +252,11 @@ def _(pd, pdfplumber):
         el_dorado.drop(columns=["Yes_Blank", "No_Blank"], inplace=True)
 
         # get rid of total count rows
-        el_dorado = el_dorado[el_dorado["precinct_id"] != "Electionwide - Total"].copy()
+        el_dorado = el_dorado[
+            el_dorado["precinct_id"] != "Electionwide - Total"
+        ].copy()
         el_dorado = el_dorado[el_dorado["precinct_id"] != "Cumulative"].copy()
-    
+
         # get rid of four values associated with each precinct
         el_dorado = el_dorado[el_dorado["precinct_id"] != "Mail"].copy()
         el_dorado = el_dorado[el_dorado["precinct_id"] != "Vote Center"].copy()
@@ -282,7 +327,7 @@ def _(pd, pdfplumber):
 
         # get rid of total rows
         glenn = glenn[glenn["precinct_id"] != "Electionwide - Total"].copy()
-    
+
         # get rid of four values associated with each precinct
         glenn = glenn[glenn["precinct_id"] != "Electionwide"].copy()
         glenn = glenn[glenn["precinct_id"] != "Vote by Mail"].copy()
@@ -353,7 +398,9 @@ def _(pd):
         )
 
         prop_50_altered["county"] = "Imperial"
-        prop_50_altered['total_votes'] = prop_50_altered['yes_votes'] + prop_50_altered['no_votes']
+        prop_50_altered["total_votes"] = (
+            prop_50_altered["yes_votes"] + prop_50_altered["no_votes"]
+        )
 
         return prop_50_altered
 
