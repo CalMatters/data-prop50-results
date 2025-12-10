@@ -164,16 +164,20 @@ def _(
 
 
 @app.function
-def check_duplicates(df):
+def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
     """
-    Check for duplicate entries in the DataFrame based on ["county", "precinct_id"].
+    Check for duplicate entries in the DataFrame based on specified columns.
     If duplicates are found, print a descriptive message listing the counties with duplicate IDs.
-    Returns the duplicate rows sorted by precinct_id if possible; otherwise, returns unsorted duplicates.
+    Returns the duplicate rows sorted by the specified columns if possible; otherwise, returns unsorted duplicates.
+    Parameters:
+        df (pd.DataFrame): The input DataFrame to check for duplicates.
+        columns_to_check (list): List of column names to identify duplicates. Defaults to ["county", "precinct_id"].
+
+    Returns:
+        pd.DataFrame or bool: DataFrame of duplicate rows if found (sorted if possible), otherwise False.
     """
     # Identify duplicate rows based on "county" and "precinct_id"
-    duplicates = df[
-        df.duplicated(subset=["county", "precinct_id"], keep=False)
-    ]
+    duplicates = df[df.duplicated(subset=columns_to_check, keep=False)]
 
     if not duplicates.empty:
         # Get the list of counties that have duplicate precinct IDs
@@ -183,7 +187,7 @@ def check_duplicates(df):
         )
         # Attempt to sort by precinct_id, but handle unsortable cases (e.g., mixed str/float)
         try:
-            return duplicates.sort_values(["county", "precinct_id"])
+            return duplicates.sort_values(columns_to_check)
         except TypeError:
             print(
                 "Sorting by (county, precinct_id) threw a type error, returning unsorted dupe data"
