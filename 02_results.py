@@ -24,7 +24,6 @@ def _(mo):
 def _():
     import marimo as mo
     import pandas as pd
-
     return mo, pd
 
 
@@ -74,6 +73,7 @@ def _(pd):
             inplace=True,
         )
         return csv
+
 
     butte = butte_df()
     butte.head()
@@ -156,9 +156,12 @@ def _(pd):
         csv.reset_index(inplace=True)
 
         # get rid of remaining columns
-        csv.drop(columns=["index", "Registered \nVoters", "Total Votes"], inplace=True)
+        csv.drop(
+            columns=["index", "Registered \nVoters", "Total Votes"], inplace=True
+        )
 
         return csv
+
 
     contra_costa = contra_costa_df()
     contra_costa.head(20)
@@ -198,14 +201,17 @@ def _(pd):
             }
         )
 
-        prop_50_altered["precinct_id"] = prop_50_altered["precinct_id"].str.replace(
-            "MB", ""
+        prop_50_altered["precinct_id"] = prop_50_altered[
+            "precinct_id"
+        ].str.replace("MB", "")
+        prop_50_altered["turnout"] = prop_50_altered["turnout"].str.replace(
+            "%", ""
         )
-        prop_50_altered["turnout"] = prop_50_altered["turnout"].str.replace("%", "")
 
         prop_50_altered["county"] = "Imperial"
 
         return prop_50_altered
+
 
     imperial = imperial_df()
 
