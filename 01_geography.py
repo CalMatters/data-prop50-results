@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.2"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -310,7 +310,7 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         butte,
         "Butte",
-        {"id": "precinct_id", "Name": "precinct_name"},
+        {"Name": "precinct_id", "id": "precinct_name"},
         [
             "id",
             "Name",
