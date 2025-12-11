@@ -63,6 +63,72 @@ def _(
         )
 
     precincts_results_merge
+    return (precincts_results_merge,)
+
+
+@app.cell
+def _(
+    DEBUG_DIR,
+    export_if_not_empty,
+    get_current_timestamp,
+    pd,
+    precincts_results_merge,
+):
+    def audit_merged_precinct_data(merged_gdf, debug_dir=DEBUG_DIR):
+        """
+        Audit an outer-merged precincts-results GeoDataFrame.
+        Identifies missing entries by county and exports mismatches for inspection.
+        """
+
+        # Reusable function to count entries by county given a condition
+        def count_by_county(condition):
+            return merged_gdf.loc[condition, "county"].value_counts()
+
+        timestamp = get_current_timestamp()
+
+        # Identify missing entries (from either left or right)
+        is_left_missing = merged_gdf["geometry"].isna()
+        is_right_missing = merged_gdf["total_votes"].isna()
+
+        left_only = merged_gdf[is_left_missing]  # in results, not in precincts GIS
+        right_only = merged_gdf[is_right_missing]  # in GIS, not in results
+
+        # Get counts for all relevant categories
+        left_missing_counts = count_by_county(is_left_missing)
+        right_missing_counts = count_by_county(is_right_missing)
+        gis_valid_counts = count_by_county(merged_gdf["geometry"].notna())
+        results_valid_counts = count_by_county(merged_gdf["total_votes"].notna())
+
+        # Build audit summary using all counties present
+        all_counties = sorted(merged_gdf["county"].unique())
+        audit_summary = {
+            county: {
+                "gis_entries": gis_valid_counts.get(county, 0),
+                "results_entries": results_valid_counts.get(county, 0),
+                "missing_in_gis": left_missing_counts.get(county, 0),
+                "missing_in_results": right_missing_counts.get(county, 0),
+            }
+            for county in all_counties
+        }
+
+        # Convert to DataFrame
+        audit_df = pd.DataFrame.from_dict(audit_summary, orient="index")
+
+        # Export for inspection
+        export_if_not_empty(left_only, "missing_in_gis")
+        export_if_not_empty(right_only, "missing_in_results")
+        audit_filepath = f"{debug_dir}/audit_summary_{timestamp}.csv"
+        audit_df.to_csv(audit_filepath, index=True)
+
+        print(
+            f"Audit complete. {len(left_only)} entries missing in GIS, {len(right_only)} missing in results. See exported audit debug data in `debug/` directory."
+        )
+        return audit_df
+
+
+    # Run audit
+    audit_results = audit_merged_precinct_data(precincts_results_merge, DEBUG_DIR)
+    audit_results
     return
 
 
@@ -154,13 +220,13 @@ def _(mo):
 
 
 @app.cell
-def _(DEBUG_DIR, datetime):
+def _(DEBUG_DIR, get_current_timestamp):
     def check_and_export_duplicates(
         df, df_name, merge_columns, debug_dir=DEBUG_DIR
     ):
         """Check for duplicates in a DataFrame and export them if found."""
         dup = df.duplicated(subset=merge_columns, keep=False)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = get_current_timestamp()
         if dup.any():
             duplicates_df = df[dup].sort_values(by=merge_columns)
             filename = f"{debug_dir}/duplicates_{df_name}_{timestamp}.csv"
@@ -170,6 +236,26 @@ def _(DEBUG_DIR, datetime):
             )
         return dup.any()
     return (check_and_export_duplicates,)
+
+
+@app.cell
+def _(datetime):
+    def get_current_timestamp():
+        return datetime.now().strftime("%Y%m%d_%H%M%S")
+    return (get_current_timestamp,)
+
+
+@app.cell
+def _(DEBUG_DIR, get_current_timestamp):
+    # Helper to export DataFrame if not empty
+    def export_if_not_empty(df, filename_suffix, debug_dir=DEBUG_DIR):
+        timestamp = get_current_timestamp()
+        filepath = f"{debug_dir}/{filename_suffix}_{timestamp}.csv"
+        if len(df) > 0:
+            df.to_csv(filepath, index=False)
+            return filepath
+        return None
+    return (export_if_not_empty,)
 
 
 if __name__ == "__main__":
