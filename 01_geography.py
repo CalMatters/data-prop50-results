@@ -360,6 +360,8 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## Contra Costa
+
+    Precincts with zero registered voters are filtered out, because these precincts are not included in the official results data. [Read more issue #47](https://github.com/CalMatters/data-prop50-results/issues/47)
     """)
     return
 
@@ -369,6 +371,9 @@ def _(PROJECTED_CRS, gpd):
     contra_costa = gpd.read_file(
         "inputs/counties/contra_costa/precincts/PrecinctSet_PDMJ017.json"
     ).to_crs(PROJECTED_CRS)
+
+    has_voters = contra_costa["iZeroRegistrationPct"] != 1
+    contra_costa = contra_costa[has_voters].copy()
 
     contra_costa = alter_df(
         contra_costa,
