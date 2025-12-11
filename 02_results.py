@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.1"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -120,6 +120,9 @@ def _(pd):
         csv.drop(csv[csv["Precinct"] == "In-Person"].index, inplace=True)
         csv.drop(csv[csv["Precinct"] == "Vote By Mail"].index, inplace=True)
 
+        # drop extraneous Cumalative records
+        csv = csv[csv["Precinct"] != "Cumulative"].copy()
+
         # get rid of the first two rows
         csv.drop([0, 1], inplace=True)
 
@@ -142,7 +145,9 @@ def _(pd):
         csv.replace("****", 0, inplace=True)
 
         # and then add in a calculated turnout column
-        csv["turnout"] = round((csv["Total Votes"] / csv["Registered \nVoters"]) * 100, 1)
+        csv["turnout"] = round(
+            (csv["Total Votes"] / csv["Registered \nVoters"]) * 100, 1
+        )
 
         # make the index a column so we can drop it
         csv.reset_index(inplace=True)
