@@ -142,7 +142,10 @@ def _(pd):
         )
 
         # replaced masked values with 0 for turnout calculations
-        csv.replace("****", 0, inplace=True)
+        csv.replace("****", "0", inplace=True)
+        csv[["yes_votes", "no_votes", "Total Votes"]] = csv[
+            ["yes_votes", "no_votes", "Total Votes"]
+        ].astype(int)
 
         # and then add in a calculated turnout column
         csv["turnout"] = round(
