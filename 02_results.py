@@ -38,10 +38,21 @@ def _(
     glenn,
     imperial,
     pd,
+    solano,
     sutter,
 ):
     combined = pd.concat(
-        [butte, calaveras, colusa, contra_costa, el_dorado, glenn, imperial, sutter]
+        [
+            butte,
+            calaveras,
+            colusa,
+            contra_costa,
+            el_dorado,
+            glenn,
+            imperial,
+            solano,
+            sutter,
+        ]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
     combined.head(None)
@@ -496,6 +507,65 @@ def _(pd):
 
     imperial.head(None)
     return (imperial,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Solano
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    def solano_df():
+        # read in the source file
+        solano_csv = pd.read_csv(
+            "inputs/counties/solano/Precincts_19.csv", skiprows=2
+        )
+        # create a pivot table so we get closer to our desired structure
+        solano = solano_csv.pivot_table(
+            index="Precinct",
+            columns="Candidate Name",
+            values="Votes",
+            aggfunc="sum",
+        )
+        # join the pivot table and the csv together so we can get some more
+        # data from the source file csv such as turnout
+        solano = solano.join(solano_csv.set_index("Precinct"), on="Precinct")
+        # rename the columns
+        solano = (
+            solano.reset_index()
+            .rename(
+                columns={
+                    "Precinct": "precinct_id",
+                    "NO": "no_votes",
+                    "YES": "yes_votes",
+                    "Voter Turnout": "turnout",
+                }
+            )
+            # get rid of some columns so we can get rid of duplicates
+            .drop(columns=["Contest Name", "Candidate Name", "Votes"])
+            # drop duplicates
+            .drop_duplicates()
+            # reset and get rid of the index column
+            .reset_index()
+            .drop(columns=["index"])
+        )
+        # add county column
+        solano["county"] = "Solano"
+        # add total_votes column
+        solano["total_votes"] = solano["no_votes"] + solano["yes_votes"]
+        # remove "%" from turnout column values
+        solano["turnout"] = solano["turnout"].str.replace("%", "")
+
+        return solano
+
+
+    solano = solano_df()
+    solano.head(None)
+    return (solano,)
 
 
 @app.cell(hide_code=True)
