@@ -38,6 +38,7 @@ def _(
     glenn,
     imperial,
     pd,
+    siskiyou,
     solano,
     sutter,
 ):
@@ -50,6 +51,7 @@ def _(
             el_dorado,
             glenn,
             imperial,
+            siskiyou,
             solano,
             sutter,
         ]
@@ -507,6 +509,52 @@ def _(pd):
 
     imperial.head(None)
     return (imperial,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Siskiyou
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    def siskiyou_df():
+        siskiyou = pd.read_excel(
+            "inputs/counties/siskiyou/statementofvotescastrpt.xlsx",
+            sheet_name="Sheet2",
+            skiprows=3,
+            skipfooter=5,
+        )
+        siskiyou = siskiyou.drop(
+            columns=[
+                "Times Cast",
+                "Unnamed: 3",
+                "Precinct.1",
+                "Unnamed: 6",
+                "Unnamed: 8",
+                "Unresolved\nWrite-In",
+                "Unnamed: 11",
+            ]
+        ).rename(columns={
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes"
+        })
+        siskiyou = siskiyou[siskiyou["precinct_id"] != "County"].copy()
+        siskiyou = siskiyou[siskiyou["precinct_id"] != "Electionwide"].copy()
+        siskiyou["turnout"] = (siskiyou["total_votes"] / siskiyou['Registered \nVoters']) * 100
+        siskiyou = siskiyou.reset_index().drop(columns=["index", "Registered \nVoters"])
+        siskiyou['county'] = 'Siskiyou'
+        return siskiyou
+
+
+    siskiyou = siskiyou_df()
+    siskiyou.head(None)
+    return (siskiyou,)
 
 
 @app.cell(hide_code=True)
