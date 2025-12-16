@@ -538,17 +538,23 @@ def _(pd):
                 "Unresolved\nWrite-In",
                 "Unnamed: 11",
             ]
-        ).rename(columns={
-            "Precinct": "precinct_id",
-            "YES\n ": "yes_votes",
-            "NO\n ": "no_votes",
-            "Total Votes": "total_votes"
-        })
+        ).rename(
+            columns={
+                "Precinct": "precinct_id",
+                "YES\n ": "yes_votes",
+                "NO\n ": "no_votes",
+                "Total Votes": "total_votes",
+            }
+        )
         siskiyou = siskiyou[siskiyou["precinct_id"] != "County"].copy()
         siskiyou = siskiyou[siskiyou["precinct_id"] != "Electionwide"].copy()
-        siskiyou["turnout"] = (siskiyou["total_votes"] / siskiyou['Registered \nVoters']) * 100
-        siskiyou = siskiyou.reset_index().drop(columns=["index", "Registered \nVoters"])
-        siskiyou['county'] = 'Siskiyou'
+        siskiyou["turnout"] = (
+            siskiyou["total_votes"] / siskiyou["Registered \nVoters"]
+        ) * 100
+        siskiyou = siskiyou.reset_index().drop(
+            columns=["index", "Registered \nVoters"]
+        )
+        siskiyou["county"] = "Siskiyou"
         return siskiyou
 
 
@@ -625,52 +631,39 @@ def _(mo):
 
 
 @app.cell
-def _(pd, pdfplumber):
-    def sutter_df():
-        sutter = None
-        with pdfplumber.open(
-            "inputs/counties/sutter/Statement Of Votes Cast  Countywide.pdf"
-        ) as pdf:
-            extracted = None
-            prop_50_page = pdf.pages[2]
-            cropped = prop_50_page.crop((396, 50, 792, 612))
-            table = cropped.extract_table()
-            sutter = pd.DataFrame(table)
-
-        # # rename columns
-        sutter.columns = [
-            "precinct_id",
-            "yes_votes",
-            "Yes_%",
-            "no_votes",
-            "No_%",
-            "total_votes",
+def _(pd):
+    sutter = pd.read_excel(
+        "inputs/counties/sutter/Statement Of Votes Cast - Countywide.xlsx",
+        sheet_name="Sheet2",
+        skiprows=5,
+    )
+    sutter = sutter[sutter["Electionwide"] != "VBM"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Polls"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Early Voting"].copy()
+    sutter = sutter.bfill()
+    sutter = sutter[sutter["Electionwide"] != "Total"].copy()
+    sutter = sutter.drop(
+        columns=[
+            "Unnamed: 1",
+            "Unnamed: 3",
+            "Unnamed: 4",
+            "Unnamed: 5",
+            "Electionwide.1",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Unnamed: 11",
         ]
-
-        # # drop some empty columns that were part of the spreadsheet structure
-        sutter.drop(columns=["Yes_%", "No_%"], inplace=True)
-
-        # get rid of total rows
-        sutter = sutter[sutter["precinct_id"] != "Precinct"].copy()
-        sutter = sutter[sutter["precinct_id"] != "County"].copy()
-        sutter = sutter[sutter["precinct_id"] != "Electionwide"].copy()
-        sutter = sutter[sutter["precinct_id"] != "Electionwide - Total"].copy()
-        sutter = sutter[sutter["precinct_id"] != "Cumulative"].copy()
-        sutter = sutter[sutter["precinct_id"] != "Cumulative - Total"].copy()
-        sutter = sutter[sutter["precinct_id"] != "County - Total"].copy()
-
-        # don't forget to add the county
-        sutter["county"] = "Sutter"
-
-        # and get rid of the index column
-        sutter = sutter.reset_index()
-        sutter = sutter.drop(columns=["index"])
-        return sutter
-
-
-    sutter = sutter_df()
+    )
+    sutter.columns = ['precinct_id', 'Registered Voters', 'yes_votes', 'no_votes', 'total_votes']
+    sutter['turnout'] = (sutter['total_votes'] / sutter['Registered Voters']) * 100
+    sutter = sutter.reset_index().drop(columns=["index", "Registered Voters"])
     sutter.head(None)
     return (sutter,)
+
+
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":
