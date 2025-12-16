@@ -40,6 +40,7 @@ def _(
     pd,
     siskiyou,
     solano,
+    sonoma,
     sutter,
     trinity,
 ):
@@ -54,6 +55,7 @@ def _(
             imperial,
             siskiyou,
             solano,
+            sonoma,
             sutter,
             trinity,
         ]
@@ -622,6 +624,30 @@ def _(pd):
     solano = solano_df()
     solano.head(None)
     return (solano,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Sonoma
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    sonoma = pd.read_excel('inputs/counties/sonoma/detail 2.xlsx', sheet_name="3", skiprows=2)
+    sonoma = sonoma.rename(columns={
+        "Precinct": "precinct_id",
+        "Total Votes": "yes_votes",
+        "Total Votes.1": "no_votes"
+    })
+    sonoma = sonoma[sonoma["precinct_id"] != "Total:"].copy()
+    sonoma['county'] = 'Sonoma'
+    sonoma['turnout'] = (sonoma['Total'] / sonoma['Registered Voters']) * 100
+    sonoma = sonoma.reset_index().drop(columns=["index","Registered Voters", "Election Day", "Vote By Mail", "Election Day.1", "Vote By Mail.1", "Total"])
+    sonoma.head(None)
+    return (sonoma,)
 
 
 @app.cell(hide_code=True)
