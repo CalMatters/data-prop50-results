@@ -38,6 +38,7 @@ def _(
     glenn,
     imperial,
     pd,
+    shasta,
     siskiyou,
     solano,
     sonoma,
@@ -53,6 +54,7 @@ def _(
             el_dorado,
             glenn,
             imperial,
+            shasta,
             siskiyou,
             solano,
             sonoma,
@@ -518,6 +520,44 @@ def _(pd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Shasta
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    shasta = pd.read_excel(
+        "inputs/counties/shasta/detail.xlsx", sheet_name="2", skiprows=2
+    )
+    shasta = shasta.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Total Votes": "yes_votes",
+            "Total Votes.1": "no_votes",
+        }
+    )
+    shasta = shasta[shasta["precinct_id"] != "Total:"].copy()
+    shasta["county"] = "Shasta"
+    shasta["turnout"] = (shasta["Total"] / shasta["Registered Voters"]) * 100
+    shasta = shasta.reset_index().drop(
+        columns=[
+            "index",
+            "Registered Voters",
+            "Election Day",
+            "Vote by  Mail",
+            "Election Day.1",
+            "Vote by  Mail.1",
+            "Total",
+        ]
+    )
+    shasta.head(None)
+    return (shasta,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Siskiyou
     """)
     return
@@ -636,16 +676,30 @@ def _(mo):
 
 @app.cell
 def _(pd):
-    sonoma = pd.read_excel('inputs/counties/sonoma/detail 2.xlsx', sheet_name="3", skiprows=2)
-    sonoma = sonoma.rename(columns={
-        "Precinct": "precinct_id",
-        "Total Votes": "yes_votes",
-        "Total Votes.1": "no_votes"
-    })
+    sonoma = pd.read_excel(
+        "inputs/counties/sonoma/detail 2.xlsx", sheet_name="3", skiprows=2
+    )
+    sonoma = sonoma.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Total Votes": "yes_votes",
+            "Total Votes.1": "no_votes",
+        }
+    )
     sonoma = sonoma[sonoma["precinct_id"] != "Total:"].copy()
-    sonoma['county'] = 'Sonoma'
-    sonoma['turnout'] = (sonoma['Total'] / sonoma['Registered Voters']) * 100
-    sonoma = sonoma.reset_index().drop(columns=["index","Registered Voters", "Election Day", "Vote By Mail", "Election Day.1", "Vote By Mail.1", "Total"])
+    sonoma["county"] = "Sonoma"
+    sonoma["turnout"] = (sonoma["Total"] / sonoma["Registered Voters"]) * 100
+    sonoma = sonoma.reset_index().drop(
+        columns=[
+            "index",
+            "Registered Voters",
+            "Election Day",
+            "Vote By Mail",
+            "Election Day.1",
+            "Vote By Mail.1",
+            "Total",
+        ]
+    )
     sonoma.head(None)
     return (sonoma,)
 
