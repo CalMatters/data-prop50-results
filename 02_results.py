@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.2"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -41,6 +41,7 @@ def _(
     siskiyou,
     solano,
     sutter,
+    trinity,
 ):
     combined = pd.concat(
         [
@@ -54,6 +55,7 @@ def _(
             siskiyou,
             solano,
             sutter,
+            trinity,
         ]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
@@ -654,16 +656,70 @@ def _(pd):
             "Unnamed: 11",
         ]
     )
-    sutter.columns = ['precinct_id', 'Registered Voters', 'yes_votes', 'no_votes', 'total_votes']
-    sutter['turnout'] = (sutter['total_votes'] / sutter['Registered Voters']) * 100
+    sutter.columns = [
+        "precinct_id",
+        "Registered Voters",
+        "yes_votes",
+        "no_votes",
+        "total_votes",
+    ]
+    sutter["turnout"] = (sutter["total_votes"] / sutter["Registered Voters"]) * 100
     sutter = sutter.reset_index().drop(columns=["index", "Registered Voters"])
     sutter.head(None)
     return (sutter,)
 
 
-@app.cell
-def _():
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Trinity
+    """)
     return
+
+
+@app.cell
+def _(pd):
+    trinity = []
+    trinity_sheets = [
+        "Sheet2",
+        "Sheet3",
+        "Sheet4",
+        "Sheet5",
+        "Sheet6",
+        "Sheet7",
+        "Sheet8",
+        "Sheet9",
+        "Sheet10",
+    ]
+
+
+    def trinity_extract_df(df):
+        precinct_id = df.iloc[0, 0]
+        yes_votes = df.iloc[6, 20]
+        no_votes = df.iloc[7, 20]
+        turnout = df.iloc[0, 13].split(" = ")[1].replace("%", "")
+        return {
+            "precinct_id": precinct_id,
+            "yes_votes": yes_votes,
+            "no_votes": no_votes,
+            "total_votes": yes_votes + no_votes,
+            "turnout": turnout,
+        }
+
+
+    for sheet in trinity_sheets:
+        trinity_sheet_df = pd.read_excel(
+            "inputs/counties/trinity/Final Precinct Results-12-2-2025 08-46-33 AM.xlsx",
+            sheet_name=sheet,
+            skiprows=23,
+        )
+        trinity_extracted = trinity_extract_df(trinity_sheet_df)
+        trinity.append(trinity_extracted)
+
+    trinity = pd.DataFrame(trinity)
+    trinity["county"] = "Trinity"
+    trinity.head(None)
+    return (trinity,)
 
 
 if __name__ == "__main__":
