@@ -31,6 +31,7 @@ def _():
 
 @app.cell
 def _(
+    alameda,
     butte,
     calaveras,
     colusa,
@@ -49,6 +50,7 @@ def _(
 ):
     combined = pd.concat(
         [
+            alameda,
             butte,
             calaveras,
             colusa,
@@ -68,6 +70,62 @@ def _(
     combined.to_csv("outputs/results.csv", index=False)
     combined.head(None)
     return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Alameda
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    alameda = pd.read_excel(
+        "inputs/counties/alameda/Statement of Vote - Statewide Special Election.xlsx",
+        sheet_name="Sheet2",
+        skiprows=5,
+    )
+
+    # get rid of extra values associated with each precinct
+    alameda = alameda[alameda["Unnamed: 1"] != "Vote by Mail"].copy()
+    alameda = alameda[alameda["Unnamed: 1"] != "Election Day"].copy()
+
+    # rename columns
+    alameda = alameda.rename(
+        columns={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",
+            "YES": "yes_votes",
+            "NO": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # drop unncessary columns
+    alameda = alameda.drop(
+        columns=[
+            "Unnamed: 1",
+            "Registered Voters",
+            "Voters Cast",
+            "Unnamed: 5",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Over Votes",
+            "Under Votes",
+        ]
+    )
+
+    # remove the "%" from turnout column
+    alameda['turnout'] = alameda['turnout'].str.replace('%', '')
+
+    # get rid of the index column
+    alameda = alameda.reset_index().drop(columns=["index"])
+
+    alameda.head(None)
+    return (alameda,)
 
 
 @app.cell(hide_code=True)
@@ -539,9 +597,15 @@ def _(np, pd):
     # get rid of some extra rows
     santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Poll"].copy()
     santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Mail"].copy()
-    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Cumulative"].copy()
-    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Cumulative - Total"].copy()
-    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Electionwide - Total"].copy()
+    santa_barbara = santa_barbara[
+        santa_barbara["Electionwide"] != "Cumulative"
+    ].copy()
+    santa_barbara = santa_barbara[
+        santa_barbara["Electionwide"] != "Cumulative - Total"
+    ].copy()
+    santa_barbara = santa_barbara[
+        santa_barbara["Electionwide"] != "Electionwide - Total"
+    ].copy()
 
     # use the total row to backfill the data
     santa_barbara = santa_barbara.bfill()
@@ -553,7 +617,7 @@ def _(np, pd):
     santa_barbara = santa_barbara.drop(
         columns=[
             "Unnamed: 1",
-            "Unnamed: 2", # registered voters per precinct
+            "Unnamed: 2",  # registered voters per precinct
             "Unnamed: 3",
             "Electionwide.1",
             "Unnamed: 6",
@@ -572,10 +636,10 @@ def _(np, pd):
     ]
 
     # get rid of index
-    santa_barbara = santa_barbara.reset_index().drop(columns=['index'])
+    santa_barbara = santa_barbara.reset_index().drop(columns=["index"])
 
-    santa_barbara['yes_votes'] = santa_barbara['yes_votes'].replace('****', np.nan)
-    santa_barbara['no_votes'] = santa_barbara['no_votes'].replace('****', np.nan)
+    santa_barbara["yes_votes"] = santa_barbara["yes_votes"].replace("****", np.nan)
+    santa_barbara["no_votes"] = santa_barbara["no_votes"].replace("****", np.nan)
 
     # show all of the data
     santa_barbara.head(None)
