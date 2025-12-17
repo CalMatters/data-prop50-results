@@ -37,6 +37,7 @@ def _(
     colusa,
     contra_costa,
     el_dorado,
+    fresno,
     glenn,
     imperial,
     pd,
@@ -56,6 +57,7 @@ def _(
             colusa,
             contra_costa,
             el_dorado,
+            fresno,
             glenn,
             imperial,
             santa_barbara,
@@ -119,7 +121,7 @@ def _(pd):
     )
 
     # remove the "%" from turnout column
-    alameda['turnout'] = alameda['turnout'].str.replace('%', '')
+    alameda["turnout"] = alameda["turnout"].str.replace("%", "")
 
     # get rid of the index column
     alameda = alameda.reset_index().drop(columns=["index"])
@@ -456,6 +458,76 @@ def _(pd, pdfplumber):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Fresno
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    fresno = pd.read_excel(
+        "inputs/counties/fresno/statementofvotescastrpt-with-privacy.xlsx",
+        sheet_name="Sheet3",
+        skiprows=5,
+    )
+
+    # remove extra rows
+    fresno = fresno[fresno["Electionwide"] != "Vote Center"].copy()
+    fresno = fresno[fresno["Electionwide"] != "Vote by Mail"].copy()
+    fresno = fresno[fresno["Electionwide"] != "County - Total"].copy()
+    fresno = fresno[fresno["Electionwide"] != "Electionwide - Total"].copy()
+
+    # and then backfill so that the total values are associated
+    # with the rows with valid precinct ids
+    fresno = fresno.bfill()
+
+    # and then get rid of the "Total" rows
+    fresno = fresno[fresno["Electionwide"] != "Total"].copy()
+
+    # rename the columns we care about so that it's easier to work with
+    fresno = fresno.rename(
+        columns={
+            "Electionwide": "precinct_id",
+            "Unnamed: 7": "yes_votes",
+            "Unnamed: 9": "no_votes",
+        }
+    )
+
+    # and then drop everything else
+    fresno = fresno.drop(
+        columns=[
+            "Unnamed: 1",
+            "Unnamed: 2",  # registered voter columns
+            "Unnamed: 3",
+            "Unnamed: 4",
+            "Unnamed: 5",
+            "Electionwide.1",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Unnamed: 11",
+            "Unnamed: 12",
+            "Unnamed: 13",
+        ]
+    )
+
+    # add county column
+    fresno["county"] = "Fresno"
+
+    # replace privacy protecting string values with NaN
+    fresno["yes_votes"] = fresno["yes_votes"].replace("****", np.nan)
+    fresno["no_votes"] = fresno["no_votes"].replace("****", np.nan)
+    fresno['total_votes'] = fresno['yes_votes'] + fresno['no_votes']
+
+    # reset and drop index column
+    fresno = fresno.reset_index().drop(columns=["index"])
+
+    fresno.head(None)
+    return (fresno,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Glenn
     """)
     return
@@ -495,11 +567,10 @@ def _(pd, pdfplumber):
         # get rid of total rows
         glenn = glenn[glenn["precinct_id"] != "Electionwide - Total"].copy()
 
-        # get rid of four values associated with each precinct
+        # get rid of values associated with each precinct
         glenn = glenn[glenn["precinct_id"] != "Electionwide"].copy()
         glenn = glenn[glenn["precinct_id"] != "Vote by Mail"].copy()
         glenn = glenn[glenn["precinct_id"] != "Election Day"].copy()
-        # glenn = glenn[glenn['precinct_id'] != 'Provisional'].copy()
 
         # some values are white space so replace that with None
         glenn = glenn.replace(r"^\s*$", None, regex=True)
