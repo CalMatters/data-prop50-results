@@ -41,6 +41,7 @@ def _(
     glenn,
     imperial,
     inyo,
+    madera,
     pd,
     santa_barbara,
     shasta,
@@ -62,6 +63,7 @@ def _(
             glenn,
             imperial,
             inyo,
+            madera,
             santa_barbara,
             shasta,
             siskiyou,
@@ -710,6 +712,68 @@ def _(np, pd):
 
     inyo.head(None)
     return (inyo,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Madera
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    madera = pd.read_excel(
+        "inputs/counties/madera/Statement-of-Votes-CastXLSX-November-4-2025-1.xlsx",
+        sheet_name="SOV by Precinct",
+        skiprows=7,
+    )
+
+    # remove extra rows
+    madera = madera[madera["Unnamed: 1"] != "Vote Center"].copy()
+    madera = madera[madera["Unnamed: 1"] != "Vote by Mail"].copy()
+
+    # rename columns we care about
+    madera = madera.rename(
+        columns={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",
+            "Yes": "yes_votes",
+            "No": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # drop columns
+    madera = madera.drop(
+        columns=[
+            "Unnamed: 1",
+            "Registered Voters",
+            "Voters Cast",
+            "Unnamed: 5",
+            "Unnamed: 8",
+            "Over Votes",
+            "Under Votes",
+        ]
+    )
+
+    # remove % from turnout column
+    madera["turnout"] = madera["turnout"].str.replace("%", "")
+
+    # replace privacy masking *** with np.nan
+    madera["yes_votes"] = madera["yes_votes"].replace("***", np.nan)
+    madera["no_votes"] = madera["no_votes"].replace("***", np.nan)
+    madera["total_votes"] = madera["total_votes"].replace("***", np.nan)
+
+    # reset and drop index column
+    madera = madera.reset_index().drop(columns=["index"])
+
+    # add county column
+    madera["county"] = "Madera"
+
+    madera.head(None)
+    return (madera,)
 
 
 @app.cell(hide_code=True)
