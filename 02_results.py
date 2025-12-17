@@ -23,9 +23,10 @@ def _(mo):
 @app.cell
 def _():
     import marimo as mo
+    import numpy as np
     import pandas as pd
     import pdfplumber
-    return mo, pd, pdfplumber
+    return mo, np, pd, pdfplumber
 
 
 @app.cell
@@ -38,6 +39,7 @@ def _(
     glenn,
     imperial,
     pd,
+    santa_barbara,
     shasta,
     siskiyou,
     solano,
@@ -54,6 +56,7 @@ def _(
             el_dorado,
             glenn,
             imperial,
+            santa_barbara,
             shasta,
             siskiyou,
             solano,
@@ -515,6 +518,68 @@ def _(pd):
 
     imperial.head(None)
     return (imperial,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Santa Barbara
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    santa_barbara = pd.read_excel(
+        "inputs/counties/santa_barbara/sov-pct.xlsx",
+        sheet_name="Sheet2",
+        skiprows=5,
+    )
+
+    # get rid of some extra rows
+    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Poll"].copy()
+    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Mail"].copy()
+    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Cumulative"].copy()
+    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Cumulative - Total"].copy()
+    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Electionwide - Total"].copy()
+
+    # use the total row to backfill the data
+    santa_barbara = santa_barbara.bfill()
+
+    # and then get rid of the total row
+    santa_barbara = santa_barbara[santa_barbara["Electionwide"] != "Total"].copy()
+
+    # drop some columns we don't care about
+    santa_barbara = santa_barbara.drop(
+        columns=[
+            "Unnamed: 1",
+            "Unnamed: 2", # registered voters per precinct
+            "Unnamed: 3",
+            "Electionwide.1",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Unnamed: 9",
+            "Unnamed: 10",
+            "Unnamed: 11",
+        ]
+    )
+
+    # rename columns to be human-readable
+    santa_barbara.columns = [
+        "precinct_id",
+        "yes_votes",
+        "no_votes",
+    ]
+
+    # get rid of index
+    santa_barbara = santa_barbara.reset_index().drop(columns=['index'])
+
+    santa_barbara['yes_votes'] = santa_barbara['yes_votes'].replace('****', np.nan)
+    santa_barbara['no_votes'] = santa_barbara['no_votes'].replace('****', np.nan)
+
+    # show all of the data
+    santa_barbara.head(None)
+    return (santa_barbara,)
 
 
 @app.cell(hide_code=True)
