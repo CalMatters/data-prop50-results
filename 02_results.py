@@ -40,6 +40,7 @@ def _(
     fresno,
     glenn,
     imperial,
+    inyo,
     pd,
     santa_barbara,
     shasta,
@@ -60,6 +61,7 @@ def _(
             fresno,
             glenn,
             imperial,
+            inyo,
             santa_barbara,
             shasta,
             siskiyou,
@@ -516,7 +518,7 @@ def _(np, pd):
     # replace privacy protecting string values with NaN
     fresno["yes_votes"] = fresno["yes_votes"].replace("****", np.nan)
     fresno["no_votes"] = fresno["no_votes"].replace("****", np.nan)
-    fresno['total_votes'] = fresno['yes_votes'] + fresno['no_votes']
+    fresno["total_votes"] = fresno["yes_votes"] + fresno["no_votes"]
 
     # reset and drop index column
     fresno = fresno.reset_index().drop(columns=["index"])
@@ -647,6 +649,67 @@ def _(pd):
 
     imperial.head(None)
     return (imperial,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Inyo
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    inyo = pd.read_excel(
+        "inputs/counties/inyo/SOVC-Redacted (by precincts).xlsx",
+        sheet_name="Sheet2",
+        skiprows=5,
+    )
+
+    # get rid of some extra rows
+    inyo = inyo[inyo["Electionwide"] != "Electionwide - Total"].copy()
+    inyo = inyo[inyo["Electionwide"] != "Cumulative"].copy()
+    inyo = inyo[inyo["Electionwide"] != "Cumulative - Total"].copy()
+    inyo = inyo[inyo["Electionwide"] != "County - Total"].copy()
+
+    # add a county column
+    inyo["county"] = "Inyo"
+
+    # rename some columns so that it's easier to work with
+    inyo = inyo.rename(
+        columns={
+            "Electionwide": "precinct_id",
+            "Unnamed: 6": "yes_votes",
+            "Unnamed: 8": "no_votes",
+            "Unnamed: 10": "total_votes",
+        }
+    )
+
+    # and then drop other columns we aren't using
+    inyo = inyo.drop(
+        columns=[
+            "Unnamed: 1",
+            "Unnamed: 2",  # registered voters column
+            "Unnamed: 3",
+            "Unnamed: 4",
+            "Electionwide.1",
+            "Unnamed: 7",
+            "Unnamed: 9",
+            "Unnamed: 11",
+        ]
+    )
+
+    # replace privacy masking "***" values with np.nan
+    inyo["yes_votes"] = inyo["yes_votes"].replace("****", np.nan)
+    inyo["no_votes"] = inyo["no_votes"].replace("****", np.nan)
+    inyo["total_votes"] = inyo["total_votes"].replace("****", np.nan)
+
+    # reset and drop index column
+    inyo = inyo.reset_index().drop(columns=["index"])
+
+    inyo.head(None)
+    return (inyo,)
 
 
 @app.cell(hide_code=True)
