@@ -42,6 +42,7 @@ def _(
     imperial,
     inyo,
     madera,
+    marin,
     pd,
     santa_barbara,
     shasta,
@@ -64,6 +65,7 @@ def _(
             imperial,
             inyo,
             madera,
+            marin,
             santa_barbara,
             shasta,
             siskiyou,
@@ -774,6 +776,62 @@ def _(np, pd):
 
     madera.head(None)
     return (madera,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Marin
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    marin = pd.read_excel(
+        "inputs/counties/marin/11-25_SOVC.Final_.xlsx",
+        sheet_name="Sheet4",
+        skiprows=3,
+    )
+
+    # get rid of some extra rows
+    marin = marin[marin["Precinct"] != "Countywide"].copy()
+    marin = marin[marin["Precinct"] != "Countywide - Total"].copy()
+    marin = marin[marin["Precinct"] != "Cumulative"].copy()
+    marin = marin[marin["Precinct"] != "Cumulative - Total"].copy()
+    marin = marin[marin["Precinct"] != "Electionwide"].copy()
+    marin = marin[marin["Precinct"] != "Electionwide - Total"].copy()
+
+    # add county column
+    marin["county"] = "Marin"
+
+    # rename some columns
+    marin = marin.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Yes\n ": "yes_votes",
+            "No\n ": "no_votes",
+        }
+    )
+
+    # drop the remaining columns we don't care about, including the index
+    marin = marin.reset_index().drop(
+        columns=[
+            "index",
+            "Times Cast",
+            "Registered \nVoters",
+            "Unnamed: 3",
+            "Precinct.1",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Total Votes",
+            "Unresolved\nWrite-In",
+            "Unnamed: 11",
+        ]
+    )
+
+    marin.head(None)
+    return (marin,)
 
 
 @app.cell(hide_code=True)
