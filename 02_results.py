@@ -814,6 +814,14 @@ def _(pd):
         }
     )
 
+    # Convert 'Total Votes' and 'Registered \nVoters' columns to numeric, coercing any non-numeric values to NaN
+    marin["Total Votes"] = pd.to_numeric(marin["Total Votes"], errors="coerce")
+    marin["Registered \nVoters"] = pd.to_numeric(marin["Registered \nVoters"], errors="coerce")
+    
+    # Calculate turnout, replacing division by zero with 0
+    marin["turnout"] = marin["Total Votes"] / marin["Registered \nVoters"].replace(0, 1)
+    marin["turnout"] = marin["turnout"].fillna(0)  # Handle cases where Registered Voters is NaN or null
+
     # drop the remaining columns we don't care about, including the index
     marin = marin.reset_index().drop(
         columns=[
