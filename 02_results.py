@@ -771,6 +771,13 @@ def _(np, pd):
     madera["no_votes"] = madera["no_votes"].replace("***", np.nan)
     madera["total_votes"] = madera["total_votes"].replace("***", np.nan)
 
+    madera = madera[
+        madera["precinct_id"]
+        .astype(str)
+        .str.strip()
+        .str.match(PRECINCT_ID_FORMAT, na=True)
+    ]
+
     # reset and drop index column
     madera = madera.reset_index(drop=True)
 
