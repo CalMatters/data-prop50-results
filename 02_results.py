@@ -90,10 +90,11 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    ALAMEDA_HEADER_ROWS_N = 5
     alameda = pd.read_excel(
         "inputs/counties/alameda/Statement of Vote - Statewide Special Election.xlsx",
-        sheet_name="Sheet2",
-        skiprows=5,
+        sheet_name=1,
+        skiprows=ALAMEDA_HEADER_ROWS_N,
     )
 
     # get rid of extra values associated with each precinct
