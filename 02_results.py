@@ -726,10 +726,13 @@ def _(mo):
 
 @app.cell
 def _(np, pd):
+    MADERA_PRECINCT_RESULTS_SHEET = "SOV by Precinct"
+    MADERA_HEADER_N = 7
+    PRECINCT_ID_FORMAT = r"^\d{4}$"
     madera = pd.read_excel(
         "inputs/counties/madera/Statement-of-Votes-CastXLSX-November-4-2025-1.xlsx",
-        sheet_name="SOV by Precinct",
-        skiprows=7,
+        sheet_name=MADERA_PRECINCT_RESULTS_SHEET,
+        skiprows=MADERA_HEADER_N,
     )
 
     # remove extra rows
