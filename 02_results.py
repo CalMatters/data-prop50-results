@@ -665,10 +665,11 @@ def _(mo):
 
 @app.cell
 def _(np, pd):
+    INYO_HEADERS_N = 5
     inyo = pd.read_excel(
         "inputs/counties/inyo/SOVC-Redacted (by precincts).xlsx",
-        sheet_name="Sheet2",
-        skiprows=5,
+        sheet_name=1,
+        skiprows=INYO_HEADERS_N,
     )
 
     # get rid of some extra rows
