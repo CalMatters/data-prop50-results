@@ -40,6 +40,9 @@ def _(
     fresno,
     glenn,
     imperial,
+    inyo,
+    madera,
+    marin,
     pd,
     santa_barbara,
     shasta,
@@ -60,6 +63,9 @@ def _(
             fresno,
             glenn,
             imperial,
+            inyo,
+            madera,
+            marin,
             santa_barbara,
             shasta,
             siskiyou,
@@ -516,7 +522,7 @@ def _(np, pd):
     # replace privacy protecting string values with NaN
     fresno["yes_votes"] = fresno["yes_votes"].replace("****", np.nan)
     fresno["no_votes"] = fresno["no_votes"].replace("****", np.nan)
-    fresno['total_votes'] = fresno['yes_votes'] + fresno['no_votes']
+    fresno["total_votes"] = fresno["yes_votes"] + fresno["no_votes"]
 
     # reset and drop index column
     fresno = fresno.reset_index().drop(columns=["index"])
@@ -647,6 +653,206 @@ def _(pd):
 
     imperial.head(None)
     return (imperial,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Inyo
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    INYO_HEADERS_N = 5
+    inyo = pd.read_excel(
+        "inputs/counties/inyo/SOVC-Redacted (by precincts).xlsx",
+        sheet_name=1,
+        skiprows=INYO_HEADERS_N,
+    )
+
+    # get rid of some extra rows
+    inyo = inyo[inyo["Electionwide"] != "Electionwide - Total"].copy()
+    inyo = inyo[inyo["Electionwide"] != "Cumulative"].copy()
+    inyo = inyo[inyo["Electionwide"] != "Cumulative - Total"].copy()
+    inyo = inyo[inyo["Electionwide"] != "County - Total"].copy()
+
+    # add a county column
+    inyo["county"] = "Inyo"
+
+    # rename some columns so that it's easier to work with
+    # contents of unnamed columns is very clear in the
+    # source spreadsheet and are unnamed because there
+    # are multiple header rows
+    inyo = inyo.rename(
+        columns={
+            "Electionwide": "precinct_id",
+            "Unnamed: 6": "yes_votes",
+            "Unnamed: 8": "no_votes",
+            "Unnamed: 10": "total_votes",
+        }
+    )
+
+    # and then drop other columns we aren't using
+    inyo = inyo.drop(
+        columns=[
+            "Unnamed: 1",
+            "Unnamed: 2",  # registered voters column
+            "Unnamed: 3",
+            "Unnamed: 4",
+            "Electionwide.1",
+            "Unnamed: 7",
+            "Unnamed: 9",
+            "Unnamed: 11",
+        ]
+    )
+
+    # replace privacy masking "***" values with np.nan
+    inyo["yes_votes"] = inyo["yes_votes"].replace("****", np.nan)
+    inyo["no_votes"] = inyo["no_votes"].replace("****", np.nan)
+    inyo["total_votes"] = inyo["total_votes"].replace("****", np.nan)
+
+    # reset and drop index column
+    inyo = inyo.reset_index(drop=True)
+
+    inyo.head(None)
+    return (inyo,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Madera
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    MADERA_PRECINCT_RESULTS_SHEET = "SOV by Precinct"
+    MADERA_HEADER_N = 7
+    PRECINCT_ID_FORMAT = r"^\d{4}$"
+    madera = pd.read_excel(
+        "inputs/counties/madera/Statement-of-Votes-CastXLSX-November-4-2025-1.xlsx",
+        sheet_name=MADERA_PRECINCT_RESULTS_SHEET,
+        skiprows=MADERA_HEADER_N,
+    )
+
+    # remove extra rows
+    madera = madera[madera["Unnamed: 1"] != "Vote Center"].copy()
+    madera = madera[madera["Unnamed: 1"] != "Vote by Mail"].copy()
+
+    # rename columns we care about
+    madera = madera.rename(
+        columns={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",
+            "Yes": "yes_votes",
+            "No": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # drop columns
+    madera = madera.drop(
+        columns=[
+            "Unnamed: 1",
+            "Registered Voters",
+            "Voters Cast",
+            "Unnamed: 5",
+            "Unnamed: 8",
+            "Over Votes",
+            "Under Votes",
+        ]
+    )
+
+    # remove % from turnout column
+    madera["turnout"] = madera["turnout"].str.replace("%", "")
+
+    # replace privacy masking *** with np.nan
+    madera["yes_votes"] = madera["yes_votes"].replace("***", np.nan)
+    madera["no_votes"] = madera["no_votes"].replace("***", np.nan)
+    madera["total_votes"] = madera["total_votes"].replace("***", np.nan)
+
+    madera = madera[
+        madera["precinct_id"]
+        .astype(str)
+        .str.strip()
+        .str.match(PRECINCT_ID_FORMAT, na=True)
+    ]
+
+    # reset and drop index column
+    madera = madera.reset_index(drop=True)
+
+    # add county column
+    madera["county"] = "Madera"
+
+    madera.head(None)
+    return (madera,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Marin
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    marin = pd.read_excel(
+        "inputs/counties/marin/11-25_SOVC.Final_.xlsx",
+        sheet_name="Sheet4",
+        skiprows=3,
+    )
+
+    # get rid of some extra rows
+    marin = marin[marin["Precinct"] != "Countywide"].copy()
+    marin = marin[marin["Precinct"] != "Countywide - Total"].copy()
+    marin = marin[marin["Precinct"] != "Cumulative"].copy()
+    marin = marin[marin["Precinct"] != "Cumulative - Total"].copy()
+    marin = marin[marin["Precinct"] != "Electionwide"].copy()
+    marin = marin[marin["Precinct"] != "Electionwide - Total"].copy()
+
+    # add county column
+    marin["county"] = "Marin"
+
+    # rename some columns
+    marin = marin.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Yes\n ": "yes_votes",
+            "No\n ": "no_votes",
+        }
+    )
+
+    # Convert 'Total Votes' and 'Registered \nVoters' columns to numeric, coercing any non-numeric values to NaN
+    marin["Total Votes"] = pd.to_numeric(marin["Total Votes"], errors="coerce")
+    marin["Registered \nVoters"] = pd.to_numeric(marin["Registered \nVoters"], errors="coerce")
+    
+    # Calculate turnout, replacing division by zero with 0
+    marin["turnout"] = marin["Total Votes"] / marin["Registered \nVoters"].replace(0, 1)
+    marin["turnout"] = marin["turnout"].fillna(0)  # Handle cases where Registered Voters is NaN or null
+
+    # drop the remaining columns we don't care about, including the index
+    marin = marin.reset_index(drop=True).drop(
+        columns=[
+            "Times Cast",
+            "Registered \nVoters",
+            "Unnamed: 3",
+            "Precinct.1",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Total Votes",
+            "Unresolved\nWrite-In",
+            "Unnamed: 11",
+        ]
+    )
+
+    marin.head(None)
+    return (marin,)
 
 
 @app.cell(hide_code=True)
