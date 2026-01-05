@@ -479,12 +479,18 @@ def _(np, pd):
         skiprows=FRESNO_HEADER_ROWS_N,
     )
 
-    # remove extra rows
-    fresno = fresno[fresno["Electionwide"] != "Vote Center"].copy()
-    fresno = fresno[fresno["Electionwide"] != "Vote by Mail"].copy()
-    fresno = fresno[fresno["Electionwide"] != "County - Total"].copy()
-    fresno = fresno[fresno["Electionwide"] != "Electionwide - Total"].copy()
-
+    # Remove extra row containing repeated or extraneous data
+    # Remove extra row containing repeated or extraneous data
+    EXTRANEOUS_ROW_IDENTIFIERS = [
+        "Vote Center",
+        "Vote by Mail",
+        "County - Total",
+        "Electionwide - Total"
+    ]
+    is_extra_row = fresno["Electionwide"].isin(
+        EXTRANEOUS_ROW_IDENTIFIERS
+    ) | fresno["Electionwide"].str.contains("Cumulative", na=False)
+    fresno = fresno[~is_extra_row].copy()
     # and then backfill so that the total values are associated
     # with the rows with valid precinct ids
     fresno = fresno.bfill()
@@ -835,7 +841,7 @@ def _(pd):
     # Convert 'Total Votes' and 'Registered \nVoters' columns to numeric, coercing any non-numeric values to NaN
     marin["Total Votes"] = pd.to_numeric(marin["Total Votes"], errors="coerce")
     marin["Registered \nVoters"] = pd.to_numeric(marin["Registered \nVoters"], errors="coerce")
-    
+
     # Calculate turnout, replacing division by zero with 0
     marin["turnout"] = marin["Total Votes"] / marin["Registered \nVoters"].replace(0, 1)
     marin["turnout"] = marin["turnout"].fillna(0)  # Handle cases where Registered Voters is NaN or null
