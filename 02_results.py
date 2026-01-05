@@ -471,10 +471,12 @@ def _(mo):
 
 @app.cell
 def _(np, pd):
+    FRESNO_PROP50_RESULTS_SHEET = "Sheet3"
+    FRESNO_HEADER_ROWS_N = 5
     fresno = pd.read_excel(
         "inputs/counties/fresno/statementofvotescastrpt-with-privacy.xlsx",
-        sheet_name="Sheet3",
-        skiprows=5,
+        sheet_name=FRESNO_PROP50_RESULTS_SHEET,
+        skiprows=FRESNO_HEADER_ROWS_N,
     )
 
     # remove extra rows
