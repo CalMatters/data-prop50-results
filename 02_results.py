@@ -952,6 +952,8 @@ def _(pd):
         sheet_name=SHASTA_PROP50_SHEET,
         skiprows=SHASTA_HEADER_N,
     )
+    # column renaming determined by looking at the source
+    # spreadsheet, which has multiple header rows
     shasta = shasta.rename(
         columns={
             "Precinct": "precinct_id",
