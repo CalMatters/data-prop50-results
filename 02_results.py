@@ -962,9 +962,8 @@ def _(pd):
     shasta = shasta[shasta["precinct_id"] != "Total:"].copy()
     shasta["county"] = "Shasta"
     shasta["turnout"] = (shasta["Total"] / shasta["Registered Voters"]) * 100
-    shasta = shasta.reset_index().drop(
+    shasta = shasta.reset_index(drop=True).drop(
         columns=[
-            "index",
             "Registered Voters",
             "Election Day",
             "Vote by  Mail",
