@@ -710,7 +710,7 @@ def _(np, pd):
     inyo["total_votes"] = inyo["total_votes"].replace("****", np.nan)
 
     # reset and drop index column
-    inyo = inyo.reset_index().drop(columns=["index"])
+    inyo = inyo.reset_index(drop=True)
 
     inyo.head(None)
     return (inyo,)
