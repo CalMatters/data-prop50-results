@@ -492,7 +492,9 @@ def _(np, pd):
     # and then get rid of the "Total" rows
     fresno = fresno[fresno["Electionwide"] != "Total"].copy()
 
-    # rename the columns we care about so that it's easier to work with
+    # contents of unnamed columns is very clear in the source
+    # spreadsheet and are unnamed because there are multiple
+    # header rows. open source spreadsheet to verify
     fresno = fresno.rename(
         columns={
             "Electionwide": "precinct_id",
