@@ -682,6 +682,9 @@ def _(np, pd):
     inyo["county"] = "Inyo"
 
     # rename some columns so that it's easier to work with
+    # contents of unnamed columns is very clear in the
+    # source spreadsheet and are unnamed because there
+    # are multiple header rows
     inyo = inyo.rename(
         columns={
             "Electionwide": "precinct_id",
