@@ -769,7 +769,7 @@ def _(np, pd):
     madera["total_votes"] = madera["total_votes"].replace("***", np.nan)
 
     # reset and drop index column
-    madera = madera.reset_index().drop(columns=["index"])
+    madera = madera.reset_index(drop=True)
 
     # add county column
     madera["county"] = "Madera"
