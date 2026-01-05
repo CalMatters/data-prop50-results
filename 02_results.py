@@ -130,7 +130,8 @@ def _(pd):
     alameda["turnout"] = alameda["turnout"].str.replace("%", "")
 
     # get rid of the index column
-    alameda = alameda.reset_index().drop(columns=["index"])
+    alameda = alameda.reset_index(drop=True)
+    alameda["county"] = "Alameda"
 
     alameda.head(None)
     return (alameda,)
