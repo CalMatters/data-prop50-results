@@ -823,9 +823,8 @@ def _(pd):
     marin["turnout"] = marin["turnout"].fillna(0)  # Handle cases where Registered Voters is NaN or null
 
     # drop the remaining columns we don't care about, including the index
-    marin = marin.reset_index().drop(
+    marin = marin.reset_index(drop=True).drop(
         columns=[
-            "index",
             "Times Cast",
             "Registered \nVoters",
             "Unnamed: 3",
