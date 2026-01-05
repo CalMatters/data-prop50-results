@@ -929,7 +929,7 @@ def _(np, pd):
 
     santa_barbara["yes_votes"] = santa_barbara["yes_votes"].replace("****", np.nan)
     santa_barbara["no_votes"] = santa_barbara["no_votes"].replace("****", np.nan)
-
+    santa_barbara["county"] = "Santa Barbara"
     # show all of the data
     santa_barbara.head(None)
     return (santa_barbara,)
