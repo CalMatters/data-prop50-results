@@ -42,6 +42,7 @@ def _(
     imperial,
     inyo,
     madera,
+    marin,
     pd,
     santa_barbara,
     shasta,
@@ -64,6 +65,7 @@ def _(
             imperial,
             inyo,
             madera,
+            marin,
             santa_barbara,
             shasta,
             siskiyou,
@@ -774,6 +776,69 @@ def _(np, pd):
 
     madera.head(None)
     return (madera,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Marin
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    marin = pd.read_excel(
+        "inputs/counties/marin/11-25_SOVC.Final_.xlsx",
+        sheet_name="Sheet4",
+        skiprows=3,
+    )
+
+    # get rid of some extra rows
+    marin = marin[marin["Precinct"] != "Countywide"].copy()
+    marin = marin[marin["Precinct"] != "Countywide - Total"].copy()
+    marin = marin[marin["Precinct"] != "Cumulative"].copy()
+    marin = marin[marin["Precinct"] != "Cumulative - Total"].copy()
+    marin = marin[marin["Precinct"] != "Electionwide"].copy()
+    marin = marin[marin["Precinct"] != "Electionwide - Total"].copy()
+
+    # add county column
+    marin["county"] = "Marin"
+
+    # rename some columns
+    marin = marin.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Yes\n ": "yes_votes",
+            "No\n ": "no_votes",
+        }
+    )
+
+    # Convert 'Total Votes' and 'Registered \nVoters' columns to numeric, coercing any non-numeric values to NaN
+    marin["Total Votes"] = pd.to_numeric(marin["Total Votes"], errors="coerce")
+    marin["Registered \nVoters"] = pd.to_numeric(marin["Registered \nVoters"], errors="coerce")
+    
+    # Calculate turnout, replacing division by zero with 0
+    marin["turnout"] = marin["Total Votes"] / marin["Registered \nVoters"].replace(0, 1)
+    marin["turnout"] = marin["turnout"].fillna(0)  # Handle cases where Registered Voters is NaN or null
+
+    # drop the remaining columns we don't care about, including the index
+    marin = marin.reset_index(drop=True).drop(
+        columns=[
+            "Times Cast",
+            "Registered \nVoters",
+            "Unnamed: 3",
+            "Precinct.1",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Total Votes",
+            "Unresolved\nWrite-In",
+            "Unnamed: 11",
+        ]
+    )
+
+    marin.head(None)
+    return (marin,)
 
 
 @app.cell(hide_code=True)
