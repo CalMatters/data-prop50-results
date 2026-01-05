@@ -945,8 +945,12 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    SHASTA_PROP50_SHEET = "2"
+    SHASTA_HEADER_N = 2
     shasta = pd.read_excel(
-        "inputs/counties/shasta/detail.xlsx", sheet_name="2", skiprows=2
+        "inputs/counties/shasta/detail.xlsx",
+        sheet_name=SHASTA_PROP50_SHEET,
+        skiprows=SHASTA_HEADER_N,
     )
     shasta = shasta.rename(
         columns={
