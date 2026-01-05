@@ -527,7 +527,7 @@ def _(np, pd):
     fresno["total_votes"] = fresno["yes_votes"] + fresno["no_votes"]
 
     # reset and drop index column
-    fresno = fresno.reset_index().drop(columns=["index"])
+    fresno = fresno.reset_index(drop=True)
 
     fresno.head(None)
     return (fresno,)
