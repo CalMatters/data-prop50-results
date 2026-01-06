@@ -1210,11 +1210,22 @@ def _(pd):
     ]
 
 
-    def trinity_extract_df(df):
-        precinct_id = df.iloc[0, 0]
-        yes_votes = df.iloc[6, 20]
-        no_votes = df.iloc[7, 20]
-        turnout = df.iloc[0, 13].split(" = ")[1].replace("%", "")
+PRECINCT_ID_CELL = (0, 0)
+YES_VOTES_CELL = (6, 20)
+NO_VOTES_CELL = (7, 20)
+TURNOUT_CELL = (0, 13)
+
+
+def trinity_extract_df(df):
+    precinct_id = df.iloc[PRECINCT_ID_CELL]
+    yes_votes = df.iloc[YES_VOTES_CELL]
+    no_votes = df.iloc[NO_VOTES_CELL]
+    turnout_str = df.iloc[TURNOUT_CELL]
+    turnout = (
+        turnout_str.split(" = ")[1].replace("%", "")
+        if isinstance(turnout_str, str) and " = " in turnout_str
+        else turnout_str
+    )
         return {
             "precinct_id": precinct_id,
             "yes_votes": yes_votes,
