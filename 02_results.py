@@ -1196,36 +1196,21 @@ def _(mo):
 
 @app.cell
 def _(pd):
-    trinity = []
-    trinity_sheets = [
-        "Sheet2",
-        "Sheet3",
-        "Sheet4",
-        "Sheet5",
-        "Sheet6",
-        "Sheet7",
-        "Sheet8",
-        "Sheet9",
-        "Sheet10",
-    ]
-TRINITY_HEADER_ROWS_N = 23
-
-PRECINCT_ID_CELL = (0, 0)
-YES_VOTES_CELL = (6, 20)
-NO_VOTES_CELL = (7, 20)
-TURNOUT_CELL = (0, 13)
-
-
-def trinity_extract_df(df):
-    precinct_id = df.iloc[PRECINCT_ID_CELL]
-    yes_votes = df.iloc[YES_VOTES_CELL]
-    no_votes = df.iloc[NO_VOTES_CELL]
-    turnout_str = df.iloc[TURNOUT_CELL]
-    turnout = (
-        turnout_str.split(" = ")[1].replace("%", "")
-        if isinstance(turnout_str, str) and " = " in turnout_str
-        else turnout_str
-    )
+    def trinity_extract_df(df):
+        PRECINCT_ID_CELL = (0, 0)
+        YES_VOTES_CELL = (6, 20)
+        NO_VOTES_CELL = (7, 20)
+        TURNOUT_CELL = (0, 13)
+    
+        precinct_id = df.iloc[PRECINCT_ID_CELL]
+        yes_votes = df.iloc[YES_VOTES_CELL]
+        no_votes = df.iloc[NO_VOTES_CELL]
+        turnout_str = df.iloc[TURNOUT_CELL]
+        turnout = (
+            turnout_str.split(" = ")[1].replace("%", "")
+            if isinstance(turnout_str, str) and " = " in turnout_str
+            else turnout_str
+        )
         return {
             "precinct_id": precinct_id,
             "yes_votes": yes_votes,
@@ -1234,18 +1219,34 @@ def trinity_extract_df(df):
             "turnout": turnout,
         }
 
+    def trinity_df():
+        TRINITY_HEADER_ROWS_N = 23
+        trinity = []
+        trinity_sheets = [
+            "Sheet2",
+            "Sheet3",
+            "Sheet4",
+            "Sheet5",
+            "Sheet6",
+            "Sheet7",
+            "Sheet8",
+            "Sheet9",
+            "Sheet10",
+        ]
+        for sheet in trinity_sheets:
+            trinity_sheet_df = pd.read_excel(
+                "inputs/counties/trinity/Final Precinct Results-12-2-2025 08-46-33 AM.xlsx",
+                sheet_name=sheet,
+                skiprows=TRINITY_HEADER_ROWS_N,
+            )
+            trinity_extracted = trinity_extract_df(trinity_sheet_df)
+            trinity.append(trinity_extracted)
+    
+        trinity = pd.DataFrame(trinity)
+        trinity["county"] = "Trinity"
+        return trinity
 
-    for sheet in trinity_sheets:
-        trinity_sheet_df = pd.read_excel(
-            "inputs/counties/trinity/Final Precinct Results-12-2-2025 08-46-33 AM.xlsx",
-            sheet_name=sheet,
-            skiprows=TRINITY_HEADER_ROWS_N,
-        )
-        trinity_extracted = trinity_extract_df(trinity_sheet_df)
-        trinity.append(trinity_extracted)
-
-    trinity = pd.DataFrame(trinity)
-    trinity["county"] = "Trinity"
+    trinity = trinity_df()
     trinity.head(None)
     return (trinity,)
 
