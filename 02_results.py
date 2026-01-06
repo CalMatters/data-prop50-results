@@ -1239,7 +1239,7 @@ def trinity_extract_df(df):
         trinity_sheet_df = pd.read_excel(
             "inputs/counties/trinity/Final Precinct Results-12-2-2025 08-46-33 AM.xlsx",
             sheet_name=sheet,
-            skiprows=23,
+            skiprows=TRINITY_HEADER_ROWS_N,
         )
         trinity_extracted = trinity_extract_df(trinity_sheet_df)
         trinity.append(trinity_extracted)
