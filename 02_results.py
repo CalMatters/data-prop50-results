@@ -1181,7 +1181,8 @@ def _(pd):
         "total_votes",
     ]
     sutter["turnout"] = (sutter["total_votes"] / sutter["Registered Voters"]) * 100
-    sutter = sutter.reset_index().drop(columns=["index", "Registered Voters"])
+    sutter = sutter.reset_index(drop=True).drop(columns=["Registered Voters"])
+    sutter['county'] = 'Sutter'
     sutter.head(None)
     return (sutter,)
 
@@ -1201,7 +1202,7 @@ def _(pd):
         YES_VOTES_CELL = (6, 20)
         NO_VOTES_CELL = (7, 20)
         TURNOUT_CELL = (0, 13)
-    
+
         precinct_id = df.iloc[PRECINCT_ID_CELL]
         yes_votes = df.iloc[YES_VOTES_CELL]
         no_votes = df.iloc[NO_VOTES_CELL]
@@ -1241,7 +1242,7 @@ def _(pd):
             )
             trinity_extracted = trinity_extract_df(trinity_sheet_df)
             trinity.append(trinity_extracted)
-    
+
         trinity = pd.DataFrame(trinity)
         trinity["county"] = "Trinity"
         return trinity
