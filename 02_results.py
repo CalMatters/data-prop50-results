@@ -1208,7 +1208,7 @@ def _(pd):
         "Sheet9",
         "Sheet10",
     ]
-
+TRINITY_HEADER_ROWS_N = 23
 
 PRECINCT_ID_CELL = (0, 0)
 YES_VOTES_CELL = (6, 20)
