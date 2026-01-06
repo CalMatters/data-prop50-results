@@ -487,7 +487,7 @@ def _(np, pd):
         "Vote Center",
         "Vote by Mail",
         "County - Total",
-        "Electionwide - Total"
+        "Electionwide - Total",
     ]
     is_extra_row = fresno["Electionwide"].isin(
         EXTRANEOUS_ROW_IDENTIFIERS
@@ -842,11 +842,17 @@ def _(pd):
 
     # Convert 'Total Votes' and 'Registered \nVoters' columns to numeric, coercing any non-numeric values to NaN
     marin["Total Votes"] = pd.to_numeric(marin["Total Votes"], errors="coerce")
-    marin["Registered \nVoters"] = pd.to_numeric(marin["Registered \nVoters"], errors="coerce")
+    marin["Registered \nVoters"] = pd.to_numeric(
+        marin["Registered \nVoters"], errors="coerce"
+    )
 
     # Calculate turnout, replacing division by zero with 0
-    marin["turnout"] = marin["Total Votes"] / marin["Registered \nVoters"].replace(0, 1)
-    marin["turnout"] = marin["turnout"].fillna(0)  # Handle cases where Registered Voters is NaN or null
+    marin["turnout"] = marin["Total Votes"] / marin["Registered \nVoters"].replace(
+        0, 1
+    )
+    marin["turnout"] = marin["turnout"].fillna(
+        0
+    )  # Handle cases where Registered Voters is NaN or null
 
     # drop the remaining columns we don't care about, including the index
     marin = marin.reset_index(drop=True).drop(
@@ -1099,9 +1105,18 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    SONOMA_PROP50_RESULTS_SHEET = "3"
+    SONOMA_HEADER_ROWS_N = 2
+
     sonoma = pd.read_excel(
-        "inputs/counties/sonoma/detail 2.xlsx", sheet_name="3", skiprows=2
+        "inputs/counties/sonoma/detail 2.xlsx",
+        sheet_name=SONOMA_PROP50_RESULTS_SHEET,
+        skiprows=SONOMA_HEADER_ROWS_N,
     )
+
+    # look at source spreadsheet to understand column name mapping
+    # there are multiple header rows in the spreadsheet but the values
+    # are obvious if you look open the document
     sonoma = sonoma.rename(
         columns={
             "Precinct": "precinct_id",
@@ -1112,9 +1127,8 @@ def _(pd):
     sonoma = sonoma[sonoma["precinct_id"] != "Total:"].copy()
     sonoma["county"] = "Sonoma"
     sonoma["turnout"] = (sonoma["Total"] / sonoma["Registered Voters"]) * 100
-    sonoma = sonoma.reset_index().drop(
+    sonoma = sonoma.reset_index(drop=True).drop(
         columns=[
-            "index",
             "Registered Voters",
             "Election Day",
             "Vote By Mail",
