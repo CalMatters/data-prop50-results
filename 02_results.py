@@ -51,6 +51,7 @@ def _(
     sonoma,
     sutter,
     trinity,
+    yuba,
 ):
     combined = pd.concat(
         [
@@ -73,6 +74,7 @@ def _(
             sonoma,
             sutter,
             trinity,
+            yuba,
         ]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
@@ -1250,6 +1252,68 @@ def _(pd):
     trinity = trinity_df()
     trinity.head(None)
     return (trinity,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Yuba
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    YUBA_FILENAME = 'inputs/counties/yuba/11_25_SOV.xlsx'
+
+    # read in the source file
+    yuba_xlsx = pd.read_excel(YUBA_FILENAME, skiprows=6).set_index('Unnamed: 0')
+
+    # create a pivot table to add together the different voting methods in each precinct
+    yuba_pt = yuba_xlsx.pivot_table(
+        index="Unnamed: 0",
+        values=["Yes", "No"],
+        aggfunc="sum",
+    )
+
+    # drop a bunch of columns from the source spreadsheet that aren't needed anymore
+    yuba_xlsx = yuba_xlsx.drop(columns=["Unnamed: 1", "Unnamed: 5", "Unnamed: 6", "Unnamed: 9", "Voters Cast", "Turnout (%)", "Yes", "No"])
+
+    # join the pivot table and the csv together so we can get registered voters per precinct
+    yuba = yuba_pt.join(yuba_xlsx, on="Unnamed: 0")
+
+    # then rename some columns so that they're easier to work with
+    yuba = yuba.reset_index().rename(columns={
+        "Unnamed: 0": "precinct_id",
+        "No": "no_votes",
+        "Yes": "yes_votes"
+    })
+
+    # get rid of duplicates
+    yuba = yuba.drop_duplicates()
+
+    # calculate total votes
+    yuba['total_votes'] = yuba['no_votes'] + yuba['yes_votes']
+
+    # and then turnout
+    yuba['turnout'] = (yuba['total_votes'] / yuba['Registered Voters']) * 100
+
+    # now that we're done with it drop the "Registered Voters" column
+    yuba = yuba.drop(columns=["Registered Voters"])
+
+    # note the county
+    yuba['county'] = "Yuba"
+
+    # and then clean up the index
+    yuba = yuba.reset_index(drop=True)
+
+    yuba.head(None)
+    return (yuba,)
+
+
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":
