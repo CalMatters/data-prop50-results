@@ -41,16 +41,23 @@ def _(
     glenn,
     imperial,
     inyo,
+    kern,
     madera,
     marin,
+    merced,
     pd,
+    san_luis_obispo,
+    san_mateo,
     santa_barbara,
+    santa_clara,
     shasta,
     siskiyou,
     solano,
     sonoma,
     sutter,
     trinity,
+    tuolumne,
+    ventura,
     tulare,  
     yuba,
 ):
@@ -64,18 +71,26 @@ def _(
             el_dorado,
             glenn,
             imperial,
+            inyo,
+            kern,
             inyo,          
             fresno,
             glenn,
             madera,
             marin,
+            merced,
+            san_luis_obispo,
+            san_mateo,
             santa_barbara,
+            santa_clara,
             shasta,
             siskiyou,
             solano,
             sonoma,
             sutter,
             trinity,
+            tuolumne,
+            ventura,
             tulare,          
             yuba,
         ]
@@ -740,6 +755,75 @@ def _(np, pd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Kern
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    # read the excel file using the "Sheet2" sheet, skip TK rows at the top and TK rows at the bottom
+    KERN_HEADER_N = 3
+    KERN_CUMULATIVE_FOOTER_N = 3
+    kern = pd.read_excel(
+        "inputs/counties/kern/StatementOfVotesCastRPT.xlsx",
+        sheet_name=1,
+        skiprows=KERN_HEADER_N,
+        skipfooter=KERN_CUMULATIVE_FOOTER_N,
+    )
+
+    # get rid of the first two rows that are presentational
+    kern = kern[kern["Precinct"] != "Countywide"].copy()
+    kern = kern[kern["Precinct"] != "Electionwide"].copy()
+
+    # drop columns we don't care about at all
+    kern = kern.drop(
+        columns=[
+            "Times Cast",
+            "Unnamed: 3",
+            "Overvotes",
+            "Precinct.1",
+            "Unnamed: 7",
+            "Unnamed: 9",
+            "Unnamed: 11",
+            "Unresolved\nWrite-In",
+        ]
+    )
+
+    # replace masked values with np.nan so that we can do math calculations
+    kern["Yes\n "] = kern["Yes\n "].replace("****", np.nan)
+    kern["No\n "] = kern["No\n "].replace("****", np.nan)
+    kern["Total Votes"] = kern["Total Votes"].replace("****", np.nan)
+
+    # calculate turnout
+    kern["turnout"] = (kern["Total Votes"] / kern["Registered \nVoters"]) * 100
+
+    # now that turnout is calculated we can drop registered voters
+    kern = kern.drop(columns=["Registered \nVoters"])
+
+    # rename the columns to match our scheme
+    kern = kern.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Yes\n ": "yes_votes",
+            "No\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # add a county column
+    kern["county"] = "Kern"
+
+    # finally, drop the index
+    kern = kern.reset_index(drop=True)
+
+    kern.head(None)
+    return (kern,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Madera
     """)
     return
@@ -881,6 +965,207 @@ def _(pd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Merced
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    MERCED_PROP50_RESULTS_SHEET = "2"
+    MERCED_HEADER_N = 2
+    merced = pd.read_excel(
+        "inputs/counties/merced/detail.xlsx",
+        sheet_name=MERCED_PROP50_RESULTS_SHEET,
+        skiprows=MERCED_HEADER_N
+    )
+
+    # add turnout and county columns
+    merced["turnout"] = (merced["Total"] / merced["Registered Voters"]) * 100
+    merced["county"] = "Merced"
+
+    # drop the columns we don't need
+    merced = merced.drop(
+        columns=[
+            "Registered Voters",
+            "Election Day",
+            "Early Voting",
+            "Vote by Mail",
+            "Conditional/Provisional",
+            "Election Day.1",
+            "Early Voting.1",
+            "Vote by Mail.1",
+            "Conditional/Provisional.1",
+        ]
+    )
+
+    # now rename the columns, the first "Total Votes" is for Yes according to the source spreadsheet
+    merced = merced.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Total Votes": "yes_votes",
+            "Total Votes.1": "no_votes",
+            "Total": "total_votes",
+        }
+    )
+
+    merced.head(None)
+    return (merced,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Luis Obispo
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    SLO_HEADER_N = 3
+    SLO_CUMULATIVE_FOOTER_N = 8
+    san_luis_obispo = pd.read_excel(
+        "inputs/counties/san_luis_obispo/2025-special-official-sovc-split-by-precinct-excel.xlsx",
+        sheet_name=1,
+        skiprows=SLO_HEADER_N,
+        skipfooter=SLO_CUMULATIVE_FOOTER_N,
+    )
+
+    # get rid of the first three rows that are county wide results or headers
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Countywide"
+    ].copy()
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Electionwide"
+    ].copy()
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "County"
+    ].copy()
+
+    # each precinct has results for polling, vote by mail, and total - we just want the total row
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Polling"
+    ].copy()
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Vote by Mail"
+    ].copy()
+
+    # then backfill each precinct results so that the "Total" values are on the same
+    # row as the precinct ID
+    san_luis_obispo = san_luis_obispo.bfill()
+
+    # and then get rid of the "Total" rows
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Total"
+    ].copy()
+
+    # replace masked values with np.nan
+    san_luis_obispo["YES\n "] = san_luis_obispo["YES\n "].replace("****", np.nan)
+    san_luis_obispo["NO\n "] = san_luis_obispo["NO\n "].replace("****", np.nan)
+    san_luis_obispo["Total Votes"] = san_luis_obispo["Total Votes"].replace(
+        "****", np.nan
+    )
+
+    # add "county" and "turnout columns"
+    san_luis_obispo["county"] = "San Luis Obispo"
+    san_luis_obispo["turnout"] = (
+        san_luis_obispo["Total Votes"] / san_luis_obispo["Registered \nVoters"]
+    ) * 100
+
+    # and then drop the columns we don't want to keep
+    san_luis_obispo = san_luis_obispo.drop(
+        columns=[
+            "Times Cast",
+            "Registered \nVoters",
+            "Unnamed: 3",
+            "Undervotes",
+            "Overvotes",
+            "Precinct.1",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Unnamed: 11",
+        ]
+    )
+
+    # and rename the ones we do want to keep
+    san_luis_obispo = san_luis_obispo.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # reset the index
+    san_luis_obispo = san_luis_obispo.reset_index(drop=True)
+
+    san_luis_obispo.head(None)
+    return (san_luis_obispo,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Mateo
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    # read in the file, skip the first two rows, and make sure the "Precinct" column is a string
+    SAN_MATEO_HEADER_N = 2
+    san_mateo_csv = pd.read_csv(
+        "inputs/counties/san_mateo/Precincts_18.csv",
+        skiprows=SAN_MATEO_HEADER_N,
+        dtype={"Precinct": str},
+    )
+
+    # since the YES and NO values are on two separate rows per precinct
+    # we want to make a pivot table and get them together
+    san_mateo = san_mateo_csv.pivot_table(
+        index="Precinct", columns="Candidate Name", values="Votes", aggfunc="sum"
+    )
+
+    # join the pivot table and the csv data together so we can get some more
+    # data from the source file csv such as turnout
+    san_mateo = san_mateo.join(san_mateo_csv.set_index("Precinct"), on="Precinct")
+
+    # rename the columns we care about
+    san_mateo = san_mateo.reset_index().rename(
+        columns={
+            "Precinct": "precinct_id",
+            "NO": "no_votes",
+            "YES": "yes_votes",
+            "Voter Turnout": "turnout",
+        }
+    )
+
+    # and drop the rest
+    san_mateo = san_mateo.drop(columns=["Contest Name", "Candidate Name", "Votes"])
+
+    # the join created duplicate rows so we want to get rid of those too
+    san_mateo = san_mateo.drop_duplicates()
+
+    # let's add columns: county and total_votes
+    san_mateo["county"] = "San Mateo"
+    san_mateo["total_votes"] = san_mateo["no_votes"] + san_mateo["yes_votes"]
+
+    # and get rid of the % in turnout
+    san_mateo["turnout"] = san_mateo["turnout"].str.replace("%", "")
+
+    # and finally get rid of the index
+    san_mateo = san_mateo.reset_index(drop=True)
+
+    san_mateo.head(None)
+    return (san_mateo,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Santa Barbara
     """)
     return
@@ -944,6 +1229,60 @@ def _(np, pd):
     # show all of the data
     santa_barbara.head(None)
     return (santa_barbara,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Santa Clara
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    SANTA_CLARA_PROP50_RESULTS_SHEET = "3"
+    SANTA_CLARA_HEADER_N = 2
+    santa_clara = pd.read_excel(
+        "inputs/counties/santa_clara/detail.xlsx",
+        sheet_name=SANTA_CLARA_PROP50_RESULTS_SHEET,
+        skiprows=SANTA_CLARA_HEADER_N
+    )
+
+    # rename the columns we care about
+    # "Total Votes" is for "Yes" and "Total Votes.1" is for "No"
+    # which you can verify with the grouped multi-index header in the source spreadsheet
+    santa_clara = santa_clara.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Total Votes": "yes_votes",
+            "Total Votes.1": "no_votes",
+            "Total": "total_votes",
+        }
+    )
+
+    # calculate turnout, it's more than 100% in some precincts and jeremia called
+    # to ask them to explain and they're going to call him back
+    santa_clara["turnout"] = (
+        santa_clara["total_votes"] / santa_clara["Registered Voters"]
+    ) * 100
+
+    # and then drop columns we don't need
+    santa_clara = santa_clara.drop(
+        columns=[
+            "Registered Voters",
+            "Election Day",
+            "Vote By Mail",
+            "Election Day.1",
+            "Vote By Mail.1",
+        ]
+    )
+
+    # and add a county column
+    santa_clara["county"] = "Santa Clara"
+
+    santa_clara.head(None)
+    return (santa_clara,)
 
 
 @app.cell(hide_code=True)
@@ -1187,7 +1526,7 @@ def _(pd):
     ]
     sutter["turnout"] = (sutter["total_votes"] / sutter["Registered Voters"]) * 100
     sutter = sutter.reset_index(drop=True).drop(columns=["Registered Voters"])
-    sutter['county'] = 'Sutter'
+    sutter["county"] = "Sutter"
     sutter.head(None)
     return (sutter,)
 
@@ -1307,6 +1646,7 @@ def _(pd):
             "turnout": turnout,
         }
 
+
     def trinity_df():
         TRINITY_HEADER_ROWS_N = 23
         trinity = []
@@ -1333,6 +1673,7 @@ def _(pd):
         trinity = pd.DataFrame(trinity)
         trinity["county"] = "Trinity"
         return trinity
+
 
     trinity = trinity_df()
     trinity.head(None)
@@ -1366,6 +1707,127 @@ def _(pd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Tuolumne
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    # read in excel file using the sheet titled "Sheet2" and skip 3 rows at the top and five at the end
+    TUOLUMNE_HEADER_N = 3
+    TUOLUMNE_CUMULATIVE_FOOTER_N = 5
+    tuolumne = pd.read_excel(
+        "inputs/counties/tuolumne/StatementOfVotesCastRPT.xlsx",
+        sheet_name=1,
+        skiprows=TUOLUMNE_HEADER_N,
+        skipfooter=TUOLUMNE_CUMULATIVE_FOOTER_N,
+    )
+
+    # the first two rows aren't useful to us so we want to drop those too
+    tuolumne = tuolumne[tuolumne["Precinct"] != "County"].copy()
+    tuolumne = tuolumne[tuolumne["Precinct"] != "Electionwide"].copy()
+
+    # let's add a turnout column before we drop all the columns we don't care about
+    tuolumne["turnout"] = (
+        tuolumne["Total Votes"] / tuolumne["Registered \nVoters"]
+    ) * 100
+
+    # and now drop 'em
+    tuolumne = tuolumne.drop(
+        columns=[
+            "Times Cast",
+            "Registered \nVoters",
+            "Unnamed: 3",
+            "Undervotes",
+            "Overvotes",
+            "Precinct.1",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Unnamed: 11",
+        ]
+    )
+
+    # let's rename the columns and add a county column
+    tuolumne = tuolumne.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+    tuolumne["county"] = "Tuolumne"
+
+    # and get rid of the index
+    tuolumne = tuolumne.reset_index(drop=True)
+
+    tuolumne.head(None)
+    return (tuolumne,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Ventura
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    VENTURA_FILENAME = "inputs/counties/ventura/2025.11.04-Statement-of-Votes-Precinct-Canvass.xlsx"
+
+    # read in the source file
+    VENTURA_HEADER_N = 6
+    ventura = pd.read_excel(
+        VENTURA_FILENAME,
+        sheet_name=1,
+        skiprows=VENTURA_HEADER_N
+    )
+
+    # rename some columns
+    ventura = ventura.rename(
+        columns={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",  # some values in this column are >100%; emailed to ask why
+            "Yes": "yes_votes",
+            "No": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # and then drop some columns we don't want to care about
+    ventura = ventura.drop(
+        columns=[
+            "Unnamed: 1",
+            "Registered Voters",
+            "Voters Cast",
+            "Unnamed: 5",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Unnamed: 10",
+        ]
+    )
+
+    # remove the % from the turnout column
+    ventura["turnout"] = ventura["turnout"].str.replace("%", "")
+
+    # replace masked values with np.nan
+    ventura["yes_votes"] = ventura["yes_votes"].replace("***", np.nan)
+    ventura["no_votes"] = ventura["no_votes"].replace("***", np.nan)
+    ventura["total_votes"] = ventura["total_votes"].replace("***", np.nan)
+
+    # add county column
+    ventura["county"] = "Ventura"
+
+    ventura.head(None)
+    return (ventura,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Yuba
     """)
     return
@@ -1373,10 +1835,12 @@ def _(mo):
 
 @app.cell
 def _(pd):
-    YUBA_FILENAME = 'inputs/counties/yuba/11_25_SOV.xlsx'
+    YUBA_FILENAME = "inputs/counties/yuba/11_25_SOV.xlsx"
 
     # read in the source file
-    yuba_xlsx = pd.read_excel(YUBA_FILENAME, skiprows=6).set_index('Unnamed: 0')
+    yuba_xlsx = pd.read_excel(YUBA_FILENAME, skiprows=6, skipfooter=3).set_index(
+        "Unnamed: 0"
+    )
 
     # create a pivot table to add together the different voting methods in each precinct
     yuba_pt = yuba_xlsx.pivot_table(
@@ -1386,32 +1850,41 @@ def _(pd):
     )
 
     # drop a bunch of columns from the source spreadsheet that aren't needed anymore
-    yuba_xlsx = yuba_xlsx.drop(columns=["Unnamed: 1", "Unnamed: 5", "Unnamed: 6", "Unnamed: 9", "Voters Cast", "Turnout (%)", "Yes", "No"])
+    yuba_xlsx = yuba_xlsx.drop(
+        columns=[
+            "Unnamed: 1",
+            "Unnamed: 5",
+            "Unnamed: 6",
+            "Unnamed: 9",
+            "Voters Cast",
+            "Turnout (%)",
+            "Yes",
+            "No",
+        ]
+    )
 
     # join the pivot table and the csv together so we can get registered voters per precinct
     yuba = yuba_pt.join(yuba_xlsx, on="Unnamed: 0")
 
     # then rename some columns so that they're easier to work with
-    yuba = yuba.reset_index().rename(columns={
-        "Unnamed: 0": "precinct_id",
-        "No": "no_votes",
-        "Yes": "yes_votes"
-    })
+    yuba = yuba.reset_index().rename(
+        columns={"Unnamed: 0": "precinct_id", "No": "no_votes", "Yes": "yes_votes"}
+    )
 
     # get rid of duplicates
     yuba = yuba.drop_duplicates()
 
     # calculate total votes
-    yuba['total_votes'] = yuba['no_votes'] + yuba['yes_votes']
+    yuba["total_votes"] = yuba["no_votes"] + yuba["yes_votes"]
 
     # and then turnout
-    yuba['turnout'] = (yuba['total_votes'] / yuba['Registered Voters']) * 100
+    yuba["turnout"] = (yuba["total_votes"] / yuba["Registered Voters"]) * 100
 
     # now that we're done with it drop the "Registered Voters" column
     yuba = yuba.drop(columns=["Registered Voters"])
 
     # note the county
-    yuba['county'] = "Yuba"
+    yuba["county"] = "Yuba"
 
     # and then clean up the index
     yuba = yuba.reset_index(drop=True)
