@@ -44,6 +44,7 @@ def _(
     madera,
     marin,
     pd,
+    san_mateo,
     santa_barbara,
     santa_clara,
     shasta,
@@ -69,6 +70,7 @@ def _(
             inyo,
             madera,
             marin,
+            san_mateo,
             santa_barbara,
             santa_clara,
             shasta,
@@ -877,6 +879,63 @@ def _(pd):
 
     marin.head(None)
     return (marin,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Mateo
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    # read in the file, skip the first two rows, and make sure the "Precinct" column is a string
+    san_mateo_csv = pd.read_csv(
+        "inputs/counties/san_mateo/Precincts_18.csv",
+        skiprows=2,
+        dtype={"Precinct": str},
+    )
+
+    # since the YES and NO values are on two separate rows per precinct
+    # we want to make a pivot table and get them together
+    san_mateo = san_mateo_csv.pivot_table(
+        index="Precinct", columns="Candidate Name", values="Votes", aggfunc="sum"
+    )
+
+    # join the pivot table and the csv data together so we can get some more
+    # data from the source file csv such as turnout
+    san_mateo = san_mateo.join(san_mateo_csv.set_index("Precinct"), on="Precinct")
+
+    # rename the columns we care about
+    san_mateo = san_mateo.reset_index().rename(
+        columns={
+            "Precinct": "precinct_id",
+            "NO": "no_votes",
+            "YES": "yes_votes",
+            "Voter Turnout": "turnout",
+        }
+    )
+
+    # and drop the rest
+    san_mateo = san_mateo.drop(columns=["Contest Name", "Candidate Name", "Votes"])
+
+    # the join created duplicate rows so we want to get rid of those too
+    san_mateo = san_mateo.drop_duplicates()
+
+    # let's add columns: county and total_votes
+    san_mateo["county"] = "San Mateo"
+    san_mateo["total_votes"] = san_mateo["no_votes"] + san_mateo["yes_votes"]
+
+    # and get rid of the % in turnout
+    san_mateo["turnout"] = san_mateo["turnout"].str.replace("%", "")
+
+    # and finally get rid of the index
+    san_mateo = san_mateo.reset_index(drop=True)
+
+    san_mateo.head(None)
+    return (san_mateo,)
 
 
 @app.cell(hide_code=True)
