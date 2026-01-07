@@ -966,8 +966,12 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    MERCED_PROP50_RESULTS_SHEET = "2"
+    MERCED_HEADER_N = 2
     merced = pd.read_excel(
-        "inputs/counties/merced/detail.xlsx", sheet_name="2", skiprows=2
+        "inputs/counties/merced/detail.xlsx",
+        sheet_name=MERCED_PROP50_RESULTS_SHEET,
+        skiprows=MERCED_HEADER_N
     )
 
     # add turnout and county columns
