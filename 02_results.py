@@ -759,11 +759,13 @@ def _(mo):
 @app.cell
 def _(np, pd):
     # read the excel file using the "Sheet2" sheet, skip TK rows at the top and TK rows at the bottom
+    KERN_HEADER_N = 3
+    KERN_CUMULATIVE_FOOTER_N = 3
     kern = pd.read_excel(
         "inputs/counties/kern/StatementOfVotesCastRPT.xlsx",
-        sheet_name="Sheet2",
-        skiprows=3,
-        skipfooter=5,
+        sheet_name=1,
+        skiprows=KERN_HEADER_N,
+        skipfooter=KERN_CUMULATIVE_FOOTER_N,
     )
 
     # get rid of the first two rows that are presentational
