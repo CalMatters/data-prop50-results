@@ -47,6 +47,7 @@ def _(
     merced,
     pd,
     sacramento,
+    san_benito,
     san_luis_obispo,
     san_mateo,
     santa_barbara,
@@ -81,6 +82,7 @@ def _(
             marin,
             merced,
             sacramento,
+            san_benito,
             san_luis_obispo,
             san_mateo,
             santa_barbara,
@@ -1054,20 +1056,81 @@ def _(pd):
     sacramento = sacramento.reset_index()
 
     # add a county column
-    sacramento['county'] = 'Sacramento'
+    sacramento["county"] = "Sacramento"
 
     # rename the other columns to match our scheme
-    sacramento = sacramento.rename(columns={
-        "Precinct": "precinct_id",
-        "No": "no_votes",
-        "Yes": "yes_votes"
-    })
+    sacramento = sacramento.rename(
+        columns={"Precinct": "precinct_id", "No": "no_votes", "Yes": "yes_votes"}
+    )
 
     # add total_votes column
-    sacramento['total_votes'] = sacramento['no_votes'] + sacramento['yes_votes']
+    sacramento["total_votes"] = sacramento["no_votes"] + sacramento["yes_votes"]
 
     sacramento.head(None)
     return (sacramento,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Benito
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    SAN_BENITO_PROP50_RESULTS_SHEET = "Proposition 50"
+    SAN_BENITO_HEADER_N = 2
+
+    san_benito = pd.read_excel(
+        "inputs/counties/san_benito/November 4, 2025 Special Election Statement of Vote - By Precinct.xlsx",
+        sheet_name=SAN_BENITO_PROP50_RESULTS_SHEET,
+        skiprows=SAN_BENITO_HEADER_N,
+    )
+
+    # remove two rows at the top that are countywide data
+    san_benito = san_benito[san_benito["Precinct"] != "Countywide"].copy()
+    san_benito = san_benito[san_benito["Precinct"] != "Electionwide"].copy()
+
+    # there are multiple lines per precinct, remove those for vote centers and vote by mail
+    san_benito = san_benito[san_benito["Precinct"] != "Vote Centers"].copy()
+    san_benito = san_benito[san_benito["Precinct"] != "Vote by Mail"].copy()
+
+    # backfill the data so that the vote counts are in the same rows as the precinct IDs
+    san_benito = san_benito.bfill()
+
+    # and then we can drop the total rows
+    san_benito = san_benito[san_benito["Precinct"] != "Total"].copy()
+
+    # calculate turnout
+    san_benito["turnout"] = (
+        san_benito["Total Votes"] / san_benito["Registered \nVoters"]
+    ) * 100
+
+    # drop columns we don't care about
+    san_benito = san_benito.drop(
+        columns=["Times Cast", "Registered \nVoters", "Unnamed: 3"]
+    )
+
+    # and rename the ones we do want to keep
+    san_benito = san_benito.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # and then get rid of the index
+    san_benito = san_benito.reset_index(drop=True)
+
+    # finally add a county column
+    san_benito["county"] = "San Benito"
+
+    san_benito.head(None)
+    return (san_benito,)
 
 
 @app.cell(hide_code=True)
