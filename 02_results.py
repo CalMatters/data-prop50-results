@@ -50,7 +50,8 @@ def _(
     solano,
     sonoma,
     sutter,
-    trinity,
+    trinity,  
+    tulare,
 ):
     combined = pd.concat(
         [
@@ -60,10 +61,11 @@ def _(
             colusa,
             contra_costa,
             el_dorado,
-            fresno,
             glenn,
             imperial,
-            inyo,
+            inyo,          
+            fresno,
+            glenn,
             madera,
             marin,
             santa_barbara,
@@ -73,6 +75,7 @@ def _(
             sonoma,
             sutter,
             trinity,
+            tulare,          
         ]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
@@ -1190,12 +1193,94 @@ def _(pd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Trinity
+    ## Tulare
     """)
     return
 
 
 @app.cell
+def _(
+    calculate_turnout,
+    pd,
+    rename_and_filter_columns,
+    zero_out_insufficient_turnout_precincts,
+):
+    def tulare_df(fp, column_renames=dict()) -> pd.DataFrame:
+        COUNTY_NAME = "Tulare"
+        RESULTS_HEADER = 3
+        VALUE_COLUMNS = ["YES\n ", "NO\n ", "Total Votes"]
+
+        df = pd.read_excel(fp, sheet_name=1, skiprows=RESULTS_HEADER)
+
+        def dedupe_data(df) -> pd.DataFrame:
+            """Source data includes multiple entries for each precincts grouped
+            by CD, SD, etc.. I filter for numeric strings to drop headers and
+            then retain only the first value from the election wide data group"""
+            is_precinct_id = df["Precinct"].str.isnumeric()
+            df_headers_dropped = df[
+                is_precinct_id
+            ].copy()  # drop inline header rows
+            expected_precinct_count = df_headers_dropped["Precinct"].nunique()
+            df_deduped = df_headers_dropped.drop_duplicates(
+                "Precinct", keep="first"
+            )  # precinct data repeated and grouped by CD, SD, etc.
+            assert df_deduped["Precinct"].nunique() == expected_precinct_count
+            return df_deduped
+
+        df = dedupe_data(df)
+        df = df.dropna(axis=1, how="all", ignore_index=True)
+
+        df[VALUE_COLUMNS] = df[VALUE_COLUMNS].apply(
+            zero_out_insufficient_turnout_precincts
+        )
+
+        df["turnout"] = calculate_turnout(
+            df["Total Votes"], df["Registered \nVoters"]
+        )
+
+        if column_renames:
+            df = rename_and_filter_columns(df, column_renames)
+
+        df["county"] = COUNTY_NAME
+
+        return df
+
+
+    TULARE_FP = (
+        "./inputs/counties/tulare/results/StatementOfVotesCastRPT_By_Precinct.xlsx"
+    )
+    tulare = tulare_df(
+        TULARE_FP,
+        {
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes",
+            "turnout": "turnout",
+        },
+    )
+    tulare
+    return (tulare,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Trinity
+    """)
+    return  
+
+@app.cell
+def _(pd):
+    INSUFFICIENT_TURNOUT_PLACEHOLDER = "****"
+
+
+    def zero_out_insufficient_turnout_precincts(
+        _series: pd.Series, placeholder_value=INSUFFICIENT_TURNOUT_PLACEHOLDER
+    ) -> pd.Series:
+        _series = _series.replace({placeholder_value: "0"})
+        return _series.astype(int)
+    return (zero_out_insufficient_turnout_precincts,)
 def _(pd):
     def trinity_extract_df(df):
         PRECINCT_ID_CELL = (0, 0)
@@ -1250,6 +1335,30 @@ def _(pd):
     trinity = trinity_df()
     trinity.head(None)
     return (trinity,)
+  
+@app.cell
+def _(mo):
+    mo.md(r"""
+    # Helper functions
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    def rename_and_filter_columns(df: pd.DataFrame, rename_dict: dict):
+        return df.rename(columns=rename_dict)[list(rename_dict.values())].copy()
+    return (rename_and_filter_columns,)
+
+
+@app.cell
+def _(pd):
+    def calculate_turnout(
+        votes_cast: pd.Series, registered_voter_count: pd.Series
+    ) -> pd.Series:
+        registered_voter_count = registered_voter_count.replace(0, 1)
+        return round((votes_cast / registered_voter_count) * 100, 1)
+    return (calculate_turnout,)  
 
 
 if __name__ == "__main__":
