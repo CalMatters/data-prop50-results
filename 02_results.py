@@ -48,6 +48,7 @@ def _(
     pd,
     sacramento,
     san_benito,
+    san_bernardino,
     san_luis_obispo,
     san_mateo,
     santa_barbara,
@@ -83,6 +84,7 @@ def _(
             merced,
             sacramento,
             san_benito,
+            san_bernardino,
             san_luis_obispo,
             san_mateo,
             santa_barbara,
@@ -1131,6 +1133,91 @@ def _(pd):
 
     san_benito.head(None)
     return (san_benito,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Bernardino
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    SAN_BERNARDINO_PROP50_RESULTS_SHEET = "Sheet2"
+    SAN_BERNARDINO_HEADER_N = 3
+    SAN_BERNARDINO_CUMULATIVE_FOOTER_N = 8
+
+    san_bernardino = pd.read_excel(
+        "inputs/counties/san_bernardino/Report_SOVbyPrecinct.xlsx",
+        sheet_name=SAN_BERNARDINO_PROP50_RESULTS_SHEET,
+        skiprows=SAN_BERNARDINO_HEADER_N,
+        skipfooter=SAN_BERNARDINO_CUMULATIVE_FOOTER_N,
+    )
+
+    # remove some rows that are in the source spreadsheet for formatting
+    san_bernardino = san_bernardino[
+        san_bernardino["Precinct"] != "Electionwide"
+    ].copy()
+
+    # and also get rid of rows that break down the voting method by precinct
+    san_bernardino = san_bernardino[
+        san_bernardino["Precinct"] != "Mail Ballot"
+    ].copy()
+    san_bernardino = san_bernardino[
+        san_bernardino["Precinct"] != "Polling Place"
+    ].copy()
+
+    # backfill the data so that precincts and vote counts are on the same row
+    san_bernardino = san_bernardino.bfill()
+
+    # and then get rid of the total rows so we're left with just precincts
+    san_bernardino = san_bernardino[san_bernardino["Precinct"] != "Total"].copy()
+
+    # replace masked values with np.nan so we can calculate turnout
+    san_bernardino["YES\n "] = san_bernardino["YES\n "].replace("****", np.nan)
+    san_bernardino["NO\n "] = san_bernardino["NO\n "].replace("****", np.nan)
+    san_bernardino["Total Votes"] = san_bernardino["Total Votes"].replace(
+        "****", np.nan
+    )
+    san_bernardino["turnout"] = (
+        san_bernardino["Total Votes"] / san_bernardino["Registered \nVoters"]
+    ) * 100
+
+    # drop some columns we don't care about
+    san_bernardino = san_bernardino.drop(
+        columns=[
+            "Registered \nVoters",
+            "Times Cast",
+            "Unnamed: 3",
+            "Precinct.1",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Unnamed: 11",
+            "Unnamed: 12",
+        ]
+    )
+
+    # rename columns
+    san_bernardino = san_bernardino.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # add county column
+    san_bernardino["county"] = "San Bernardino"
+
+    # and remove index
+    san_bernardino = san_bernardino.reset_index(drop=True)
+
+    san_bernardino.head(None)
+    return (san_bernardino,)
 
 
 @app.cell(hide_code=True)
