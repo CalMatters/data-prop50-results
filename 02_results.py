@@ -41,6 +41,7 @@ def _(
     glenn,
     imperial,
     inyo,
+    kern,
     madera,
     marin,
     pd,
@@ -69,6 +70,7 @@ def _(
             glenn,
             imperial,
             inyo,
+            kern,
             madera,
             marin,
             san_mateo,
@@ -740,6 +742,73 @@ def _(np, pd):
 
     inyo.head(None)
     return (inyo,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Kern
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    # read the excel file using the "Sheet2" sheet, skip TK rows at the top and TK rows at the bottom
+    kern = pd.read_excel(
+        "inputs/counties/kern/StatementOfVotesCastRPT.xlsx",
+        sheet_name="Sheet2",
+        skiprows=3,
+        skipfooter=5,
+    )
+
+    # get rid of the first two rows that are presentational
+    kern = kern[kern["Precinct"] != "Countywide"].copy()
+    kern = kern[kern["Precinct"] != "Electionwide"].copy()
+
+    # drop columns we don't care about at all
+    kern = kern.drop(
+        columns=[
+            "Times Cast",
+            "Unnamed: 3",
+            "Overvotes",
+            "Precinct.1",
+            "Unnamed: 7",
+            "Unnamed: 9",
+            "Unnamed: 11",
+            "Unresolved\nWrite-In",
+        ]
+    )
+
+    # replace masked values with np.nan so that we can do math calculations
+    kern["Yes\n "] = kern["Yes\n "].replace("****", np.nan)
+    kern["No\n "] = kern["No\n "].replace("****", np.nan)
+    kern["Total Votes"] = kern["Total Votes"].replace("****", np.nan)
+
+    # calculate turnout
+    kern["turnout"] = (kern["Total Votes"] / kern["Registered \nVoters"]) * 100
+
+    # now that turnout is calculated we can drop registered voters
+    kern = kern.drop(columns=["Registered \nVoters"])
+
+    # rename the columns to match our scheme
+    kern = kern.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Yes\n ": "yes_votes",
+            "No\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # add a county column
+    kern["county"] = "Kern"
+
+    # finally, drop the index
+    kern = kern.reset_index(drop=True)
+
+    kern.head(None)
+    return (kern,)
 
 
 @app.cell(hide_code=True)
@@ -1500,7 +1569,9 @@ def _(pd):
     YUBA_FILENAME = "inputs/counties/yuba/11_25_SOV.xlsx"
 
     # read in the source file
-    yuba_xlsx = pd.read_excel(YUBA_FILENAME, skiprows=6, skipfooter=3).set_index("Unnamed: 0")
+    yuba_xlsx = pd.read_excel(YUBA_FILENAME, skiprows=6, skipfooter=3).set_index(
+        "Unnamed: 0"
+    )
 
     # create a pivot table to add together the different voting methods in each precinct
     yuba_pt = yuba_xlsx.pivot_table(
