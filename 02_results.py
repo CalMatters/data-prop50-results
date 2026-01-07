@@ -53,6 +53,7 @@ def _(
     sonoma,
     sutter,
     trinity,
+    tuolumne,
     ventura,
     yuba,
 ):
@@ -79,6 +80,7 @@ def _(
             sonoma,
             sutter,
             trinity,
+            tuolumne,
             ventura,
             yuba,
         ]
@@ -1367,6 +1369,66 @@ def _(pd):
     trinity = trinity_df()
     trinity.head(None)
     return (trinity,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Tuolumne
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    # read in excel file using the sheet titled "Sheet2" and skip 3 rows at the top and five at the end
+    tuolumne = pd.read_excel(
+        "inputs/counties/tuolumne/StatementOfVotesCastRPT.xlsx",
+        sheet_name="Sheet2",
+        skiprows=3,
+        skipfooter=5,
+    )
+
+    # the first two rows aren't useful to us so we want to drop those too
+    tuolumne = tuolumne[tuolumne["Precinct"] != "County"].copy()
+    tuolumne = tuolumne[tuolumne["Precinct"] != "Electionwide"].copy()
+
+    # let's add a turnout column before we drop all the columns we don't care about
+    tuolumne["turnout"] = (
+        tuolumne["Total Votes"] / tuolumne["Registered \nVoters"]
+    ) * 100
+
+    # and now drop 'em
+    tuolumne = tuolumne.drop(
+        columns=[
+            "Times Cast",
+            "Registered \nVoters",
+            "Unnamed: 3",
+            "Undervotes",
+            "Overvotes",
+            "Precinct.1",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Unnamed: 11",
+        ]
+    )
+
+    # let's rename the columns and add a county column
+    tuolumne = tuolumne.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+    tuolumne["county"] = "Tuolumne"
+
+    # and get rid of the index
+    tuolumne = tuolumne.reset_index(drop=True)
+
+    tuolumne.head(None)
+    return (tuolumne,)
 
 
 @app.cell(hide_code=True)
