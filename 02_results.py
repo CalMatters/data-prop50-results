@@ -1084,11 +1084,13 @@ def _(mo):
 def _(pd):
     SAN_BENITO_PROP50_RESULTS_SHEET = "Proposition 50"
     SAN_BENITO_HEADER_N = 2
+    SAN_BENITO_CUMULATIVE_FOOTER_N = 3
 
     san_benito = pd.read_excel(
         "inputs/counties/san_benito/November 4, 2025 Special Election Statement of Vote - By Precinct.xlsx",
         sheet_name=SAN_BENITO_PROP50_RESULTS_SHEET,
         skiprows=SAN_BENITO_HEADER_N,
+        skipfooter=SAN_BENITO_CUMULATIVE_FOOTER_N,
     )
 
     # remove two rows at the top that are countywide data
