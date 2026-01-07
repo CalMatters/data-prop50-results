@@ -1500,7 +1500,7 @@ def _(pd):
     YUBA_FILENAME = "inputs/counties/yuba/11_25_SOV.xlsx"
 
     # read in the source file
-    yuba_xlsx = pd.read_excel(YUBA_FILENAME, skiprows=6).set_index("Unnamed: 0")
+    yuba_xlsx = pd.read_excel(YUBA_FILENAME, skiprows=6, skipfooter=3).set_index("Unnamed: 0")
 
     # create a pivot table to add together the different voting methods in each precinct
     yuba_pt = yuba_xlsx.pivot_table(
