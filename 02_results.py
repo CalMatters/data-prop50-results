@@ -1270,17 +1270,8 @@ def _(mo):
     """)
     return  
 
+
 @app.cell
-def _(pd):
-    INSUFFICIENT_TURNOUT_PLACEHOLDER = "****"
-
-
-    def zero_out_insufficient_turnout_precincts(
-        _series: pd.Series, placeholder_value=INSUFFICIENT_TURNOUT_PLACEHOLDER
-    ) -> pd.Series:
-        _series = _series.replace({placeholder_value: "0"})
-        return _series.astype(int)
-    return (zero_out_insufficient_turnout_precincts,)
 def _(pd):
     def trinity_extract_df(df):
         PRECINCT_ID_CELL = (0, 0)
@@ -1334,14 +1325,28 @@ def _(pd):
 
     trinity = trinity_df()
     trinity.head(None)
-    return (trinity,)
-  
+    return (trinity,)    
+
+
 @app.cell
 def _(mo):
     mo.md(r"""
     # Helper functions
     """)
     return
+
+
+@app.cell
+def _(pd):
+    INSUFFICIENT_TURNOUT_PLACEHOLDER = "****"
+
+
+    def zero_out_insufficient_turnout_precincts(
+        _series: pd.Series, placeholder_value=INSUFFICIENT_TURNOUT_PLACEHOLDER
+    ) -> pd.Series:
+        _series = _series.replace({placeholder_value: "0"})
+        return _series.astype(int)
+    return (zero_out_insufficient_turnout_precincts,)
 
 
 @app.cell
