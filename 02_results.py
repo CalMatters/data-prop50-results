@@ -1112,9 +1112,10 @@ def _(mo):
 @app.cell
 def _(pd):
     # read in the file, skip the first two rows, and make sure the "Precinct" column is a string
+    SAN_MATEO_HEADER_N = 2
     san_mateo_csv = pd.read_csv(
         "inputs/counties/san_mateo/Precincts_18.csv",
-        skiprows=2,
+        skiprows=SAN_MATEO_HEADER_N,
         dtype={"Precinct": str},
     )
 
