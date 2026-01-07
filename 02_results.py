@@ -1600,11 +1600,13 @@ def _(mo):
 @app.cell
 def _(pd):
     # read in excel file using the sheet titled "Sheet2" and skip 3 rows at the top and five at the end
+    TUOLUMNE_HEADER_N = 3
+    TUOLUMNE_CUMULATIVE_FOOTER_N = 5
     tuolumne = pd.read_excel(
         "inputs/counties/tuolumne/StatementOfVotesCastRPT.xlsx",
-        sheet_name="Sheet2",
-        skiprows=3,
-        skipfooter=5,
+        sheet_name=1,
+        skiprows=TUOLUMNE_HEADER_N,
+        skipfooter=TUOLUMNE_CUMULATIVE_FOOTER_N,
     )
 
     # the first two rows aren't useful to us so we want to drop those too
