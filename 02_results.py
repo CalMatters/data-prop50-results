@@ -46,6 +46,7 @@ def _(
     marin,
     merced,
     pd,
+    san_luis_obispo,
     san_mateo,
     santa_barbara,
     santa_clara,
@@ -75,6 +76,7 @@ def _(
             madera,
             marin,
             merced,
+            san_luis_obispo,
             san_mateo,
             santa_barbara,
             santa_clara,
@@ -963,12 +965,6 @@ def _(mo):
 
 
 @app.cell
-def _(merced):
-    merced.columns
-    return
-
-
-@app.cell
 def _(pd):
     merced = pd.read_excel(
         "inputs/counties/merced/detail.xlsx", sheet_name="2", skiprows=2
@@ -1005,6 +1001,96 @@ def _(pd):
 
     merced.head(None)
     return (merced,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Luis Obispo
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    san_luis_obispo = pd.read_excel(
+        "inputs/counties/san_luis_obispo/2025-special-official-sovc-split-by-precinct-excel.xlsx",
+        sheet_name="Sheet2",
+        skiprows=3,
+        skipfooter=8,
+    )
+
+    # get rid of the first three rows that are county wide results or headers
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Countywide"
+    ].copy()
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Electionwide"
+    ].copy()
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "County"
+    ].copy()
+
+    # each precinct has results for polling, vote by mail, and total - we just want the total row
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Polling"
+    ].copy()
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Vote by Mail"
+    ].copy()
+
+    # then backfill each precinct results so that the "Total" values are on the same
+    # row as the precinct ID
+    san_luis_obispo = san_luis_obispo.bfill()
+
+    # and then get rid of the "Total" rows
+    san_luis_obispo = san_luis_obispo[
+        san_luis_obispo["Precinct"] != "Total"
+    ].copy()
+
+    # replace masked values with np.nan
+    san_luis_obispo["YES\n "] = san_luis_obispo["YES\n "].replace("****", np.nan)
+    san_luis_obispo["NO\n "] = san_luis_obispo["NO\n "].replace("****", np.nan)
+    san_luis_obispo["Total Votes"] = san_luis_obispo["Total Votes"].replace(
+        "****", np.nan
+    )
+
+    # add "county" and "turnout columns"
+    san_luis_obispo["county"] = "San Luis Obispo"
+    san_luis_obispo["turnout"] = (
+        san_luis_obispo["Total Votes"] / san_luis_obispo["Registered \nVoters"]
+    ) * 100
+
+    # and then drop the columns we don't want to keep
+    san_luis_obispo = san_luis_obispo.drop(
+        columns=[
+            "Times Cast",
+            "Registered \nVoters",
+            "Unnamed: 3",
+            "Undervotes",
+            "Overvotes",
+            "Precinct.1",
+            "Unnamed: 8",
+            "Unnamed: 10",
+            "Unnamed: 11",
+        ]
+    )
+
+    # and rename the ones we do want to keep
+    san_luis_obispo = san_luis_obispo.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "YES\n ": "yes_votes",
+            "NO\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # reset the index
+    san_luis_obispo = san_luis_obispo.reset_index(drop=True)
+
+    san_luis_obispo.head(None)
+    return (san_luis_obispo,)
 
 
 @app.cell(hide_code=True)
