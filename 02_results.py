@@ -1241,7 +1241,7 @@ def _(pd):
         "inputs/counties/santa_clara/detail.xlsx", sheet_name="3", skiprows=2
     )
 
-    # rename the counties we care about
+    # rename the columns we care about
     # "Total Votes" is for "Yes" and "Total Votes.1" is for "No"
     # which you can see if you open the source spreadsheet
     santa_clara = santa_clara.rename(
