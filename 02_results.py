@@ -44,6 +44,7 @@ def _(
     kern,
     madera,
     marin,
+    merced,
     pd,
     san_mateo,
     santa_barbara,
@@ -73,6 +74,7 @@ def _(
             kern,
             madera,
             marin,
+            merced,
             san_mateo,
             santa_barbara,
             santa_clara,
@@ -950,6 +952,59 @@ def _(pd):
 
     marin.head(None)
     return (marin,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Merced
+    """)
+    return
+
+
+@app.cell
+def _(merced):
+    merced.columns
+    return
+
+
+@app.cell
+def _(pd):
+    merced = pd.read_excel(
+        "inputs/counties/merced/detail.xlsx", sheet_name="2", skiprows=2
+    )
+
+    # add turnout and county columns
+    merced["turnout"] = (merced["Total"] / merced["Registered Voters"]) * 100
+    merced["county"] = "Merced"
+
+    # drop the columns we don't need
+    merced = merced.drop(
+        columns=[
+            "Registered Voters",
+            "Election Day",
+            "Early Voting",
+            "Vote by Mail",
+            "Conditional/Provisional",
+            "Election Day.1",
+            "Early Voting.1",
+            "Vote by Mail.1",
+            "Conditional/Provisional.1",
+        ]
+    )
+
+    # now rename the columns, the first "Total Votes" is for Yes according to the source spreadsheet
+    merced = merced.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Total Votes": "yes_votes",
+            "Total Votes.1": "no_votes",
+            "Total": "total_votes",
+        }
+    )
+
+    merced.head(None)
+    return (merced,)
 
 
 @app.cell(hide_code=True)
