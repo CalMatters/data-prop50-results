@@ -1237,8 +1237,12 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    SANTA_CLARA_PROP50_RESULTS_SHEET = "3"
+    SANTA_CLARA_HEADER_N = 2
     santa_clara = pd.read_excel(
-        "inputs/counties/santa_clara/detail.xlsx", sheet_name="3", skiprows=2
+        "inputs/counties/santa_clara/detail.xlsx",
+        sheet_name=SANTA_CLARA_PROP50_RESULTS_SHEET,
+        skiprows=SANTA_CLARA_HEADER_N
     )
 
     # rename the columns we care about
