@@ -45,6 +45,7 @@ def _(
     marin,
     pd,
     santa_barbara,
+    santa_clara,
     shasta,
     siskiyou,
     solano,
@@ -69,6 +70,7 @@ def _(
             madera,
             marin,
             santa_barbara,
+            santa_clara,
             shasta,
             siskiyou,
             solano,
@@ -943,6 +945,56 @@ def _(np, pd):
     # show all of the data
     santa_barbara.head(None)
     return (santa_barbara,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Santa Clara
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    santa_clara = pd.read_excel(
+        "inputs/counties/santa_clara/detail.xlsx", sheet_name="3", skiprows=2
+    )
+
+    # rename the counties we care about
+    # "Total Votes" is for "Yes" and "Total Votes.1" is for "No"
+    # which you can see if you open the source spreadsheet
+    santa_clara = santa_clara.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Total Votes": "yes_votes",
+            "Total Votes.1": "no_votes",
+            "Total": "total_votes",
+        }
+    )
+
+    # calculate turnout, it's more than 100% in some precincts and jeremia called
+    # to ask them to explain and they're going to call him back
+    santa_clara["turnout"] = (
+        santa_clara["total_votes"] / santa_clara["Registered Voters"]
+    ) * 100
+
+    # and then drop columns we don't need
+    santa_clara = santa_clara.drop(
+        columns=[
+            "Registered Voters",
+            "Election Day",
+            "Vote By Mail",
+            "Election Day.1",
+            "Vote By Mail.1",
+        ]
+    )
+
+    # and add a county column
+    santa_clara["county"] = "Santa Clara"
+
+    santa_clara.head(None)
+    return (santa_clara,)
 
 
 @app.cell(hide_code=True)
