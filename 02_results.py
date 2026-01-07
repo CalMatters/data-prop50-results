@@ -1013,11 +1013,13 @@ def _(mo):
 
 @app.cell
 def _(np, pd):
+    SLO_HEADER_N = 3
+    SLO_CUMULATIVE_FOOTER_N = 8
     san_luis_obispo = pd.read_excel(
         "inputs/counties/san_luis_obispo/2025-special-official-sovc-split-by-precinct-excel.xlsx",
-        sheet_name="Sheet2",
-        skiprows=3,
-        skipfooter=8,
+        sheet_name=1,
+        skiprows=SLO_HEADER_N,
+        skipfooter=SLO_CUMULATIVE_FOOTER_N,
     )
 
     # get rid of the first three rows that are county wide results or headers
