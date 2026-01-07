@@ -1243,7 +1243,7 @@ def _(pd):
 
     # rename the columns we care about
     # "Total Votes" is for "Yes" and "Total Votes.1" is for "No"
-    # which you can see if you open the source spreadsheet
+    # which you can verify with the grouped multi-index header in the source spreadsheet
     santa_clara = santa_clara.rename(
         columns={
             "Precinct": "precinct_id",
