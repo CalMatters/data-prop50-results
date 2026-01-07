@@ -1669,8 +1669,11 @@ def _(np, pd):
     VENTURA_FILENAME = "inputs/counties/ventura/2025.11.04-Statement-of-Votes-Precinct-Canvass.xlsx"
 
     # read in the source file
+    VENTURA_HEADER_N = 6
     ventura = pd.read_excel(
-        VENTURA_FILENAME, sheet_name="PrecinctCanvass", skiprows=6
+        VENTURA_FILENAME,
+        sheet_name=1,
+        skiprows=VENTURA_HEADER_N
     )
 
     # rename some columns
