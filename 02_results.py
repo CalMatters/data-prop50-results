@@ -345,6 +345,9 @@ def _(pd):
         csv = csv[csv["Precinct"] != "In-Person"]
         csv = csv[csv["Precinct"] != "Vote By Mail"]
 
+        # drop extraneous Cumalative records
+        csv = csv[csv["Precinct"] != "Cumulative"].copy()
+
         # get rid of the first two rows
         csv = csv.drop([0, 1])
 
@@ -371,7 +374,10 @@ def _(pd):
         )
 
         # replaced masked values with 0 for turnout calculations
-        csv = csv.replace("****", 0)
+        csv.replace("****", np.nan, inplace=True)
+        csv[["yes_votes", "no_votes", "total_votes"]] = csv[
+            ["yes_votes", "no_votes", "total_votes"]
+        ].astype(float)
 
         # and then add in a calculated turnout column
         csv["turnout"] = round(
