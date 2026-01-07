@@ -135,6 +135,47 @@ def _(
 @app.cell
 def _(mo):
     mo.md(r"""
+    # Explore
+    """)
+    return
+
+
+@app.cell
+def _(mo, results_df):
+    county_dropdown = mo.ui.dropdown(list(results_df["county"].unique()))
+    county_dropdown
+    return (county_dropdown,)
+
+
+@app.cell
+def _(county_dropdown, precincts_results_merge):
+    precincts_results_merge[
+        (precincts_results_merge["county"] == county_dropdown.value)
+    ]
+    return
+
+
+@app.cell
+def _(county_dropdown, precincts_results_merge):
+    precincts_results_merge[
+        (precincts_results_merge["county"] == county_dropdown.value)
+        & (precincts_results_merge["geometry"].isnull())
+    ]
+    return
+
+
+@app.cell
+def _(county_dropdown, precincts_results_merge):
+    precincts_results_merge[
+        (precincts_results_merge["county"] == county_dropdown.value)
+        & (precincts_results_merge["yes_votes"].isnull())
+    ]
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
     # Read data
     """)
     return
@@ -144,6 +185,9 @@ def _(mo):
 def _(Path, RESULTS_CSV_FP, pd):
     if Path(RESULTS_CSV_FP).exists():
         results_df = pd.read_csv(RESULTS_CSV_FP, dtype={"precinct_id": str})
+        results_df[["yes_votes", "no_votes", "total_votes"]] = results_df[
+            ["yes_votes", "no_votes", "total_votes"]
+        ].fillna(-1)
         result_county_count = results_df["county"].nunique()
         print(
             f"Read in {RESULTS_CSV_FP}. Precincts for {result_county_count} counties present"
