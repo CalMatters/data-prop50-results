@@ -46,6 +46,7 @@ def _(
     marin,
     merced,
     pd,
+    sacramento,
     san_luis_obispo,
     san_mateo,
     santa_barbara,
@@ -56,9 +57,9 @@ def _(
     sonoma,
     sutter,
     trinity,
+    tulare,
     tuolumne,
     ventura,
-    tulare,  
     yuba,
 ):
     combined = pd.concat(
@@ -73,12 +74,13 @@ def _(
             imperial,
             inyo,
             kern,
-            inyo,          
+            inyo,
             fresno,
             glenn,
             madera,
             marin,
             merced,
+            sacramento,
             san_luis_obispo,
             san_mateo,
             santa_barbara,
@@ -91,7 +93,7 @@ def _(
             trinity,
             tuolumne,
             ventura,
-            tulare,          
+            tulare,
             yuba,
         ]
     ).reset_index(drop=True)
@@ -332,7 +334,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(np, pd):
     def contra_costa_df():
         csv = pd.read_excel(
             "inputs/counties/contra_costa/StatementOfVotesCastRPT_ByPrecinct.xlsx",
@@ -983,7 +985,7 @@ def _(pd):
     merced = pd.read_excel(
         "inputs/counties/merced/detail.xlsx",
         sheet_name=MERCED_PROP50_RESULTS_SHEET,
-        skiprows=MERCED_HEADER_N
+        skiprows=MERCED_HEADER_N,
     )
 
     # add turnout and county columns
@@ -1017,6 +1019,55 @@ def _(pd):
 
     merced.head(None)
     return (merced,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Sacramento
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    SACRAMENTO_PROP50_RESULTS_SHEET = "Precinct Results"
+    sacramento = pd.read_excel(
+        "inputs/counties/sacramento/Results_bd6edf40-d97c-4b13-adc8-792cb842323e.xlsx",
+        sheet_name=SACRAMENTO_PROP50_RESULTS_SHEET,
+    )
+
+    # only use the rows with Yes and No results
+    sacramento = sacramento[sacramento["Ballot Name"] != "Ballots Cast"].copy()
+    sacramento = sacramento[sacramento["Ballot Name"] != "Over Votes"].copy()
+    sacramento = sacramento[sacramento["Ballot Name"] != "Under Votes"].copy()
+
+    # make a pivot table to group yes and no votes per precinct together
+    sacramento = sacramento.pivot_table(
+        index="Precinct",
+        columns="Ballot Name",
+        values="Total",
+        aggfunc="sum",
+    )
+
+    # reset the index so the precinct ID is in a regular data column
+    sacramento = sacramento.reset_index()
+
+    # add a county column
+    sacramento['county'] = 'Sacramento'
+
+    # rename the other columns to match our scheme
+    sacramento = sacramento.rename(columns={
+        "Precinct": "precinct_id",
+        "No": "no_votes",
+        "Yes": "yes_votes"
+    })
+
+    # add total_votes column
+    sacramento['total_votes'] = sacramento['no_votes'] + sacramento['yes_votes']
+
+    sacramento.head(None)
+    return (sacramento,)
 
 
 @app.cell(hide_code=True)
@@ -1252,7 +1303,7 @@ def _(pd):
     santa_clara = pd.read_excel(
         "inputs/counties/santa_clara/detail.xlsx",
         sheet_name=SANTA_CLARA_PROP50_RESULTS_SHEET,
-        skiprows=SANTA_CLARA_HEADER_N
+        skiprows=SANTA_CLARA_HEADER_N,
     )
 
     # rename the columns we care about
@@ -1615,7 +1666,7 @@ def _(mo):
     mo.md(r"""
     ## Trinity
     """)
-    return  
+    return
 
 
 @app.cell
@@ -1674,7 +1725,7 @@ def _(pd):
 
     trinity = trinity_df()
     trinity.head(None)
-    return (trinity,)    
+    return (trinity,)
 
 
 @app.cell
@@ -1712,7 +1763,7 @@ def _(pd):
     ) -> pd.Series:
         registered_voter_count = registered_voter_count.replace(0, 1)
         return round((votes_cast / registered_voter_count) * 100, 1)
-    return (calculate_turnout,)  
+    return (calculate_turnout,)
 
 
 @app.cell(hide_code=True)
@@ -1792,9 +1843,7 @@ def _(np, pd):
     # read in the source file
     VENTURA_HEADER_N = 6
     ventura = pd.read_excel(
-        VENTURA_FILENAME,
-        sheet_name=1,
-        skiprows=VENTURA_HEADER_N
+        VENTURA_FILENAME, sheet_name=1, skiprows=VENTURA_HEADER_N
     )
 
     # rename some columns
