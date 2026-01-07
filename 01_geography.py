@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.2"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -310,7 +310,7 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         butte,
         "Butte",
-        {"id": "precinct_id", "Name": "precinct_name"},
+        {"Name": "precinct_id", "id": "precinct_name"},
         [
             "id",
             "Name",
@@ -360,6 +360,8 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## Contra Costa
+
+    Precincts with zero registered voters are filtered out, because these precincts are not included in the official results data. [Read more issue #47](https://github.com/CalMatters/data-prop50-results/issues/47)
     """)
     return
 
@@ -369,6 +371,9 @@ def _(PROJECTED_CRS, gpd):
     contra_costa = gpd.read_file(
         "inputs/counties/contra_costa/precincts/PrecinctSet_PDMJ017.json"
     ).to_crs(PROJECTED_CRS)
+
+    has_voters = contra_costa["iZeroRegistrationPct"] != 1
+    contra_costa = contra_costa[has_voters].copy()
 
     contra_costa = alter_df(
         contra_costa,
@@ -982,7 +987,9 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## san_Benito
+    ## San Benito
+
+    A dissolve operation is executed to join all the records with `precinct_id` `0`. These are associated with unpopulated areas such as water treatment plant, farmland, parks, open fields. [Read more issue #32](https://github.com/CalMatters/data-prop50-results/issues/32)
     """)
     return
 
@@ -1010,6 +1017,22 @@ def _(PROJECTED_CRS, gpd):
             "Shape__L_1",
         ],
     )
+
+    assert len(check_duplicates(san_benito)) > 0, (
+        "Expected duplicates but found none"
+    )
+    unpopulated_precinct_count = (san_benito["precinct_id"] == "0").sum()
+    predissolve_precinct_count = len(san_benito)
+    san_benito = san_benito.dissolve("precinct_id", as_index=False)
+    expected_count = predissolve_precinct_count - (unpopulated_precinct_count - 1)
+    actual_count = len(san_benito)
+    assert actual_count == expected_count, (
+        f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
+    )
+    assert check_duplicates(san_benito) is None, (
+        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
+    )
+    print("San Benito duplicate resolved using dissolve operation")
 
     san_benito.head()
     return (san_benito,)
@@ -1429,6 +1452,8 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## Sutter
+
+    Sutter requires a dissolve operation to resolve an issue with a data artifact. [Read more issue #35](https://github.com/CalMatters/data-prop50-results/issues/35)
     """)
     return
 
@@ -1452,6 +1477,18 @@ def _(PROJECTED_CRS, gpd):
             "Shape__Len",
         ],
     )
+
+    assert len(check_duplicates(sutter)) > 1, "Expected duplicates but found none"
+    predissolve_precinct_count = len(sutter)
+    sutter = sutter.dissolve(by="precinct_id", as_index=False)
+    assert (predissolve_precinct_count - 1) == len(sutter), (
+        f"Expected {predissolve_precinct_count - 1} precincts after dissolve, but got {len(sutter)}"
+    )
+    assert check_duplicates(sutter) is None, (
+        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
+    )
+    print("Sutter duplicate resolved using dissolve operation")
+
 
     sutter.head()
     return (sutter,)
@@ -1499,7 +1536,7 @@ def _(PROJECTED_CRS, gpd):
     tulare = alter_df(
         tulare,
         "Tulare",
-        {"VotingPctID": "precinct_id"},
+        {"PrecNum1": "precinct_id"},
         [
             "OBJECTID_12",
             "OBJECTID_1",
@@ -1519,7 +1556,7 @@ def _(PROJECTED_CRS, gpd):
             "Pollsite",
             "PollingSiteID",
             "BallotTypeList",
-            "PrecNum1",
+            "VotingPctID",
             "Precincts_UPDATE_LOCAL_VotingPc",
             "Shape__Area",
             "Shape__Length",
