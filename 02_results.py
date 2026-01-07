@@ -371,14 +371,14 @@ def _(pd):
         )
 
         # replaced masked values with 0 for turnout calculations
-        csv.replace("****", "0", inplace=True)
-        csv[["yes_votes", "no_votes", "Total Votes"]] = csv[
-            ["yes_votes", "no_votes", "Total Votes"]
-        ].astype(int)
+        csv.replace("****", np.nan, inplace=True)
+        csv[["yes_votes", "no_votes", "total_votes"]] = csv[
+            ["yes_votes", "no_votes", "total_votes"]
+        ].astype(float)
 
         # and then add in a calculated turnout column
         csv["turnout"] = round(
-            (csv["Total Votes"] / csv["Registered \nVoters"]) * 100, 1
+            (csv["total_votes"] / csv["Registered \nVoters"]) * 100, 1
         )
 
         # make the index a column so we can drop it
