@@ -42,6 +42,8 @@ def _(
     imperial,
     inyo,
     kern,
+    kings,
+    lake,
     madera,
     marin,
     merced,
@@ -76,12 +78,12 @@ def _(
             contra_costa,
             el_dorado,
             glenn,
+            fresno,
             imperial,
             inyo,
             kern,
-            inyo,
-            fresno,
-            glenn,
+            kings,
+            lake,
             madera,
             marin,
             merced,
@@ -904,13 +906,75 @@ def _(pd, pdfplumber):
     kings["total_votes"] = kings["yes_votes"] + kings["no_votes"]
 
     # remove " %" from the turnout column
-    kings['turnout'] = kings['turnout'].str.replace(' %', '')
+    kings["turnout"] = kings["turnout"].str.replace(" %", "")
 
     # and remove the index
     kings = kings.reset_index(drop=True)
 
     kings.head(None)
+    return (kings,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Lake
+    """)
     return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def extract_lake_pdf():
+        lake = None
+        # extract the tables from the Prop 50 results pages in the PDF document
+        with pdfplumber.open(
+            "inputs/counties/lake/Statement of Votes12022025.pdf"
+        ) as pdf:
+            extracted_pages = []
+            # just a few pages from the document are related to Prop 50
+            prop_50_page = pdf.pages[0]
+            table = prop_50_page.extract_table()
+            lake = pd.DataFrame(table[1:])
+
+        return lake
+
+
+    # create a dataframe from the pdf
+    lake = extract_lake_pdf()
+
+    # remove some extra rows at the end of the dataframe
+    lake = lake[lake[0] != "Vote by Mail Totals"].copy()
+    lake = lake[lake[0] != "Election Day Voting Totals"].copy()
+    lake = lake[lake[0] != "Grand Totals"].copy()
+
+    # now that all the data has been extracted we need to rename
+    # the columns in the dataframe. the mapping can be verified
+    # by looking at the source PDF document
+    lake = lake.rename(
+        columns={0: "precinct_id", 3: "turnout", 4: "yes_votes", 5: "no_votes"}
+    )
+
+    # we can drop columns we don't care about
+    # column with an index of 1 is "Registration"
+    # column with an index of 2 is "Ballots Cast"
+    lake = lake.drop(columns=[1, 2])
+
+    # # add a county column
+    lake["county"] = "Lake"
+
+    # force yes_votes and no_votes to be numbers
+    lake["yes_votes"] = pd.to_numeric(lake["yes_votes"], errors="coerce")
+    lake["no_votes"] = pd.to_numeric(lake["no_votes"], errors="coerce")
+
+    # and add a total_votes
+    lake["total_votes"] = lake["yes_votes"] + lake["no_votes"]
+
+    # and remove the index
+    lake = lake.reset_index(drop=True)
+
+    lake.head(None)
+    return (lake,)
 
 
 @app.cell(hide_code=True)
@@ -1928,18 +1992,21 @@ def _(pd, pdfplumber):
     def extract_stanislaus_pdf():
         stanislaus = None
         # extract the tables from the Prop 50 results pages in the PDF document
-        with pdfplumber.open("inputs/counties/stanislaus/11-04-2025-sov.pdf") as pdf:
+        with pdfplumber.open(
+            "inputs/counties/stanislaus/11-04-2025-sov.pdf"
+        ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
             prop_50_pages = pdf.pages[6:8]
-    
+
             for page in prop_50_pages:
                 table = page.extract_table()
                 df = pd.DataFrame(table[1:])
                 extracted_pages.append(df)
-    
+
             stanislaus = pd.concat(extracted_pages)
         return stanislaus
+
 
     stanislaus = extract_stanislaus_pdf()
 
