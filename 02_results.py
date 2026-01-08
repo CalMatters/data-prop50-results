@@ -49,6 +49,7 @@ def _(
     sacramento,
     san_benito,
     san_bernardino,
+    san_diego,
     san_luis_obispo,
     san_mateo,
     santa_barbara,
@@ -85,6 +86,7 @@ def _(
             sacramento,
             san_benito,
             san_bernardino,
+            san_diego,
             san_luis_obispo,
             san_mateo,
             santa_barbara,
@@ -1220,6 +1222,66 @@ def _(np, pd):
 
     san_bernardino.head(None)
     return (san_bernardino,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Diego
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    SAN_DIEGO_PROP50_RESULTS_SHEET = "Sheet2"
+    SAN_DIEGO_HEADER_N = 6
+    SAN_DIEGO_CUMULATIVE_FOOTER_N = 5
+
+    san_diego = pd.read_excel(
+        "inputs/counties/san_diego/Statement of Votes Cast 202511.xls",
+        sheet_name=SAN_DIEGO_PROP50_RESULTS_SHEET,
+        skiprows=SAN_DIEGO_HEADER_N,
+        skipfooter=SAN_DIEGO_CUMULATIVE_FOOTER_N,
+    )
+
+    # replace masked values with np.nan so we can calculate turnout
+    san_diego["YES"] = san_diego["YES"].replace("****", np.nan)
+    san_diego["NO"] = san_diego["NO"].replace("****", np.nan)
+    san_diego["Total Votes"] = san_diego["Total Votes"].replace("****", np.nan)
+
+    # replace "%" in turnout values
+    san_diego["Turnout (%)"] = san_diego["Turnout (%)"].str.replace("%", "")
+
+    # drop some columns we don't care about
+    san_diego = san_diego.drop(
+        columns=[
+            "Unnamed: 1",
+            "Registered Voters",
+            "Voters Cast",
+            "Unnamed: 5",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Unnamed: 10",
+        ]
+    )
+
+    # rename columns
+    san_diego = san_diego.rename(
+        columns={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",
+            "YES": "yes_votes",
+            "NO": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # add county column
+    san_diego["county"] = "San Diego"
+
+    san_diego.head(None)
+    return (san_diego,)
 
 
 @app.cell(hide_code=True)
