@@ -842,6 +842,80 @@ def _(np, pd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Kings
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def extract_kings_pdf():
+        kings = None
+        # extract the tables from the Prop 50 results pages in the PDF document
+        with pdfplumber.open("inputs/counties/kings/NOV 2025 SOV BOOK.pdf") as pdf:
+            extracted_pages = []
+            # just a few pages from the document are related to Prop 50
+            prop_50_pages = pdf.pages[9:12]
+
+            for page in prop_50_pages:
+                table = page.extract_table()
+                df = pd.DataFrame(table[1:])
+                extracted_pages.append(df)
+
+            kings = pd.concat(extracted_pages)
+        return kings
+
+
+    # create a dataframe from the pdf
+    kings = extract_kings_pdf()
+
+    # there are rows for different types of voting
+    # but we just want the "Total"
+    kings = kings[kings[1] == "Total"].copy()
+
+    # the precinct IDs all start with "1" so
+    # filter rows to just those
+    kings = kings[kings[0].str.get(0).isin(["1"])]
+
+    # that ends up including the "16th Senatorial" data
+    # so filter that out too
+    kings = kings[kings[0] != "16th Senatorial"].copy()
+
+    # now that all the data has been extracted we need to rename
+    # the columns in the dataframe. the mapping can be verified
+    # by looking at the source PDF document
+    kings = kings.rename(
+        columns={0: "precinct_id", 4: "turnout", 5: "yes_votes", 6: "no_votes"}
+    )
+
+    # we can drop columns we don't care about
+    # column with an index of 1 is "Registered Voters"
+    # column with an index of 2 is "Ballots Cast"
+    kings = kings.drop(columns=[1, 2, 3, 7, 8])
+
+    # add a county column
+    kings["county"] = "Kings"
+
+    # force yes_votes and no_votes to be numbers
+    kings["yes_votes"] = pd.to_numeric(kings["yes_votes"], errors="coerce")
+    kings["no_votes"] = pd.to_numeric(kings["no_votes"], errors="coerce")
+
+    # and add a total_votes
+    kings["total_votes"] = kings["yes_votes"] + kings["no_votes"]
+
+    # remove " %" from the turnout column
+    kings['turnout'] = kings['turnout'].str.replace(' %', '')
+
+    # and remove the index
+    kings = kings.reset_index(drop=True)
+
+    kings.head(None)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Madera
     """)
     return
@@ -1841,7 +1915,7 @@ def _(pd):
     return (sonoma,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
     mo.md(r"""
     ## Stanislaus
