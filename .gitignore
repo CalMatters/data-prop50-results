@@ -212,3 +212,4 @@ __marimo__/
 # Generated output files
 outputs/results.csv
 outputs/precincts.*
+outputs/cvap_tracts.gpkg
