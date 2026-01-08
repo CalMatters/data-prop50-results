@@ -27,104 +27,24 @@ def _():
     return gpd, mo, pd, zipfile
 
 
-@app.cell
-def _(OUTPUT_DRIVER, OUTPUT_FP, gdf_ca_cvap_tracts):
-    # Export merged data
-    gdf_ca_cvap_tracts.to_file(OUTPUT_FP, driver=OUTPUT_DRIVER)
-    return
-
-
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Merge GIS and demographic data
+    # Constants
     """)
     return
 
 
 @app.cell
-def _(df_ca_cvap_est_by_tract, gdf_ca_tracts):
-    expected_tract_num = len(gdf_ca_tracts)
-    gdf_ca_cvap_tracts = gdf_ca_tracts.merge(
-        df_ca_cvap_est_by_tract, validate="1:1", how="outer"
-    )
-    observed_post_merge_tract_num = len(gdf_ca_cvap_tracts)
-
-    assert gdf_ca_cvap_tracts["total_cvap_est"].isnull().sum() == 0, (
-        "Unexpected null value post-merge, each row should contain a non-null value for total cvap estimate"
-    )
-    assert observed_post_merge_tract_num == expected_tract_num, (
-        f"Number of tracts after merge ({observed_post_merge_tract_num}) does not match expected number ({expected_tract_num}). "
-        "This suggests that some tracts were either duplicated or dropped during the merge operation."
-    )
-
-    gdf_ca_cvap_tracts
-    return (gdf_ca_cvap_tracts,)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## Tract GIS file
-
-    Read and filter for California
-    """)
-    return
+def _():
+    CA_FIPS = "06"
+    return (CA_FIPS,)
 
 
 @app.cell
-def _(TRACTS_GIS_FP, gpd, is_ca_geoid):
-    GDF_TRACTS = gpd.read_file(TRACTS_GIS_FP)
-    gdf_ca_tracts = GDF_TRACTS[is_ca_geoid(GDF_TRACTS["GEOID"])][
-        ["GEOID", "geometry"]
-    ].copy()
-    gdf_ca_tracts = gdf_ca_tracts.rename(columns={"GEOID": "geoid"})
-    del GDF_TRACTS
-    gdf_ca_tracts.plot()
-    return (gdf_ca_tracts,)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## CVAP demographic data
-
-    Read and transform to wide format
-    """)
-    return
-
-
-@app.cell
-def _(
-    CVAP_TRACT_DATA_FP,
-    CVAP_ZIPPED_DATA_FP,
-    TRACT_FIPS_LEN,
-    filter_moe_from_wide_df,
-    is_ca_geoid,
-    read_csv_from_zip,
-    transform_cvap_format,
-):
-    DF_CVAP_BY_TRACT = read_csv_from_zip(
-        CVAP_ZIPPED_DATA_FP, CVAP_TRACT_DATA_FP, encoding="latin1"
-    )
-    DF_CVAP_BY_TRACT["geoid"] = DF_CVAP_BY_TRACT["geoid"].str.slice(
-        -1 * TRACT_FIPS_LEN
-    )
-
-    df_ca_cvap_by_tract = DF_CVAP_BY_TRACT[
-        is_ca_geoid(DF_CVAP_BY_TRACT["geoid"])
-    ].copy()
-    del DF_CVAP_BY_TRACT
-
-    df_ca_cvap_by_tract = transform_cvap_format(df_ca_cvap_by_tract)
-    df_ca_cvap_est_by_tract = filter_moe_from_wide_df(df_ca_cvap_by_tract)
-    return (df_ca_cvap_est_by_tract,)
-
-
-@app.cell
-def _(CVAP_ZIPPED_DATA_FP, list_files_in_zip):
-    list_files_in_zip(CVAP_ZIPPED_DATA_FP)
-    return
+def _():
+    TRACT_FIPS_LEN = 11
+    return (TRACT_FIPS_LEN,)
 
 
 @app.cell(hide_code=True)
@@ -153,26 +73,6 @@ def _():
     OUTPUT_FP = "./outputs/cvap_tracts.gpkg"
     OUTPUT_DRIVER = "GPKG"
     return OUTPUT_DRIVER, OUTPUT_FP
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    # Constants
-    """)
-    return
-
-
-@app.cell
-def _():
-    TRACT_FIPS_LEN = 11
-    return (TRACT_FIPS_LEN,)
-
-
-@app.cell
-def _():
-    CA_FIPS = "06"
-    return (CA_FIPS,)
 
 
 @app.cell(hide_code=True)
@@ -234,10 +134,6 @@ def _(pd):
         # Create column names for estimate and margin of error
         df_copy["est_col"] = df_copy["lntitle_clean"] + "_cvap_est"
         df_copy["moe_col"] = df_copy["lntitle_clean"] + "_cvap_moe"
-
-        # Create dictionaries mapping geoid to value for each column
-        est_dict = df_copy.set_index(["geoid", "est_col"])["cvap_est"].to_dict()
-        moe_dict = df_copy.set_index(["geoid", "moe_col"])["cvap_moe"].to_dict()
 
         # Get unique geoids and initialize result dataframe
         geoids = df_copy["geoid"].unique()
@@ -333,7 +229,208 @@ def _(CA_FIPS, pd):
             A boolean Series indicating whether each GEOID starts with '06'.
         """
         return geoid_series.str.startswith(CA_FIPS)
-    return (is_ca_geoid,)
+
+
+    def extract_tract_geoid(
+        geoid_series: pd.Series, tract_fips_len: int
+    ) -> pd.Series:
+        """
+        Extract the tract portion of a GEOID by taking the last N characters.
+
+        Parameters
+        ----------
+        geoid_series : pd.Series
+            A pandas Series containing full GEOID strings.
+        tract_fips_len : int
+            The length of the tract FIPS code to extract (typically 11).
+
+        Returns
+        -------
+        pd.Series
+            A Series containing the extracted tract GEOID strings.
+        """
+        return geoid_series.str.slice(-1 * tract_fips_len)
+
+
+    def filter_california_data(
+        df: pd.DataFrame, geoid_column: str = "geoid"
+    ) -> pd.DataFrame:
+        """
+        Filter a DataFrame to include only rows with California GEOIDs.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input DataFrame with a GEOID column.
+        geoid_column : str, default "geoid"
+            Name of the column containing GEOID values.
+
+        Returns
+        -------
+        pd.DataFrame
+            Filtered DataFrame containing only California rows.
+        """
+        return df[is_ca_geoid(df[geoid_column])].copy()
+
+
+    def standardize_geoid_column(
+        df: pd.DataFrame,
+        source_column: str = "GEOID",
+        target_column: str = "geoid",
+    ) -> pd.DataFrame:
+        """
+        Rename a GEOID column to a standardized name.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input DataFrame with a source GEOID column.
+        source_column : str, default "GEOID"
+            Name of the source column to rename.
+        target_column : str, default "geoid"
+            Name of the target column after renaming.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with renamed GEOID column.
+        """
+        return df.rename(columns={source_column: target_column})
+    return (
+        extract_tract_geoid,
+        filter_california_data,
+        standardize_geoid_column,
+    )
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Produce joined CVAP GIS data file
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## CVAP demographic data
+
+    Read and transform to wide format. The CVAP data is read from a zip file, the tract GEOID is extracted, and the data is filtered to California tracts only.
+    """)
+    return
+
+
+@app.cell
+def _(CVAP_ZIPPED_DATA_FP, list_files_in_zip):
+    # List files in the CVAP zip to verify contents
+    list_files_in_zip(CVAP_ZIPPED_DATA_FP)
+    return
+
+
+@app.cell
+def _(
+    CVAP_TRACT_DATA_FP,
+    CVAP_ZIPPED_DATA_FP,
+    TRACT_FIPS_LEN,
+    extract_tract_geoid,
+    filter_california_data,
+    filter_moe_from_wide_df,
+    read_csv_from_zip,
+    transform_cvap_format,
+):
+    # Read CVAP data from zip file
+    DF_CVAP_BY_TRACT = read_csv_from_zip(
+        CVAP_ZIPPED_DATA_FP, CVAP_TRACT_DATA_FP, encoding="latin1"
+    )
+
+    # Extract tract GEOID from full GEOID string
+    DF_CVAP_BY_TRACT["geoid"] = extract_tract_geoid(
+        DF_CVAP_BY_TRACT["geoid"], TRACT_FIPS_LEN
+    )
+
+    # Filter to California tracts only
+    df_ca_cvap_by_tract = filter_california_data(DF_CVAP_BY_TRACT)
+    del DF_CVAP_BY_TRACT
+
+    # Transform from long to wide format
+    df_ca_cvap_by_tract = transform_cvap_format(df_ca_cvap_by_tract)
+
+    # Remove margin of error columns, keeping only estimates
+    df_ca_cvap_est_by_tract = filter_moe_from_wide_df(df_ca_cvap_by_tract)
+    return (df_ca_cvap_est_by_tract,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Tract GIS file
+
+    Read the census tract GIS file and filter to California tracts only. The GEOID column is standardized to lowercase.
+    """)
+    return
+
+
+@app.cell
+def _(TRACTS_GIS_FP, filter_california_data, gpd, standardize_geoid_column):
+    # Read tract GIS file
+    GDF_TRACTS = gpd.read_file(TRACTS_GIS_FP)
+
+    # Filter to California tracts and select only GEOID and geometry columns
+    gdf_ca_tracts = filter_california_data(GDF_TRACTS, geoid_column="GEOID")[
+        ["GEOID", "geometry"]
+    ].copy()
+
+    # Standardize GEOID column name to lowercase
+    gdf_ca_tracts = standardize_geoid_column(gdf_ca_tracts)
+    del GDF_TRACTS
+
+    # Visualize the tracts
+    gdf_ca_tracts.plot()
+    return (gdf_ca_tracts,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Merge GIS and demographic data
+
+    Merge the CVAP demographic estimates with the tract GIS data. The merge is validated to ensure no tracts are missing or duplicated.
+    """)
+    return
+
+
+@app.cell
+def _(df_ca_cvap_est_by_tract, gdf_ca_tracts):
+    # Validate expected tract count before merge
+    expected_tract_num = len(gdf_ca_tracts)
+
+    # Perform outer merge to ensure all tracts are included
+    gdf_ca_cvap_tracts = gdf_ca_tracts.merge(
+        df_ca_cvap_est_by_tract, validate="1:1", how="outer"
+    )
+    observed_post_merge_tract_num = len(gdf_ca_cvap_tracts)
+
+    # Validate that all tracts have CVAP data
+    assert gdf_ca_cvap_tracts["total_cvap_est"].isnull().sum() == 0, (
+        "Unexpected null value post-merge, each row should contain a non-null value for total cvap estimate"
+    )
+
+    # Validate that no tracts were duplicated or dropped
+    assert observed_post_merge_tract_num == expected_tract_num, (
+        f"Number of tracts after merge ({observed_post_merge_tract_num}) does not match expected number ({expected_tract_num}). "
+        "This suggests that some tracts were either duplicated or dropped during the merge operation."
+    )
+
+    gdf_ca_cvap_tracts
+    return (gdf_ca_cvap_tracts,)
+
+
+@app.cell
+def _(OUTPUT_DRIVER, OUTPUT_FP, gdf_ca_cvap_tracts):
+    # Export merged data to GeoPackage format
+    gdf_ca_cvap_tracts.to_file(OUTPUT_FP, driver=OUTPUT_DRIVER)
+    return
 
 
 if __name__ == "__main__":
