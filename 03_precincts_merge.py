@@ -132,7 +132,7 @@ def _(
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Explore
@@ -147,11 +147,27 @@ def _(mo, results_df):
     return (county_dropdown,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Merged data
+    """)
+    return
+
+
 @app.cell
 def _(county_dropdown, precincts_results_merge):
     precincts_results_merge[
         (precincts_results_merge["county"] == county_dropdown.value)
     ]
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Results without a geographic match
+    """)
     return
 
 
@@ -164,6 +180,14 @@ def _(county_dropdown, precincts_results_merge):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Geographic data without a results match
+    """)
+    return
+
+
 @app.cell
 def _(county_dropdown, precincts_results_merge):
     precincts_results_merge[
@@ -173,7 +197,7 @@ def _(county_dropdown, precincts_results_merge):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Read data
@@ -214,7 +238,7 @@ def _(PRECINCTS_GIS_FP, Path, gpd):
     return (precincts_gdf,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Constants
@@ -228,7 +252,7 @@ def _():
     return (MERGE_COLUMNS,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## File paths
@@ -255,7 +279,7 @@ def _(os):
     return (DEBUG_DIR,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Helper functions
