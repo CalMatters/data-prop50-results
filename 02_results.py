@@ -175,6 +175,9 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    _PRECINCT_ID_PATTERN = r"\d{4}"
+
+
     def butte_df():
         csv = pd.read_excel(
             "inputs/counties/butte/detail.xlsx", sheet_name="2", skiprows=2
@@ -202,6 +205,7 @@ def _(pd):
                 "Provisional.1",
             ],
         )
+        csv = csv[csv["precinct_id"].str.match(_PRECINCT_ID_PATTERN)].copy()
         return csv
 
 
