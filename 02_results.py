@@ -152,9 +152,9 @@ def _(pd):
     alameda["turnout"] = alameda["turnout"].str.replace("%", "")
 
 
-    alameda[
+    alameda = alameda[
         alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
-    ]
+    ].copy()
 
     # get rid of the index column
     alameda = alameda.reset_index(drop=True)
