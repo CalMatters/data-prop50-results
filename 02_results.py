@@ -53,6 +53,7 @@ def _(
     san_bernardino,
     san_diego,
     san_francisco,
+    san_joaquin,
     san_luis_obispo,
     san_mateo,
     santa_barbara,
@@ -92,6 +93,7 @@ def _(
             san_bernardino,
             san_diego,
             san_francisco,
+            san_joaquin,
             san_luis_obispo,
             san_mateo,
             santa_barbara,
@@ -1505,6 +1507,70 @@ def _(pd):
 
     san_francisco.head(None)
     return (san_francisco,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Joaquin
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def extract_san_joaquin_pdf():
+        san_joaquin = None
+        # extract the tables from the Prop 50 results pages in the PDF document
+        with pdfplumber.open(
+            "inputs/counties/san_joaquin/November-4-2025-Statewide-Special-Election-Statement-of-the-Vote.pdf"
+        ) as pdf:
+            extracted_pages = []
+            # just a few pages from the document are related to Prop 50
+            prop_50_pages = pdf.pages[5:10]
+
+            for page in prop_50_pages:
+                table = page.extract_table()
+                df = pd.DataFrame(table[1:])
+                extracted_pages.append(df)
+
+            san_joaquin = pd.concat(extracted_pages)
+        return san_joaquin
+
+
+    san_joaquin = extract_san_joaquin_pdf()
+
+    # now that all the data has been extracted we need to rename
+    # the columns in the dataframe. the mapping can be verified
+    # by looking at the source PDF document
+    san_joaquin = san_joaquin.rename(
+        columns={0: "precinct_id", 3: "turnout", 4: "yes_votes", 5: "no_votes"}
+    )
+
+    # we can drop columns we don't care about
+    # column with an index of 1 is "Registered Voters"
+    # column with an index of 2 is "Ballots Cast"
+    san_joaquin = san_joaquin.drop(columns=[1, 2])
+
+    # add a county column
+    san_joaquin["county"] = "San Joaquin"
+
+    # force yes_votes and no_votes to be numbers
+    san_joaquin["yes_votes"] = pd.to_numeric(
+        san_joaquin["yes_votes"].str.replace(",", ""), errors="coerce"
+    )
+    san_joaquin["no_votes"] = pd.to_numeric(
+        san_joaquin["no_votes"].str.replace(",", ""), errors="coerce"
+    )
+
+    # and add a total_votes
+    san_joaquin["total_votes"] = san_joaquin["yes_votes"] + san_joaquin["no_votes"]
+
+    # and remove the index
+    san_joaquin = san_joaquin.reset_index(drop=True)
+
+    san_joaquin.head(None)
+    return (san_joaquin,)
 
 
 @app.cell(hide_code=True)
