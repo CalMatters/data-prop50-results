@@ -59,6 +59,7 @@ def _(
     siskiyou,
     solano,
     sonoma,
+    stanislaus,
     sutter,
     trinity,
     tulare,
@@ -97,6 +98,7 @@ def _(
             siskiyou,
             solano,
             sonoma,
+            stanislaus,
             sutter,
             trinity,
             tuolumne,
@@ -1304,7 +1306,7 @@ def _(pd):
         "inputs/counties/san_francisco/sov.xlsx",
         sheet_name=SAN_FRANCISCO_PROP50_RESULTS_SHEET,
         skiprows=SAN_FRANCISCO_HEADER_N,
-        skipfooter=SAN_FRANCISCO_CUMULATIVE_FOOTER_N
+        skipfooter=SAN_FRANCISCO_CUMULATIVE_FOOTER_N,
     )
 
     # remove some extra rows
@@ -1837,6 +1839,61 @@ def _(pd):
     )
     sonoma.head(None)
     return (sonoma,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Stanislaus
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    stanislaus = None
+    # extract the tables from the Prop 50 results pages in the PDF document
+    with pdfplumber.open("inputs/counties/stanislaus/11-04-2025-sov.pdf") as pdf:
+        extracted_pages = []
+        # just a few pages from the document are related to Prop 50
+        prop_50_pages = pdf.pages[6:8]
+
+        for page in prop_50_pages:
+            table = page.extract_table()
+            df = pd.DataFrame(table[1:])
+            extracted_pages.append(df)
+
+        stanislaus = pd.concat(extracted_pages)
+
+    # now that all the data has been extracted we need to rename
+    # the columns in the dataframe. the mapping can be verified
+    # by looking at the source PDF document
+    stanislaus = stanislaus.rename(
+        columns={0: "precinct_id", 3: "turnout", 4: "yes_votes", 5: "no_votes"}
+    )
+
+    # we can drop columns we don't care about
+    # column with an index of 1 is "Registered Voters"
+    # column with an index of 2 is "Ballots Cast"
+    stanislaus = stanislaus.drop(columns=[1, 2])
+
+    # add a county column
+    stanislaus["county"] = "Stanislaus"
+
+    # force yes_votes and no_votes to be numbers
+    stanislaus["yes_votes"] = pd.to_numeric(
+        stanislaus["yes_votes"], errors="coerce"
+    )
+    stanislaus["no_votes"] = pd.to_numeric(stanislaus["no_votes"], errors="coerce")
+
+    # and add a total_votes
+    stanislaus["total_votes"] = stanislaus["yes_votes"] + stanislaus["no_votes"]
+
+    # and remove the index
+    stanislaus = stanislaus.reset_index(drop=True)
+
+    stanislaus.head(None)
+    return (stanislaus,)
 
 
 @app.cell(hide_code=True)
