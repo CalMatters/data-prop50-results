@@ -1915,7 +1915,7 @@ def _(pd):
     return (sonoma,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## Stanislaus
@@ -1925,19 +1925,23 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
-    stanislaus = None
-    # extract the tables from the Prop 50 results pages in the PDF document
-    with pdfplumber.open("inputs/counties/stanislaus/11-04-2025-sov.pdf") as pdf:
-        extracted_pages = []
-        # just a few pages from the document are related to Prop 50
-        prop_50_pages = pdf.pages[6:8]
+    def extract_stanislaus_pdf():
+        stanislaus = None
+        # extract the tables from the Prop 50 results pages in the PDF document
+        with pdfplumber.open("inputs/counties/stanislaus/11-04-2025-sov.pdf") as pdf:
+            extracted_pages = []
+            # just a few pages from the document are related to Prop 50
+            prop_50_pages = pdf.pages[6:8]
+    
+            for page in prop_50_pages:
+                table = page.extract_table()
+                df = pd.DataFrame(table[1:])
+                extracted_pages.append(df)
+    
+            stanislaus = pd.concat(extracted_pages)
+        return stanislaus
 
-        for page in prop_50_pages:
-            table = page.extract_table()
-            df = pd.DataFrame(table[1:])
-            extracted_pages.append(df)
-
-        stanislaus = pd.concat(extracted_pages)
+    stanislaus = extract_stanislaus_pdf()
 
     # now that all the data has been extracted we need to rename
     # the columns in the dataframe. the mapping can be verified
