@@ -94,8 +94,12 @@ def _(
         right_only = merged_gdf[is_right_missing]  # in GIS, not in results
 
         # Get counts for all relevant categories
-        left_missing_counts = count_by_county(is_left_missing)
-        right_missing_counts = count_by_county(is_right_missing)
+        gis_missing_counts = count_by_county(
+            is_left_missing
+        )  # number of result records without a geography match in each county
+        results_missing_counts = count_by_county(
+            is_right_missing
+        )  # number of precinct geographies without corresponding results in each county
         gis_valid_counts = count_by_county(merged_gdf["geometry"].notna())
         results_valid_counts = count_by_county(merged_gdf["total_votes"].notna())
 
@@ -105,8 +109,8 @@ def _(
             county: {
                 "gis_entries": gis_valid_counts.get(county, 0),
                 "results_entries": results_valid_counts.get(county, 0),
-                "missing_in_gis": left_missing_counts.get(county, 0),
-                "missing_in_results": right_missing_counts.get(county, 0),
+                "missing_in_gis": gis_missing_counts.get(county, 0),
+                "missing_in_results": results_missing_counts.get(county, 0),
             }
             for county in all_counties
         }
