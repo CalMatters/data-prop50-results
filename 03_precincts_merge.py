@@ -29,7 +29,7 @@ def _(
 
     county_intersect = precincts_county_set & results_county_set
     print(
-        f"Counties present in both precincts and results data: {sorted(county_intersect)}"
+        f"{len(county_intersect)} counties present in both precincts and results data: {sorted(county_intersect)}"
     )
 
     precincts_filtered_gdf = precincts_gdf[
