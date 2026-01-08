@@ -56,9 +56,9 @@ def _(
     sonoma,
     sutter,
     trinity,
+    tulare,
     tuolumne,
     ventura,
-    tulare,  
     yuba,
 ):
     combined = pd.concat(
@@ -73,7 +73,7 @@ def _(
             imperial,
             inyo,
             kern,
-            inyo,          
+            inyo,
             fresno,
             glenn,
             madera,
@@ -91,7 +91,7 @@ def _(
             trinity,
             tuolumne,
             ventura,
-            tulare,          
+            tulare,
             yuba,
         ]
     ).reset_index(drop=True)
@@ -110,6 +110,7 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    ALAMEDA_PRECINCT_ID_PATTERN = r"\d{6}"
     ALAMEDA_HEADER_ROWS_N = 5
     alameda = pd.read_excel(
         "inputs/counties/alameda/Statement of Vote - Statewide Special Election.xlsx",
@@ -149,6 +150,11 @@ def _(pd):
 
     # remove the "%" from turnout column
     alameda["turnout"] = alameda["turnout"].str.replace("%", "")
+
+
+    alameda[
+        alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
+    ]
 
     # get rid of the index column
     alameda = alameda.reset_index(drop=True)
@@ -332,7 +338,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(np, pd):
     def contra_costa_df():
         csv = pd.read_excel(
             "inputs/counties/contra_costa/StatementOfVotesCastRPT_ByPrecinct.xlsx",
@@ -983,7 +989,7 @@ def _(pd):
     merced = pd.read_excel(
         "inputs/counties/merced/detail.xlsx",
         sheet_name=MERCED_PROP50_RESULTS_SHEET,
-        skiprows=MERCED_HEADER_N
+        skiprows=MERCED_HEADER_N,
     )
 
     # add turnout and county columns
@@ -1252,7 +1258,7 @@ def _(pd):
     santa_clara = pd.read_excel(
         "inputs/counties/santa_clara/detail.xlsx",
         sheet_name=SANTA_CLARA_PROP50_RESULTS_SHEET,
-        skiprows=SANTA_CLARA_HEADER_N
+        skiprows=SANTA_CLARA_HEADER_N,
     )
 
     # rename the columns we care about
@@ -1615,7 +1621,7 @@ def _(mo):
     mo.md(r"""
     ## Trinity
     """)
-    return  
+    return
 
 
 @app.cell
@@ -1674,7 +1680,7 @@ def _(pd):
 
     trinity = trinity_df()
     trinity.head(None)
-    return (trinity,)    
+    return (trinity,)
 
 
 @app.cell
@@ -1712,7 +1718,7 @@ def _(pd):
     ) -> pd.Series:
         registered_voter_count = registered_voter_count.replace(0, 1)
         return round((votes_cast / registered_voter_count) * 100, 1)
-    return (calculate_turnout,)  
+    return (calculate_turnout,)
 
 
 @app.cell(hide_code=True)
@@ -1792,9 +1798,7 @@ def _(np, pd):
     # read in the source file
     VENTURA_HEADER_N = 6
     ventura = pd.read_excel(
-        VENTURA_FILENAME,
-        sheet_name=1,
-        skiprows=VENTURA_HEADER_N
+        VENTURA_FILENAME, sheet_name=1, skiprows=VENTURA_HEADER_N
     )
 
     # rename some columns
