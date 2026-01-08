@@ -1,10 +1,10 @@
 import marimo
 
-__generated_with = "0.18.1"
+__generated_with = "0.18.4"
 app = marimo.App(width="columns")
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # CVAP by Tract
@@ -98,7 +98,7 @@ def _(CVAP_ZIPPED_DATA_FP, list_files_in_zip):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Filepaths
@@ -126,7 +126,7 @@ def _():
     return OUTPUT_DRIVER, OUTPUT_FP
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Constants
@@ -146,7 +146,7 @@ def _():
     return (CA_FIPS,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     # Helper functions
