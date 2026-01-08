@@ -50,6 +50,7 @@ def _(
     san_benito,
     san_bernardino,
     san_diego,
+    san_francisco,
     san_luis_obispo,
     san_mateo,
     santa_barbara,
@@ -87,6 +88,7 @@ def _(
             san_benito,
             san_bernardino,
             san_diego,
+            san_francisco,
             san_luis_obispo,
             san_mateo,
             santa_barbara,
@@ -1282,6 +1284,87 @@ def _(np, pd):
 
     san_diego.head(None)
     return (san_diego,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Francisco
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    SAN_FRANCISCO_PROP50_RESULTS_SHEET = "Sheet2"
+    SAN_FRANCISCO_HEADER_N = 3
+    SAN_FRANCISCO_CUMULATIVE_FOOTER_N = 8
+
+    san_francisco = pd.read_excel(
+        "inputs/counties/san_francisco/sov.xlsx",
+        sheet_name=SAN_FRANCISCO_PROP50_RESULTS_SHEET,
+        skiprows=SAN_FRANCISCO_HEADER_N,
+        skipfooter=SAN_FRANCISCO_CUMULATIVE_FOOTER_N
+    )
+
+    # remove some extra rows
+    san_francisco = san_francisco[
+        san_francisco["Precinct"] != "Electionwide"
+    ].copy()
+
+    # there are multiple rows per precinct, one per voting method
+    # remove them except for the total votes values
+    san_francisco = san_francisco[
+        san_francisco["Precinct"] != "Election Day"
+    ].copy()
+    san_francisco = san_francisco[
+        san_francisco["Precinct"] != "Vote by Mail"
+    ].copy()
+
+    # backfill the data so that the vote totals are on the same
+    # rows as the precinct ids
+    san_francisco = san_francisco.bfill()
+
+    # and then get rid of the "Total" rows so we're just left with precinct data
+    san_francisco = san_francisco[san_francisco["Precinct"] != "Total"].copy()
+
+    # calculate turnout per precinct
+    san_francisco["turnout"] = (
+        san_francisco["Total Votes"] / san_francisco["Registered \nVoters"]
+    ) * 100
+
+    # drop the columns we don't want
+    san_francisco = san_francisco.drop(
+        columns=[
+            "Registered \nVoters",
+            "Undervotes",
+            "Unnamed: 3",
+            "Overvotes",
+            "Precinct.1",
+            "Unnamed: 7",
+            "Unnamed: 9",
+            "Unnamed: 11",
+        ]
+    )
+
+    # rename columns to match our schema
+    san_francisco = san_francisco.rename(
+        columns={
+            "Precinct": "precinct_id",
+            "Yes\n ": "yes_votes",
+            "No\n ": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # add a county column
+    san_francisco["county"] = "San Francisco"
+
+    # get rid of the index
+    san_francisco = san_francisco.reset_index(drop=True)
+
+    san_francisco.head(None)
+    return (san_francisco,)
 
 
 @app.cell(hide_code=True)
