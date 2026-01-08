@@ -988,6 +988,66 @@ def _(pd, pdfplumber):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Los Angeles
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    LOS_ANGELES_HEADER_N = 2
+    los_angeles = pd.read_excel(
+        "inputs/counties/los_angeles/4337_final_svc_excel/STATE_MEASURE_50_11-04-25_by_Precinct_4337-bmc9985.xls",
+        skiprows=LOS_ANGELES_HEADER_N,
+    )
+
+    # remove rows for individual voting methods
+    los_angeles = los_angeles[los_angeles["TYPE"] == "TOTAL"].copy()
+
+    # rename columns to match our scheme
+    los_angeles = los_angeles.rename(
+        columns={"PRECINCT": "precinct_id", "YES": "yes_votes", "NO": "no_votes"}
+    )
+
+    # calculate total votes
+    los_angeles["total_votes"] = los_angeles["yes_votes"] + los_angeles["no_votes"]
+
+    # because there are precincts with 0 registered voters
+    # and we can't divide by zero first we have to replace
+    # all of the 0s with np.nan
+    los_angeles["REGISTRATION"] = los_angeles["REGISTRATION"].replace(0, np.nan)
+    # and then calculate turnout
+    los_angeles["turnout"] = (
+        los_angeles["total_votes"] / los_angeles["REGISTRATION"]
+    ) * 100
+
+    # drop some columns we know we won't need
+    los_angeles = los_angeles.drop(
+        columns=[
+            "LOCATION",
+            "SERIAL",
+            "REGISTRATION",
+            "BALLOT GROUP",
+            "VOTE BY MAIL ONLY",
+            "TYPE",
+            "BALLOTS CAST",
+            "Unnamed: 10",
+        ]
+    )
+
+    # add a county column
+    los_angeles["county"] = "Los Angeles"
+
+    # drop the index
+    los_angeles = los_angeles.reset_index(drop=True)
+
+    los_angeles.head(None)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Madera
     """)
     return
