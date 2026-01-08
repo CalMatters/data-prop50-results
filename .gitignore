@@ -213,3 +213,6 @@ __marimo__/
 outputs/results.csv
 outputs/precincts.*
 outputs/cvap_tracts.gpkg
+
+# Ignore debug outputs
+debug/*.csv
