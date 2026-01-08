@@ -29,7 +29,16 @@ def _():
 
 @app.cell
 def _(OUTPUT_DRIVER, OUTPUT_FP, gdf_ca_cvap_tracts):
+    # Export merged data
     gdf_ca_cvap_tracts.to_file(OUTPUT_FP, driver=OUTPUT_DRIVER)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Merge GIS and demographic data
+    """)
     return
 
 
@@ -53,6 +62,16 @@ def _(df_ca_cvap_est_by_tract, gdf_ca_tracts):
     return (gdf_ca_cvap_tracts,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Tract GIS file
+
+    Read and filter for California
+    """)
+    return
+
+
 @app.cell
 def _(TRACTS_GIS_FP, gpd, is_ca_geoid):
     GDF_TRACTS = gpd.read_file(TRACTS_GIS_FP)
@@ -63,6 +82,16 @@ def _(TRACTS_GIS_FP, gpd, is_ca_geoid):
     del GDF_TRACTS
     gdf_ca_tracts.plot()
     return (gdf_ca_tracts,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## CVAP demographic data
+
+    Read and transform to wide format
+    """)
+    return
 
 
 @app.cell
