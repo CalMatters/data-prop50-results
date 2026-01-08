@@ -1800,6 +1800,7 @@ def _(mo):
 @app.cell
 def _(np, pd):
     VENTURA_FILENAME = "inputs/counties/ventura/2025.11.04-Statement-of-Votes-Precinct-Canvass.xlsx"
+    _PRECINCT_ID_PATTERN = r"\d{7}"
 
     # read in the source file
     VENTURA_HEADER_N = 6
@@ -1838,6 +1839,10 @@ def _(np, pd):
     ventura["yes_votes"] = ventura["yes_votes"].replace("***", np.nan)
     ventura["no_votes"] = ventura["no_votes"].replace("***", np.nan)
     ventura["total_votes"] = ventura["total_votes"].replace("***", np.nan)
+
+    ventura = ventura[
+        ventura["precinct_id"].str.match(_PRECINCT_ID_PATTERN, na=False)
+    ].reset_index(drop=True)
 
     # add county column
     ventura["county"] = "Ventura"
