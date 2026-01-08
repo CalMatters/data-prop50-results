@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.0"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -71,6 +71,7 @@ def _(
     orange,
     pd,
     placer,
+    riverside,
     sacramento,
     san_benito,
     san_bernardino,
@@ -120,6 +121,7 @@ def _(
             nevada,
             orange,
             placer,
+            riverside,
             sacramento,
             san_benito,
             san_bernardino,
@@ -153,11 +155,46 @@ def _(
         ["county", "precinct_id", "precinct_name", "geometry"]
     ]
 
+    dupes = check_duplicates(combined_reordered)
+
     # save the reordered results to a file at COMBINED_OUTPUT_PATH
     combined_reordered.to_file(COMBINED_OUTPUT_PATH, driver=COMBINED_OUTPUT_DRIVER)
     print(f"Saved combined precincts to {COMBINED_OUTPUT_PATH}")
-
     return (combined_reordered,)
+
+
+@app.function
+def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
+    """
+    Check for duplicate entries in the DataFrame based on specified columns.
+    If duplicates are found, print a descriptive message listing the counties with duplicate IDs.
+    Returns the duplicate rows sorted by the specified columns if possible; otherwise, returns unsorted duplicates.
+    Parameters:
+        df (pd.DataFrame): The input DataFrame to check for duplicates.
+        columns_to_check (list): List of column names to identify duplicates. Defaults to ["county", "precinct_id"].
+
+    Returns:
+        pd.DataFrame or bool: DataFrame of duplicate rows if found (sorted if possible), otherwise None.
+    """
+    # Identify duplicate rows based on "county" and "precinct_id"
+    duplicates = df[df.duplicated(subset=columns_to_check, keep=False)]
+
+    if not duplicates.empty:
+        # Get the list of counties that have duplicate precinct IDs
+        duplicate_counties = duplicates["county"].unique().tolist()
+        print(
+            f"Duplicate precinct IDs found in the following counties: {', '.join(sorted(duplicate_counties))}"
+        )
+        # Attempt to sort by precinct_id, but handle unsortable cases (e.g., mixed str/float)
+        try:
+            return duplicates.sort_values(columns_to_check)
+        except TypeError:
+            print(
+                "Sorting by (county, precinct_id) threw a type error, returning unsorted dupe data"
+            )
+            return duplicates  # Return unsorted if sorting fails
+    else:
+        return None
 
 
 @app.function
@@ -231,10 +268,9 @@ def _(PROJECTED_CRS, gpd):
 
     # the spatial data is more granular than the results so we should combine
     # features based on the value in the "CP" column
-    # spatial data is likely voting precincts, and the results data is reported using Consolidated Precincts. 
+    # spatial data is likely voting precincts, and the results data is reported using Consolidated Precincts.
     # We are (safely) assuming "CP" is consolidated precincts and dissolving the data appropriately
-    amador = amador.dissolve(by="CP")
-
+    amador = amador.dissolve(by="CP").reset_index()
     amador = alter_df(
         amador,
         "Amador",
@@ -274,7 +310,7 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         butte,
         "Butte",
-        {"id": "precinct_id", "Name": "precinct_name"},
+        {"Name": "precinct_id", "id": "precinct_name"},
         [
             "id",
             "Name",
@@ -324,6 +360,8 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## Contra Costa
+
+    Precincts with zero registered voters are filtered out, because these precincts are not included in the official results data. [Read more issue #47](https://github.com/CalMatters/data-prop50-results/issues/47)
     """)
     return
 
@@ -333,6 +371,9 @@ def _(PROJECTED_CRS, gpd):
     contra_costa = gpd.read_file(
         "inputs/counties/contra_costa/precincts/PrecinctSet_PDMJ017.json"
     ).to_crs(PROJECTED_CRS)
+
+    has_voters = contra_costa["iZeroRegistrationPct"] != 1
+    contra_costa = contra_costa[has_voters].copy()
 
     contra_costa = alter_df(
         contra_costa,
@@ -575,9 +616,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    madera = gpd.read_file('inputs/counties/madera/precincts/VotingPrecincts_2025SpecialElection.zip').to_crs(PROJECTED_CRS)
+    madera = gpd.read_file(
+        "inputs/counties/madera/precincts/VotingPrecincts_2025SpecialElection.zip"
+    ).to_crs(PROJECTED_CRS)
 
-    madera = alter_df(madera, "Madera", { "VotingPrec": "precinct_id" }, ['CreatedBy', 'CreatedDat', 'ModifyBy', 'ModifyDate'])
+    madera = alter_df(
+        madera,
+        "Madera",
+        {"VotingPrec": "precinct_id"},
+        ["CreatedBy", "CreatedDat", "ModifyBy", "ModifyDate"],
+    )
 
     madera.head()
     return (madera,)
@@ -854,6 +902,44 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Riverside
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    riverside = gpd.read_file(
+        "inputs/counties/riverside/precincts/Final Voting Precincts.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    riverside = alter_df(
+        riverside,
+        "Riverside",
+        {"PRIMARY_NE": "precinct_id"},
+        [
+            "SUM_lTotal",
+            "sVotingPre",
+            "SUM_lTot_1",
+            "VPMapping",
+            "sVotingP_1",
+            "iMailBallo",
+            "Shape_Leng",
+            "Shape_Area",
+            "iBalType",
+            "iMailBal_1",
+            "Shape_Le_1",
+            "Shape_Ar_1",
+        ],
+    )
+
+    riverside.head()
+    return (riverside,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Sacramento
     """)
     return
@@ -901,7 +987,9 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## san_Benito
+    ## San Benito
+
+    A dissolve operation is executed to join all the records with `precinct_id` `0`. These are associated with unpopulated areas such as water treatment plant, farmland, parks, open fields. [Read more issue #32](https://github.com/CalMatters/data-prop50-results/issues/32)
     """)
     return
 
@@ -929,6 +1017,22 @@ def _(PROJECTED_CRS, gpd):
             "Shape__L_1",
         ],
     )
+
+    assert len(check_duplicates(san_benito)) > 0, (
+        "Expected duplicates but found none"
+    )
+    unpopulated_precinct_count = (san_benito["precinct_id"] == "0").sum()
+    predissolve_precinct_count = len(san_benito)
+    san_benito = san_benito.dissolve("precinct_id", as_index=False)
+    expected_count = predissolve_precinct_count - (unpopulated_precinct_count - 1)
+    actual_count = len(san_benito)
+    assert actual_count == expected_count, (
+        f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
+    )
+    assert check_duplicates(san_benito) is None, (
+        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
+    )
+    print("San Benito duplicate resolved using dissolve operation")
 
     san_benito.head()
     return (san_benito,)
@@ -1348,6 +1452,8 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## Sutter
+
+    Sutter requires a dissolve operation to resolve an issue with a data artifact. [Read more issue #35](https://github.com/CalMatters/data-prop50-results/issues/35)
     """)
     return
 
@@ -1371,6 +1477,18 @@ def _(PROJECTED_CRS, gpd):
             "Shape__Len",
         ],
     )
+
+    assert len(check_duplicates(sutter)) > 1, "Expected duplicates but found none"
+    predissolve_precinct_count = len(sutter)
+    sutter = sutter.dissolve(by="precinct_id", as_index=False)
+    assert (predissolve_precinct_count - 1) == len(sutter), (
+        f"Expected {predissolve_precinct_count - 1} precincts after dissolve, but got {len(sutter)}"
+    )
+    assert check_duplicates(sutter) is None, (
+        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
+    )
+    print("Sutter duplicate resolved using dissolve operation")
+
 
     sutter.head()
     return (sutter,)
@@ -1418,7 +1536,7 @@ def _(PROJECTED_CRS, gpd):
     tulare = alter_df(
         tulare,
         "Tulare",
-        {"VotingPctID": "precinct_id"},
+        {"PrecNum1": "precinct_id"},
         [
             "OBJECTID_12",
             "OBJECTID_1",
@@ -1438,7 +1556,7 @@ def _(PROJECTED_CRS, gpd):
             "Pollsite",
             "PollingSiteID",
             "BallotTypeList",
-            "PrecNum1",
+            "VotingPctID",
             "Precincts_UPDATE_LOCAL_VotingPc",
             "Shape__Area",
             "Shape__Length",
