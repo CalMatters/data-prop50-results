@@ -60,6 +60,7 @@ def _(
     santa_barbara,
     santa_clara,
     shasta,
+    sierra,
     siskiyou,
     solano,
     sonoma,
@@ -101,6 +102,7 @@ def _(
             santa_barbara,
             santa_clara,
             shasta,
+            sierra,
             siskiyou,
             solano,
             sonoma,
@@ -1961,6 +1963,71 @@ def _(pd):
     )
     shasta.head(None)
     return (shasta,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Sierra
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def extract_sierra_pdf():
+        sierra = None
+        # extract the tables from the Prop 50 results pages in the PDF document
+        with pdfplumber.open(
+            "inputs/counties/sierra/Statement of Vote.pdf"
+        ) as pdf:
+            # only the first page has vote counts from Prop 50
+            # just a few pages from the document are related to Prop 50
+            table = pdf.pages[0].extract_table()
+            sierra = pd.DataFrame(table[1:])
+
+        return sierra
+
+
+    sierra = extract_sierra_pdf()
+
+    # now that all the data has been extracted we need to rename
+    # the columns in the dataframe. the mapping can be verified
+    # by looking at the source PDF document
+    sierra = sierra.rename(
+        columns={0: "precinct_id", 1: "yes_votes", 2: "no_votes", 11: "turnout"}
+    )
+
+    # we can drop columns we don't care about
+    # 3 - Cast Votes
+    # 4 - Undervotes
+    # 5 - Overvotes
+    # 6 - Rejected write in votes
+    # 7 - Unresolved write in votes
+    # 8 - Vote-By-Mail Ballots Cast
+    # 9 - Total Ballots Cast
+    # 10 - Registered Voters
+    sierra = sierra.drop(columns=[3, 4, 5, 6, 7, 8, 9, 10])
+
+    # add a county column
+    sierra["county"] = "Sierra"
+
+    # force yes_votes and no_votes to be numbers
+    sierra["yes_votes"] = pd.to_numeric(
+        sierra["yes_votes"].str.replace(",", ""), errors="coerce"
+    )
+    sierra["no_votes"] = pd.to_numeric(
+        sierra["no_votes"].str.replace(",", ""), errors="coerce"
+    )
+
+    # calculate total votes
+    sierra["total_votes"] = sierra["yes_votes"] + sierra["no_votes"]
+
+    # remove the "%" from the turnout column
+    sierra["turnout"] = sierra["turnout"].str.replace("%", "")
+
+    sierra.head(None)
+    return (sierra,)
 
 
 @app.cell(hide_code=True)
