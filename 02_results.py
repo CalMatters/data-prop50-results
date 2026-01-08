@@ -47,6 +47,7 @@ def _(
     madera,
     marin,
     merced,
+    napa,
     pd,
     sacramento,
     san_benito,
@@ -88,6 +89,7 @@ def _(
             madera,
             marin,
             merced,
+            napa,
             sacramento,
             san_benito,
             san_bernardino,
@@ -1169,6 +1171,79 @@ def _(pd):
 
     merced.head(None)
     return (merced,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Napa
+    """)
+    return
+
+
+@app.cell
+def _(pd, pdfplumber):
+    def extract_napa_pdf():
+        napa = None
+        # extract the tables from the Prop 50 results pages in the PDF document
+        with pdfplumber.open(
+            "inputs/counties/napa/Statement of Votes Cast_202512031558433636.pdf"
+        ) as pdf:
+            extracted_pages = []
+            # just a few pages from the document are related to Prop 50
+            prop_50_pages = pdf.pages[:6]
+
+            for page in prop_50_pages:
+                table = page.extract_table()
+                df = pd.DataFrame(table[1:])
+                extracted_pages.append(df)
+
+            napa = pd.concat(extracted_pages)
+        return napa
+
+
+    napa = extract_napa_pdf()
+
+    # now that all the data has been extracted we need to rename
+    # the columns in the dataframe. the mapping can be verified
+    # by looking at the source PDF document
+    napa = napa.rename(
+        columns={
+            0: "precinct_id",
+            3: "turnout",
+            4: "total_votes",
+            5: "yes_votes",
+            6: "no_votes",
+        }
+    )
+
+    # we can drop columns we don't care about
+    # column with an index of 1 is "Registered Voters"
+    # column with an index of 2 is "Times Cast"
+    napa = napa.drop(columns=[1, 2])
+
+    # add a county column
+    napa["county"] = "Napa"
+
+    # force yes_votes, no_votes, total_votes to be numbers
+    napa["yes_votes"] = pd.to_numeric(
+        napa["yes_votes"].str.replace(",", ""), errors="coerce"
+    )
+    napa["no_votes"] = pd.to_numeric(
+        napa["no_votes"].str.replace(",", ""), errors="coerce"
+    )
+    napa["total_votes"] = pd.to_numeric(
+        napa["total_votes"].str.replace(",", ""), errors="coerce"
+    )
+
+    # remove the "%" from the turnout column
+    napa["turnout"] = napa["turnout"].str.replace("%", "")
+
+    # and remove the index
+    napa = napa.reset_index(drop=True)
+
+    napa.head(None)
+    return (napa,)
 
 
 @app.cell(hide_code=True)
