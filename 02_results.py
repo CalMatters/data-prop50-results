@@ -47,6 +47,7 @@ def _(
     madera,
     marin,
     merced,
+    monterey,
     napa,
     pd,
     sacramento,
@@ -90,6 +91,7 @@ def _(
             madera,
             marin,
             merced,
+            monterey,
             napa,
             sacramento,
             san_benito,
@@ -1173,6 +1175,81 @@ def _(pd):
 
     merced.head(None)
     return (merced,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Monterey
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    MONTEREY_PROP50_RESULTS_SHEET = "PrecinctCanvass"
+    MONTEREY_HEADER_N = 5
+    monterey = pd.read_excel(
+        "inputs/counties/monterey/SOV_2025-11-04_ByPrecinct.xlsx",
+        sheet_name=MONTEREY_PROP50_RESULTS_SHEET,
+        skiprows=MONTEREY_HEADER_N,
+    )
+
+    # add county columns
+    monterey["county"] = "Monterey"
+
+    # drop all the rows that are individual voting methods
+
+    monterey = monterey[monterey["Unnamed: 1"] == "Total"].copy()
+
+    # drop the columns we don't need
+    monterey = monterey.drop(
+        columns=[
+            "Unnamed: 1",
+            "Registered Voters",
+            "Voters Cast",
+            "Unnamed: 5",
+            "Unnamed: 6",
+            "Unnamed: 8",
+            "Unnamed: 10",
+        ]
+    )
+
+    # now rename the columns
+    monterey = monterey.rename(
+        columns={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",
+            "YES": "yes_votes",
+            "NO": "no_votes",
+            "Total Votes": "total_votes",
+        }
+    )
+
+    # replace masked values (***) with np.nan
+    monterey["yes_votes"] = monterey["yes_votes"].replace("***", np.nan)
+    monterey["no_votes"] = monterey["no_votes"].replace("***", np.nan)
+    monterey["total_votes"] = monterey["total_votes"].replace("***", np.nan)
+
+    # force yes_votes, no_votes, total_votes to be numbers
+    monterey["yes_votes"] = pd.to_numeric(
+        monterey["yes_votes"].str.replace(",", ""), errors="coerce"
+    )
+    monterey["no_votes"] = pd.to_numeric(
+        monterey["no_votes"].str.replace(",", ""), errors="coerce"
+    )
+    monterey["total_votes"] = pd.to_numeric(
+        monterey["total_votes"].str.replace(",", ""), errors="coerce"
+    )
+
+    # remove the "%" from the turnout column values
+    monterey["turnout"] = monterey["turnout"].str.replace("%", "")
+
+    # remove the index
+    monterey = monterey.reset_index(drop=True)
+
+    monterey.head(None)
+    return (monterey,)
 
 
 @app.cell(hide_code=True)
