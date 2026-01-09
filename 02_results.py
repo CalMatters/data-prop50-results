@@ -198,6 +198,7 @@ def _(pd):
                 "Provisional.1",
             ],
         )
+       # remove rows where the precinct_id is not a four digit number
         csv = csv[csv["precinct_id"].str.match(_PRECINCT_ID_PATTERN)].copy()
         return csv
 
