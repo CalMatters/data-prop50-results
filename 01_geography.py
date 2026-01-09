@@ -310,7 +310,7 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         butte,
         "Butte",
-        {"Name": "precinct_id", "id": "precinct_name"},
+        {"Name": "precinct_name", "id": "precinct_id"},
         [
             "id",
             "Name",
