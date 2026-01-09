@@ -151,7 +151,7 @@ def _(pd):
     # remove the "%" from turnout column
     alameda["turnout"] = alameda["turnout"].str.replace("%", "")
 
-
+# remove rows where the precinct ID is not a six digit number
     alameda = alameda[
         alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
     ].copy()
