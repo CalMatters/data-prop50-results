@@ -1,5 +1,6 @@
 import marimo
 
+
 __generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
@@ -132,6 +133,7 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    ALAMEDA_PRECINCT_ID_PATTERN = r"\d{6}"
     ALAMEDA_HEADER_ROWS_N = 5
     alameda = pd.read_excel(
         "inputs/counties/alameda/Statement of Vote - Statewide Special Election.xlsx",
@@ -172,6 +174,11 @@ def _(pd):
     # remove the "%" from turnout column
     alameda["turnout"] = alameda["turnout"].str.replace("%", "")
 
+# remove rows where the precinct ID is not a six digit number
+    alameda = alameda[
+        alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
+    ].copy()
+
     # get rid of the index column
     alameda = alameda.reset_index(drop=True)
     alameda["county"] = "Alameda"
@@ -190,6 +197,9 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    _PRECINCT_ID_PATTERN = r"\d{4}"
+
+
     def butte_df():
         csv = pd.read_excel(
             "inputs/counties/butte/detail.xlsx", sheet_name="2", skiprows=2
@@ -217,6 +227,8 @@ def _(pd):
                 "Provisional.1",
             ],
         )
+       # remove rows where the precinct_id is not a four digit number
+        csv = csv[csv["precinct_id"].str.match(_PRECINCT_ID_PATTERN)].copy()
         return csv
 
 
@@ -2683,6 +2695,7 @@ def _(mo):
 @app.cell
 def _(np, pd):
     VENTURA_FILENAME = "inputs/counties/ventura/2025.11.04-Statement-of-Votes-Precinct-Canvass.xlsx"
+    _PRECINCT_ID_PATTERN = r"\d{7}"
 
     # read in the source file
     VENTURA_HEADER_N = 6
@@ -2721,6 +2734,10 @@ def _(np, pd):
     ventura["yes_votes"] = ventura["yes_votes"].replace("***", np.nan)
     ventura["no_votes"] = ventura["no_votes"].replace("***", np.nan)
     ventura["total_votes"] = ventura["total_votes"].replace("***", np.nan)
+
+    ventura = ventura[
+        ventura["precinct_id"].str.match(_PRECINCT_ID_PATTERN, na=False)
+    ].reset_index(drop=True)
 
     # add county column
     ventura["county"] = "Ventura"
