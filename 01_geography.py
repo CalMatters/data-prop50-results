@@ -63,6 +63,7 @@ def _(
     marin,
     mariposa,
     mendocino,
+    merced,
     modoc,
     mono,
     monterey,
@@ -114,6 +115,7 @@ def _(
             marin,
             mariposa,
             mendocino,
+            merced,
             modoc,
             mono,
             monterey,
@@ -698,6 +700,31 @@ def _(PROJECTED_CRS, gpd):
 
     mendocino.head()
     return (mendocino,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Merced
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    merced = gpd.read_file(
+        "inputs/counties/merced/Merced County Pct Shapefile/MercedCountyPrecincts.shp"
+    ).to_crs(PROJECTED_CRS)
+
+    merced = alter_df(
+        merced,
+        "Merced",
+        {"REF_NUM_28": "precinct_id", "PCT_NAME_1": "precinct_name"},
+        ["Ballot_Lin", "Shape_Leng", "Shape_Area"],
+    )
+
+    merced.head(None)
+    return (merced,)
 
 
 @app.cell(hide_code=True)
