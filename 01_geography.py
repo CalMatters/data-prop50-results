@@ -1609,7 +1609,7 @@ def _(PROJECTED_CRS, gpd):
     ventura = alter_df(
         ventura,
         "Ventura",
-        {"number_": "precinct_id"},
+        {"electid": "precinct_id", "number_": "precinct_name"},
         [
             "objectid",
             "gr_cr_date",
@@ -1619,7 +1619,7 @@ def _(PROJECTED_CRS, gpd):
             "last_edite",
             "oldprecinc",
             "globalid",
-            "electid",
+            "number_",
             "shape_Leng",
             "shape_Area",
         ],
