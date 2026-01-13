@@ -1,6 +1,5 @@
 import marimo
 
-
 __generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
@@ -50,6 +49,7 @@ def _(
     merced,
     monterey,
     napa,
+    orange,
     pd,
     sacramento,
     san_benito,
@@ -94,6 +94,7 @@ def _(
             merced,
             monterey,
             napa,
+            orange,
             sacramento,
             san_benito,
             san_bernardino,
@@ -174,7 +175,7 @@ def _(pd):
     # remove the "%" from turnout column
     alameda["turnout"] = alameda["turnout"].str.replace("%", "")
 
-# remove rows where the precinct ID is not a six digit number
+    # remove rows where the precinct ID is not a six digit number
     alameda = alameda[
         alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
     ].copy()
@@ -227,7 +228,7 @@ def _(pd):
                 "Provisional.1",
             ],
         )
-       # remove rows where the precinct_id is not a four digit number
+        # remove rows where the precinct_id is not a four digit number
         csv = csv[csv["precinct_id"].str.match(_PRECINCT_ID_PATTERN)].copy()
         return csv
 
@@ -1395,6 +1396,50 @@ def _(pd, pdfplumber):
 
     napa.head(None)
     return (napa,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Orange
+
+    Orange has a precinct with ID `99999`. The precinct's record says it has 976 registered voters with 430 votes cast. It has null value for turnout. It may be worth it to reach out to county to ask which voters are registered to this precinct. My guess is these are Americans voting from abroad.
+
+    Orange results data has two different precinct identifiers. I determined which one to use by cross referencing with the counties precinct GIS file.
+    """)
+    return
+
+
+@app.cell
+def _(calculate_total_votes, pd):
+    _DATA_FP = "./inputs/counties/orange/media.zip"
+    _TAB_SEP = "\t"
+    _DTYPE_MAP = {".Precinct": str, "Precinct ID": str}
+    _COLUMN_NAMES = ["precinct_id", "no_votes", "yes_votes", "turnout", "to_drop"]
+
+    orange = pd.read_csv(_DATA_FP, sep=_TAB_SEP, dtype=_DTYPE_MAP)
+    orange = orange.pivot_table(
+        values=["Total Votes", "Turnout Percentage"],
+        index=[".Precinct"],
+        columns=["Choice Name1"],
+        dropna=False,
+    ).reset_index()
+
+    # Precinct 99999 should be the only precinct without turnout set
+    # this precinct does not exist in geography file, so it will likely be dropped
+    # assertion included b/c we pivot on the turnout records from the source data
+    assert (
+        orange[("Turnout Percentage", "No")]
+        != orange[("Turnout Percentage", "Yes")]
+    ).sum() == 1
+
+    orange.columns = _COLUMN_NAMES
+    orange = orange[orange.columns[:-1]].copy()
+
+    orange["total_votes"] = calculate_total_votes(orange)
+
+    orange
+    return (orange,)
 
 
 @app.cell(hide_code=True)
@@ -2620,6 +2665,13 @@ def _(pd):
         registered_voter_count = registered_voter_count.replace(0, 1)
         return round((votes_cast / registered_voter_count) * 100, 1)
     return (calculate_turnout,)
+
+
+@app.cell
+def _(pd):
+    def calculate_total_votes(df_clean: pd.DataFrame) -> pd.Series:
+        return df_clean["yes_votes"] + df_clean["no_votes"]
+    return (calculate_total_votes,)
 
 
 @app.cell(hide_code=True)
