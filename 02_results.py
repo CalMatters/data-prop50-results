@@ -871,13 +871,16 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
+    _PROP50_PAGE_RANGE = (9, 12)
+
+
     def extract_kings_pdf():
         kings = None
         # extract the tables from the Prop 50 results pages in the PDF document
         with pdfplumber.open("inputs/counties/kings/NOV 2025 SOV BOOK.pdf") as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[9:12]
+            prop_50_pages = pdf.pages[_PROP50_PAGE_RANGE[0]:_PROP50_PAGE_RANGE[1]]
 
             for page in prop_50_pages:
                 table = page.extract_table()
