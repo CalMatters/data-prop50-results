@@ -2156,16 +2156,18 @@ def _(pd, pdfplumber):
         columns={0: "precinct_id", 1: "yes_votes", 2: "no_votes", 11: "turnout"}
     )
 
-    # we can drop columns we don't care about
-    # 3 - Cast Votes
-    # 4 - Undervotes
-    # 5 - Overvotes
-    # 6 - Rejected write in votes
-    # 7 - Unresolved write in votes
-    # 8 - Vote-By-Mail Ballots Cast
-    # 9 - Total Ballots Cast
-    # 10 - Registered Voters
-    sierra = sierra.drop(columns=[3, 4, 5, 6, 7, 8, 9, 10])
+    # drop columns that are not needed for Prop 50 results
+    _DROP_COLUMNS = [
+        3,  # Cast Votes
+        4,  # Undervotes
+        5,  # Overvotes
+        6,  # Rejected write in votes
+        7,  # Unresolved write in votes
+        8,  # Vote-By-Mail Ballots Cast
+        9,  # Total Ballots Cast
+        10, # Registered Voters
+    ]
+    sierra = sierra.drop(columns=_DROP_COLUMNS)
 
     # add a county column
     sierra["county"] = "Sierra"
