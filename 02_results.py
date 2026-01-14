@@ -900,11 +900,8 @@ def _(pd, pdfplumber):
 
     # the precinct IDs all start with "1" so
     # filter rows to just those
-    kings = kings[kings[0].str.get(0).isin(["1"])]
-
-    # that ends up including the "16th Senatorial" data
-    # so filter that out too
-    kings = kings[kings[0] != "16th Senatorial"].copy()
+    _PRECINCT_ID_PATTERN = r"1\{3}"
+    kings = kings[kings[0].str.match(_PRECINCT_ID_PATTERN)].copy()
 
     # now that all the data has been extracted we need to rename
     # the columns in the dataframe. the mapping can be verified
