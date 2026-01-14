@@ -961,7 +961,6 @@ def _(pd, pdfplumber):
         with pdfplumber.open(
             "inputs/counties/lake/Statement of Votes12022025.pdf"
         ) as pdf:
-            extracted_pages = []
             # just a few pages from the document are related to Prop 50
             prop_50_page = pdf.pages[0]
             table = prop_50_page.extract_table()
