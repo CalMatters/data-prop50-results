@@ -118,7 +118,13 @@ def _(CVAP_EST_COLUMN_SUFFIX, cvap_gdf):
         for column in list(cvap_gdf)
         if column.endswith(CVAP_EST_COLUMN_SUFFIX)
     ]
-    return (extensive_variables_to_interpolate,)
+
+    subgroup_est_columns = [
+        column
+        for column in extensive_variables_to_interpolate
+        if "total" not in column
+    ]
+    return extensive_variables_to_interpolate, subgroup_est_columns
 
 
 @app.cell
@@ -128,11 +134,26 @@ def _(
     extensive_variables_to_interpolate,
     tobler,
 ):
-    cvap_estimates = tobler.area_weighted.area_interpolate(
+    cvap_precinct_estimates = tobler.area_weighted.area_interpolate(
         cvap_gdf,
         audited_precinct_results_gdf,
         extensive_variables=extensive_variables_to_interpolate,
     )
+    cvap_precinct_estimates = cvap_precinct_estimates[
+        extensive_variables_to_interpolate
+    ].apply(round)
+    return
+
+
+@app.cell
+def _(cvap_gdf, subgroup_est_columns):
+    cvap_gdf["interpolated_total_est"] = cvap_gdf[subgroup_est_columns].sum(axis=1)
+    cvap_gdf
+    return
+
+
+@app.cell
+def _():
     return
 
 
