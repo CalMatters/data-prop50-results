@@ -105,15 +105,6 @@ wheels = [
 ]
 
 [[package]]
-name = "cachetools"
-version = "6.2.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fb/44/ca1675be2a83aeee1886ab745b28cda92093066590233cc501890eb8417a/cachetools-6.2.2.tar.gz", hash = "sha256:8e6d266b25e539df852251cfd6f990b4bc3a141db73b939058d809ebd2590fc6", size = 31571, upload-time = "2025-11-13T17:42:51.465Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/46/eb6eca305c77a4489affe1c5d8f4cae82f285d9addd8de4ec084a7184221/cachetools-6.2.2-py3-none-any.whl", hash = "sha256:6c09c98183bf58560c97b2abfcedcbaf6a896a490f534b031b661d3723b45ace", size = 11503, upload-time = "2025-11-13T17:42:50.232Z" },
-]
-
-[[package]]
 name = "certifi"
 version = "2025.11.12"
 source = { registry = "https://pypi.org/simple" }
@@ -492,46 +483,6 @@ wheels = [
 ]
 
 [[package]]
-name = "google-auth"
-version = "2.43.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cachetools" },
-    { name = "pyasn1-modules" },
-    { name = "rsa" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/ef/66d14cf0e01b08d2d51ffc3c20410c4e134a1548fc246a6081eae585a4fe/google_auth-2.43.0.tar.gz", hash = "sha256:88228eee5fc21b62a1b5fe773ca15e67778cb07dc8363adcb4a8827b52d81483", size = 296359, upload-time = "2025-11-06T00:13:36.587Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6f/d1/385110a9ae86d91cc14c5282c61fe9f4dc41c0b9f7d423c6ad77038c4448/google_auth-2.43.0-py2.py3-none-any.whl", hash = "sha256:af628ba6fa493f75c7e9dbe9373d148ca9f4399b5ea29976519e0a3848eddd16", size = 223114, upload-time = "2025-11-06T00:13:35.209Z" },
-]
-
-[package.optional-dependencies]
-requests = [
-    { name = "requests" },
-]
-
-[[package]]
-name = "google-genai"
-version = "1.55.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "distro" },
-    { name = "google-auth", extra = ["requests"] },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "requests" },
-    { name = "sniffio" },
-    { name = "tenacity" },
-    { name = "typing-extensions" },
-    { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/7c/19b59750592702305ae211905985ec8ab56f34270af4a159fba5f0214846/google_genai-1.55.0.tar.gz", hash = "sha256:ae9f1318fedb05c7c1b671a4148724751201e8908a87568364a309804064d986", size = 477615, upload-time = "2025-12-11T02:49:28.624Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/86/a5a8e32b2d40b30b5fb20e7b8113fafd1e38befa4d1801abd5ce6991065a/google_genai-1.55.0-py3-none-any.whl", hash = "sha256:98c422762b5ff6e16b8d9a1e4938e8e0ad910392a5422e47f5301498d7f373a1", size = 703389, upload-time = "2025-12-11T02:49:27.105Z" },
-]
-
-[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -777,7 +728,7 @@ wheels = [
 
 [[package]]
 name = "marimo"
-version = "0.18.4"
+version = "0.19.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -797,16 +748,15 @@ dependencies = [
     { name = "uvicorn" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/dc/46cdff84f6a92847bada01ba20cfa79e3c77d1f39a7627f35855ab5451ad/marimo-0.18.4.tar.gz", hash = "sha256:30b5d8cd8f3e9054b5f7332bf0f4d11cb608712995e4f4feed7337d118eef8ab", size = 37851688, upload-time = "2025-12-09T17:42:44.82Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/67/43c96d82f6ad1f4e6e53772e61c8a3ac1bd284aad6ed5a70e8895b3b3ae2/marimo-0.19.2.tar.gz", hash = "sha256:e734b9f6f49943b052be27260befdf48b0f6c627d22fa81259ca48b303df4de6", size = 39373490, upload-time = "2026-01-11T03:24:05.978Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/c7/cd3b652650c188d7b1d7cefad8194d51f10600c84e5d1b68be8d6f0b40ba/marimo-0.18.4-py3-none-any.whl", hash = "sha256:7c1d72f37e9662e8811eff801f6c85451af685fe1cbd22c49a85e7b1f57aebec", size = 38369689, upload-time = "2025-12-09T17:42:48.972Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/53/55d149a5244d8f982d493ce7263e014224435df6f4ff37d89f9a92673942/marimo-0.19.2-py3-none-any.whl", hash = "sha256:75b8083bb34fbb4c9908daac5208ad5186d8138a1692c0e937b258c7f6e6cd8a", size = 39912515, upload-time = "2026-01-11T03:24:11.819Z" },
 ]
 
 [package.optional-dependencies]
 recommended = [
     { name = "altair" },
     { name = "duckdb" },
-    { name = "google-genai" },
     { name = "nbformat" },
     { name = "openai" },
     { name = "polars", extra = ["pyarrow"] },
@@ -1231,27 +1181,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyasn1"
-version = "0.6.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ba/e9/01f1a64245b89f039897cb0130016d79f77d52669aae6ee7b159a6c4c018/pyasn1-0.6.1.tar.gz", hash = "sha256:6f580d2bdd84365380830acf45550f2511469f673cb4a5ae3857a3170128b034", size = 145322, upload-time = "2024-09-10T22:41:42.55Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/f1/d6a797abb14f6283c0ddff96bbdd46937f64122b8c925cab503dd37f8214/pyasn1-0.6.1-py3-none-any.whl", hash = "sha256:0d632f46f2ba09143da3a8afe9e33fb6f92fa2320ab7e886e2d0f7672af84629", size = 83135, upload-time = "2024-09-11T16:00:36.122Z" },
-]
-
-[[package]]
-name = "pyasn1-modules"
-version = "0.4.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyasn1" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/e6/78ebbb10a8c8e4b61a59249394a4a594c1a7af95593dc933a349c8d00964/pyasn1_modules-0.4.2.tar.gz", hash = "sha256:677091de870a80aae844b1ca6134f54652fa2c8c5a52aa396440ac3106e941e6", size = 307892, upload-time = "2025-03-28T02:41:22.17Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/8d/d529b5d697919ba8c11ad626e835d4039be708a35b0d22de83a269a6682c/pyasn1_modules-0.4.2-py3-none-any.whl", hash = "sha256:29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a", size = 181259, upload-time = "2025-03-28T02:41:19.028Z" },
-]
-
-[[package]]
 name = "pycparser"
 version = "2.23"
 source = { registry = "https://pypi.org/simple" }
@@ -1636,18 +1565,6 @@ wheels = [
 ]
 
 [[package]]
-name = "rsa"
-version = "4.9.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyasn1" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/da/8a/22b7beea3ee0d44b1916c0c1cb0ee3af23b700b6da9f04991899d0c555d4/rsa-4.9.1.tar.gz", hash = "sha256:e7bdbfdb5497da4c07dfd35530e1a902659db6ff241e39d9953cad06ebd0ae75", size = 29034, upload-time = "2025-04-16T09:51:18.218Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/64/8d/0133e4eb4beed9e425d9a98ed6e081a55d195481b7632472be1af08d2f6b/rsa-4.9.1-py3-none-any.whl", hash = "sha256:68635866661c6836b8d39430f97a996acbd61bfa49406748ea243539fe239762", size = 34696, upload-time = "2025-04-16T09:51:17.142Z" },
-]
-
-[[package]]
 name = "ruff"
 version = "0.14.8"
 source = { registry = "https://pypi.org/simple" }
@@ -1856,15 +1773,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/34/0e/2408735aca9e764643196212f9069912100151414dd617d39ffc72d77eee/statsmodels-0.14.6-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3414e40c073d725007a6603a18247ab7af3467e1af4a5e5a24e4c27bc26673b4", size = 10337587, upload-time = "2025-12-05T23:13:37.597Z" },
     { url = "https://files.pythonhosted.org/packages/0f/36/4d44f7035ab3c0b2b6a4c4ebb98dedf36246ccbc1b3e2f51ebcd7ac83abb/statsmodels-0.14.6-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:a518d3f9889ef920116f9fa56d0338069e110f823926356946dae83bc9e33e19", size = 10363350, upload-time = "2025-12-05T23:13:53.08Z" },
     { url = "https://files.pythonhosted.org/packages/26/33/f1652d0c59fa51de18492ee2345b65372550501ad061daa38f950be390b6/statsmodels-0.14.6-cp314-cp314-win_amd64.whl", hash = "sha256:151b73e29f01fe619dbce7f66d61a356e9d1fe5e906529b78807df9189c37721", size = 9588010, upload-time = "2025-12-05T23:14:07.28Z" },
-]
-
-[[package]]
-name = "tenacity"
-version = "9.1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/30/643397144bfbfec6f6ef821f36f33e57d35946c44a2352d3c9f0ae847619/tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138", size = 28248, upload-time = "2025-04-02T08:25:07.678Z" },
 ]
 
 [[package]]
