@@ -1338,6 +1338,7 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
+    _PROP50_END_PAGE = 6
     def extract_napa_pdf():
         napa = None
         # extract the tables from the Prop 50 results pages in the PDF document
@@ -1346,7 +1347,7 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[:6]
+            prop_50_pages = pdf.pages[:_PROP50_END_PAGE]
 
             for page in prop_50_pages:
                 table = page.extract_table()
