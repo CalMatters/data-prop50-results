@@ -1,6 +1,5 @@
 import marimo
 
-
 __generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
@@ -174,7 +173,7 @@ def _(pd):
     # remove the "%" from turnout column
     alameda["turnout"] = alameda["turnout"].str.replace("%", "")
 
-# remove rows where the precinct ID is not a six digit number
+    # remove rows where the precinct ID is not a six digit number
     alameda = alameda[
         alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
     ].copy()
@@ -227,7 +226,7 @@ def _(pd):
                 "Provisional.1",
             ],
         )
-       # remove rows where the precinct_id is not a four digit number
+        # remove rows where the precinct_id is not a four digit number
         csv = csv[csv["precinct_id"].str.match(_PRECINCT_ID_PATTERN)].copy()
         return csv
 
@@ -880,7 +879,9 @@ def _(pd, pdfplumber):
         with pdfplumber.open("inputs/counties/kings/NOV 2025 SOV BOOK.pdf") as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[_PROP50_PAGE_RANGE[0]:_PROP50_PAGE_RANGE[1]]
+            prop_50_pages = pdf.pages[
+                _PROP50_PAGE_RANGE[0] : _PROP50_PAGE_RANGE[1]
+            ]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -906,18 +907,23 @@ def _(pd, pdfplumber):
     # now that all the data has been extracted we need to rename
     # the columns in the dataframe. the mapping can be verified
     # by looking at the source PDF document
-    _RENAME_COL_MAP = {0: "precinct_id", 4: "turnout", 5: "yes_votes", 6: "no_votes"}
-    kings = kings.rename(
-        columns= _RENAME_COL_MAP
-    )
+    _RENAME_COL_MAP = {
+        0: "precinct_id",
+        4: "turnout",
+        5: "yes_votes",
+        6: "no_votes",
+    }
+    kings = kings.rename(columns=_RENAME_COL_MAP)
 
     # we can drop columns we don't care about
     _DROP_COLUMNS = [
-        1, # Registered voters
-        2, # Ballots cast
-        3, 7, 8 # Misc.
+        1,  # Registered voters
+        2,  # Ballots cast
+        3,
+        7,
+        8,  # Misc.
     ]
-    kings = kings.drop(columns=)
+    kings = kings.drop(columns=_DROP_COLUMNS)
 
     # add a county column
     kings["county"] = "Kings"
@@ -1339,6 +1345,8 @@ def _(mo):
 @app.cell
 def _(pd, pdfplumber):
     _PROP50_END_PAGE = 6
+
+
     def extract_napa_pdf():
         napa = None
         # extract the tables from the Prop 50 results pages in the PDF document
@@ -2164,7 +2172,7 @@ def _(pd, pdfplumber):
         7,  # Unresolved write in votes
         8,  # Vote-By-Mail Ballots Cast
         9,  # Total Ballots Cast
-        10, # Registered Voters
+        10,  # Registered Voters
     ]
     sierra = sierra.drop(columns=_DROP_COLUMNS)
 
