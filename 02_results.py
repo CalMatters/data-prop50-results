@@ -1453,6 +1453,8 @@ def _(calculate_total_votes, pd):
     orange = orange[orange.columns[:-1]].copy()
 
     orange["total_votes"] = calculate_total_votes(orange)
+    orange["county"] = "Orange"
+
 
     orange
     return (orange,)
