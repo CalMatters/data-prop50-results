@@ -17,8 +17,9 @@ def _():
 
 
 @app.cell
-def _(DATA_EXPORT_FP, EXPORT_DRIVER, precincts_results_merge):
-    precincts_results_merge.to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
+def _(DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS, precincts_results_merge):
+    precincts_results_merge.to_crs(PROJECTED_CRS).to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
+    print(f"Exported merged precincts and results data to {DATA_EXPORT_FP}")
     return
 
 
@@ -286,7 +287,10 @@ def _():
 def _():
     DATA_EXPORT_FP = "./outputs/precinct_results.gpkg"
     EXPORT_DRIVER = "GPKG"
-    return DATA_EXPORT_FP, EXPORT_DRIVER
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    return DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS
 
 
 @app.cell
