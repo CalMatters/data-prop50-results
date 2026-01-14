@@ -872,13 +872,18 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
+    _PROP50_PAGE_RANGE = (9, 12)
+
+
     def extract_kings_pdf():
         kings = None
         # extract the tables from the Prop 50 results pages in the PDF document
         with pdfplumber.open("inputs/counties/kings/NOV 2025 SOV BOOK.pdf") as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[9:12]
+            prop_50_pages = pdf.pages[
+                _PROP50_PAGE_RANGE[0] : _PROP50_PAGE_RANGE[1]
+            ]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -898,23 +903,29 @@ def _(pd, pdfplumber):
 
     # the precinct IDs all start with "1" so
     # filter rows to just those
-    kings = kings[kings[0].str.get(0).isin(["1"])]
-
-    # that ends up including the "16th Senatorial" data
-    # so filter that out too
-    kings = kings[kings[0] != "16th Senatorial"].copy()
+    _PRECINCT_ID_PATTERN = r"1\{3}"
+    kings = kings[kings[0].str.match(_PRECINCT_ID_PATTERN)].copy()
 
     # now that all the data has been extracted we need to rename
     # the columns in the dataframe. the mapping can be verified
     # by looking at the source PDF document
-    kings = kings.rename(
-        columns={0: "precinct_id", 4: "turnout", 5: "yes_votes", 6: "no_votes"}
-    )
+    _RENAME_COL_MAP = {
+        0: "precinct_id",
+        4: "turnout",
+        5: "yes_votes",
+        6: "no_votes",
+    }
+    kings = kings.rename(columns=_RENAME_COL_MAP)
 
     # we can drop columns we don't care about
-    # column with an index of 1 is "Registered Voters"
-    # column with an index of 2 is "Ballots Cast"
-    kings = kings.drop(columns=[1, 2, 3, 7, 8])
+    _DROP_COLUMNS = [
+        1,  # Registered voters
+        2,  # Ballots cast
+        3,
+        7,
+        8,  # Misc.
+    ]
+    kings = kings.drop(columns=_DROP_COLUMNS)
 
     # add a county column
     kings["county"] = "Kings"
@@ -952,7 +963,6 @@ def _(pd, pdfplumber):
         with pdfplumber.open(
             "inputs/counties/lake/Statement of Votes12022025.pdf"
         ) as pdf:
-            extracted_pages = []
             # just a few pages from the document are related to Prop 50
             prop_50_page = pdf.pages[0]
             table = prop_50_page.extract_table()
@@ -1335,6 +1345,12 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
+    _PROP50_END_PAGE = 6
+
+
+    _PROP50_END_PAGE = 6
+
+    
     def extract_napa_pdf():
         napa = None
         # extract the tables from the Prop 50 results pages in the PDF document
@@ -1343,7 +1359,7 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[:6]
+            prop_50_pages = pdf.pages[:_PROP50_END_PAGE]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -1453,9 +1469,11 @@ def _(mo):
 @app.cell
 def _(pd):
     SACRAMENTO_PROP50_RESULTS_SHEET = "Precinct Results"
+    _READ_DTYPE = {"Precinct": str}
     sacramento = pd.read_excel(
         "inputs/counties/sacramento/Results_bd6edf40-d97c-4b13-adc8-792cb842323e.xlsx",
         sheet_name=SACRAMENTO_PROP50_RESULTS_SHEET,
+        dtype=_READ_DTYPE,
     )
 
     # only use the rows with Yes and No results
@@ -1533,7 +1551,10 @@ def _(pd):
     san_benito = san_benito.drop(
         columns=["Times Cast", "Registered \nVoters", "Unnamed: 3"]
     )
-
+    _PRECINCT_PATTERN = r"[a-zA-Z]\d{5}"
+    san_benito = san_benito[
+        san_benito["precinct_id"].str.match(_PRECINCT_PATTERN)
+    ].reset_index(drop=True)
     # and rename the ones we do want to keep
     san_benito = san_benito.rename(
         columns={
@@ -1661,9 +1682,9 @@ def _(np, pd):
     )
 
     # replace masked values with np.nan so we can calculate turnout
-    san_diego["YES"] = san_diego["YES"].replace("****", np.nan)
-    san_diego["NO"] = san_diego["NO"].replace("****", np.nan)
-    san_diego["Total Votes"] = san_diego["Total Votes"].replace("****", np.nan)
+    san_diego["YES"] = san_diego["YES"].replace("***", np.nan)
+    san_diego["NO"] = san_diego["NO"].replace("***", np.nan)
+    san_diego["Total Votes"] = san_diego["Total Votes"].replace("***", np.nan)
 
     # replace "%" in turnout values
     san_diego["Turnout (%)"] = san_diego["Turnout (%)"].str.replace("%", "")
@@ -1790,6 +1811,9 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
+    _PROP50_PAGE_RANGE = (5, 10)
+
+
     def extract_san_joaquin_pdf():
         san_joaquin = None
         # extract the tables from the Prop 50 results pages in the PDF document
@@ -1798,7 +1822,7 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[5:10]
+            prop_50_pages = pdf.pages[_PROP50_PAGE_RANGE[0]:_PROP50_PAGE_RANGE[1]]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -1837,8 +1861,10 @@ def _(pd, pdfplumber):
     # and add a total_votes
     san_joaquin["total_votes"] = san_joaquin["yes_votes"] + san_joaquin["no_votes"]
 
-    # and remove the index
-    san_joaquin = san_joaquin.reset_index(drop=True)
+    _PRECINCT_ID_PATTERN = r"\d{7}"
+    san_joaquin = san_joaquin[
+        san_joaquin["precinct_id"].str.match(_PRECINCT_ID_PATTERN)
+    ].reset_index(drop=True)
 
     san_joaquin.head(None)
     return (san_joaquin,)
@@ -2178,7 +2204,8 @@ def _(pd, pdfplumber):
             # only the first page has vote counts from Prop 50
             # just a few pages from the document are related to Prop 50
             table = pdf.pages[0].extract_table()
-            sierra = pd.DataFrame(table[1:])
+            # last entry is the aggregate results which is dropped
+            sierra = pd.DataFrame(table[1:])[:-1]
 
         return sierra
 
@@ -2192,16 +2219,18 @@ def _(pd, pdfplumber):
         columns={0: "precinct_id", 1: "yes_votes", 2: "no_votes", 11: "turnout"}
     )
 
-    # we can drop columns we don't care about
-    # 3 - Cast Votes
-    # 4 - Undervotes
-    # 5 - Overvotes
-    # 6 - Rejected write in votes
-    # 7 - Unresolved write in votes
-    # 8 - Vote-By-Mail Ballots Cast
-    # 9 - Total Ballots Cast
-    # 10 - Registered Voters
-    sierra = sierra.drop(columns=[3, 4, 5, 6, 7, 8, 9, 10])
+    # drop columns that are not needed for Prop 50 results
+    _DROP_COLUMNS = [
+        3,  # Cast Votes
+        4,  # Undervotes
+        5,  # Overvotes
+        6,  # Rejected write in votes
+        7,  # Unresolved write in votes
+        8,  # Vote-By-Mail Ballots Cast
+        9,  # Total Ballots Cast
+        10,  # Registered Voters
+    ]
+    sierra = sierra.drop(columns=_DROP_COLUMNS)
 
     # add a county column
     sierra["county"] = "Sierra"
@@ -2391,6 +2420,9 @@ def _(mo):
 
 @app.cell
 def _(pd, pdfplumber):
+    _PROP5_PAGE_RANGE = (6, 8)
+
+
     def extract_stanislaus_pdf():
         stanislaus = None
         # extract the tables from the Prop 50 results pages in the PDF document
@@ -2399,7 +2431,7 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[6:8]
+            prop_50_pages = pdf.pages[_PROP5_PAGE_RANGE[0]:_PROP5_PAGE_RANGE[1]]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -2436,8 +2468,10 @@ def _(pd, pdfplumber):
     # and add a total_votes
     stanislaus["total_votes"] = stanislaus["yes_votes"] + stanislaus["no_votes"]
 
-    # and remove the index
-    stanislaus = stanislaus.reset_index(drop=True)
+    _PRECINCT_ID_PATTERN = r"\d{6}"
+    stanislaus = stanislaus[
+        stanislaus["precinct_id"].str.match(_PRECINCT_ID_PATTERN)
+    ].reset_index(drop=True)
 
     stanislaus.head(None)
     return (stanislaus,)
