@@ -1350,7 +1350,7 @@ def _(pd, pdfplumber):
 
     _PROP50_END_PAGE = 6
 
-    
+
     def extract_napa_pdf():
         napa = None
         # extract the tables from the Prop 50 results pages in the PDF document
@@ -1520,6 +1520,7 @@ def _(pd):
     SAN_BENITO_PROP50_RESULTS_SHEET = "Proposition 50"
     SAN_BENITO_HEADER_N = 2
     SAN_BENITO_CUMULATIVE_FOOTER_N = 3
+    _PRECINCT_PATTERN = r"[a-zA-Z]\d{5}"
 
     san_benito = pd.read_excel(
         "inputs/counties/san_benito/November 4, 2025 Special Election Statement of Vote - By Precinct.xlsx",
@@ -1551,10 +1552,6 @@ def _(pd):
     san_benito = san_benito.drop(
         columns=["Times Cast", "Registered \nVoters", "Unnamed: 3"]
     )
-    _PRECINCT_PATTERN = r"[a-zA-Z]\d{5}"
-    san_benito = san_benito[
-        san_benito["precinct_id"].str.match(_PRECINCT_PATTERN)
-    ].reset_index(drop=True)
     # and rename the ones we do want to keep
     san_benito = san_benito.rename(
         columns={
@@ -1565,8 +1562,9 @@ def _(pd):
         }
     )
 
-    # and then get rid of the index
-    san_benito = san_benito.reset_index(drop=True)
+    san_benito = san_benito[
+        san_benito["precinct_id"].str.match(_PRECINCT_PATTERN)
+    ].reset_index(drop=True)
 
     # finally add a county column
     san_benito["county"] = "San Benito"
@@ -1822,7 +1820,9 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[_PROP50_PAGE_RANGE[0]:_PROP50_PAGE_RANGE[1]]
+            prop_50_pages = pdf.pages[
+                _PROP50_PAGE_RANGE[0] : _PROP50_PAGE_RANGE[1]
+            ]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -2431,7 +2431,7 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[_PROP5_PAGE_RANGE[0]:_PROP5_PAGE_RANGE[1]]
+            prop_50_pages = pdf.pages[_PROP5_PAGE_RANGE[0] : _PROP5_PAGE_RANGE[1]]
 
             for page in prop_50_pages:
                 table = page.extract_table()
