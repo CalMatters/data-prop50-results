@@ -1022,9 +1022,9 @@ def _(PROJECTED_CRS, gpd):
         "Expected duplicates but found none"
     )
     unpopulated_precinct_count = (san_benito["precinct_id"] == "0").sum()
-    predissolve_precinct_count = len(san_benito)
+    _predissolve_precinct_count = len(san_benito)
     san_benito = san_benito.dissolve("precinct_id", as_index=False)
-    expected_count = predissolve_precinct_count - (unpopulated_precinct_count - 1)
+    expected_count = _predissolve_precinct_count - (unpopulated_precinct_count - 1)
     actual_count = len(san_benito)
     assert actual_count == expected_count, (
         f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
@@ -1479,10 +1479,10 @@ def _(PROJECTED_CRS, gpd):
     )
 
     assert len(check_duplicates(sutter)) > 1, "Expected duplicates but found none"
-    predissolve_precinct_count = len(sutter)
+    _predissolve_precinct_count = len(sutter)
     sutter = sutter.dissolve(by="precinct_id", as_index=False)
-    assert (predissolve_precinct_count - 1) == len(sutter), (
-        f"Expected {predissolve_precinct_count - 1} precincts after dissolve, but got {len(sutter)}"
+    assert (_predissolve_precinct_count - 1) == len(sutter), (
+        f"Expected {_predissolve_precinct_count - 1} precincts after dissolve, but got {len(sutter)}"
     )
     assert check_duplicates(sutter) is None, (
         "Expected no duplicate entires after dissolve operations but duplicate check returned True"
