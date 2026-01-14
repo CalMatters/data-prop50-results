@@ -2140,7 +2140,8 @@ def _(pd, pdfplumber):
             # only the first page has vote counts from Prop 50
             # just a few pages from the document are related to Prop 50
             table = pdf.pages[0].extract_table()
-            sierra = pd.DataFrame(table[1:])
+            # last entry is the aggregate results which is dropped
+            sierra = pd.DataFrame(table[1:])[:-1]
 
         return sierra
 
