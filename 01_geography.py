@@ -63,6 +63,7 @@ def _(
     marin,
     mariposa,
     mendocino,
+    merced,
     modoc,
     mono,
     monterey,
@@ -114,6 +115,7 @@ def _(
             marin,
             mariposa,
             mendocino,
+            merced,
             modoc,
             mono,
             monterey,
@@ -310,7 +312,7 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         butte,
         "Butte",
-        {"Name": "precinct_id", "id": "precinct_name"},
+        {"Name": "precinct_name", "id": "precinct_id"},
         [
             "id",
             "Name",
@@ -703,6 +705,33 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Merced
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    merced = gpd.read_file(
+        "inputs/counties/merced/Merced County Pct Shapefile/MercedCountyPrecincts.shp"
+    ).to_crs(PROJECTED_CRS)
+
+    merced = alter_df(
+        merced,
+        "Merced",
+        {"REF_NUM_28": "precinct_id", "PCT_NAME_1": "precinct_name"},
+        ["Ballot_Lin", "Shape_Leng", "Shape_Area"],
+    )
+
+    merced["county"] = "Merced"
+    
+    merced.head(None)
+    return (merced,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Modoc
     """)
     return
@@ -1022,9 +1051,9 @@ def _(PROJECTED_CRS, gpd):
         "Expected duplicates but found none"
     )
     unpopulated_precinct_count = (san_benito["precinct_id"] == "0").sum()
-    predissolve_precinct_count = len(san_benito)
+    _predissolve_precinct_count = len(san_benito)
     san_benito = san_benito.dissolve("precinct_id", as_index=False)
-    expected_count = predissolve_precinct_count - (unpopulated_precinct_count - 1)
+    expected_count = _predissolve_precinct_count - (unpopulated_precinct_count - 1)
     actual_count = len(san_benito)
     assert actual_count == expected_count, (
         f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
@@ -1479,10 +1508,10 @@ def _(PROJECTED_CRS, gpd):
     )
 
     assert len(check_duplicates(sutter)) > 1, "Expected duplicates but found none"
-    predissolve_precinct_count = len(sutter)
+    _predissolve_precinct_count = len(sutter)
     sutter = sutter.dissolve(by="precinct_id", as_index=False)
-    assert (predissolve_precinct_count - 1) == len(sutter), (
-        f"Expected {predissolve_precinct_count - 1} precincts after dissolve, but got {len(sutter)}"
+    assert (_predissolve_precinct_count - 1) == len(sutter), (
+        f"Expected {_predissolve_precinct_count - 1} precincts after dissolve, but got {len(sutter)}"
     )
     assert check_duplicates(sutter) is None, (
         "Expected no duplicate entires after dissolve operations but duplicate check returned True"
@@ -1609,7 +1638,7 @@ def _(PROJECTED_CRS, gpd):
     ventura = alter_df(
         ventura,
         "Ventura",
-        {"number_": "precinct_id"},
+        {"electid": "precinct_id", "number_": "precinct_name"},
         [
             "objectid",
             "gr_cr_date",
@@ -1619,7 +1648,6 @@ def _(PROJECTED_CRS, gpd):
             "last_edite",
             "oldprecinc",
             "globalid",
-            "electid",
             "shape_Leng",
             "shape_Area",
         ],
