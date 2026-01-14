@@ -723,6 +723,8 @@ def _(PROJECTED_CRS, gpd):
         ["Ballot_Lin", "Shape_Leng", "Shape_Area"],
     )
 
+    merced["county"] = "Merced"
+    
     merced.head(None)
     return (merced,)
 
