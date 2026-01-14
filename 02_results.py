@@ -909,14 +909,18 @@ def _(pd, pdfplumber):
     # now that all the data has been extracted we need to rename
     # the columns in the dataframe. the mapping can be verified
     # by looking at the source PDF document
+    _RENAME_COL_MAP = {0: "precinct_id", 4: "turnout", 5: "yes_votes", 6: "no_votes"}
     kings = kings.rename(
-        columns={0: "precinct_id", 4: "turnout", 5: "yes_votes", 6: "no_votes"}
+        columns= _RENAME_COL_MAP
     )
 
     # we can drop columns we don't care about
-    # column with an index of 1 is "Registered Voters"
-    # column with an index of 2 is "Ballots Cast"
-    kings = kings.drop(columns=[1, 2, 3, 7, 8])
+    _DROP_COLUMNS = [
+        1, # Registered voters
+        2, # Ballots cast
+        3, 7, 8 # Misc.
+    ]
+    kings = kings.drop(columns=)
 
     # add a county column
     kings["county"] = "Kings"
