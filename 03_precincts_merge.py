@@ -17,6 +17,12 @@ def _():
 
 
 @app.cell
+def _(DATA_EXPORT_FP, EXPORT_DRIVER, precincts_results_merge):
+    precincts_results_merge.to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
+    return
+
+
+@app.cell
 def _(
     MERGE_COLUMNS,
     check_and_export_duplicates,
@@ -274,6 +280,13 @@ def _():
 def _():
     RESULTS_CSV_FP = "./outputs/results.csv"
     return (RESULTS_CSV_FP,)
+
+
+@app.cell
+def _():
+    DATA_EXPORT_FP = "./outputs/precinct_results.gpkg"
+    EXPORT_DRIVER = "GPKG"
+    return DATA_EXPORT_FP, EXPORT_DRIVER
 
 
 @app.cell
