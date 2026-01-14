@@ -1799,8 +1799,10 @@ def _(pd, pdfplumber):
     # and add a total_votes
     san_joaquin["total_votes"] = san_joaquin["yes_votes"] + san_joaquin["no_votes"]
 
-    # and remove the index
-    san_joaquin = san_joaquin.reset_index(drop=True)
+    _PRECINCT_ID_PATTERN = r"\d{7}"
+    san_joaquin = san_joaquin[
+        san_joaquin["precinct_id"].str.match(_PRECINCT_ID_PATTERN)
+    ].reset_index(drop=True)
 
     san_joaquin.head(None)
     return (san_joaquin,)
