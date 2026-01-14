@@ -63,6 +63,7 @@ def _(
     marin,
     mariposa,
     mendocino,
+    merced,
     modoc,
     mono,
     monterey,
@@ -114,6 +115,7 @@ def _(
             marin,
             mariposa,
             mendocino,
+            merced,
             modoc,
             mono,
             monterey,
@@ -310,7 +312,7 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         butte,
         "Butte",
-        {"Name": "precinct_id", "id": "precinct_name"},
+        {"Name": "precinct_name", "id": "precinct_id"},
         [
             "id",
             "Name",
@@ -698,6 +700,33 @@ def _(PROJECTED_CRS, gpd):
 
     mendocino.head()
     return (mendocino,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Merced
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    merced = gpd.read_file(
+        "inputs/counties/merced/Merced County Pct Shapefile/MercedCountyPrecincts.shp"
+    ).to_crs(PROJECTED_CRS)
+
+    merced = alter_df(
+        merced,
+        "Merced",
+        {"REF_NUM_28": "precinct_id", "PCT_NAME_1": "precinct_name"},
+        ["Ballot_Lin", "Shape_Leng", "Shape_Area"],
+    )
+
+    merced["county"] = "Merced"
+    
+    merced.head(None)
+    return (merced,)
 
 
 @app.cell(hide_code=True)
@@ -1609,7 +1638,7 @@ def _(PROJECTED_CRS, gpd):
     ventura = alter_df(
         ventura,
         "Ventura",
-        {"number_": "precinct_id"},
+        {"electid": "precinct_id", "number_": "precinct_name"},
         [
             "objectid",
             "gr_cr_date",
@@ -1619,7 +1648,6 @@ def _(PROJECTED_CRS, gpd):
             "last_edite",
             "oldprecinc",
             "globalid",
-            "electid",
             "shape_Leng",
             "shape_Area",
         ],
