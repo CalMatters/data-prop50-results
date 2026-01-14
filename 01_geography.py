@@ -1619,7 +1619,6 @@ def _(PROJECTED_CRS, gpd):
             "last_edite",
             "oldprecinc",
             "globalid",
-            "number_",
             "shape_Leng",
             "shape_Area",
         ],
