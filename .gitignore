@@ -209,10 +209,14 @@ __marimo__/
 # MacOS
 .DS_Store
 
+# Large input file
+inputs/census/tl_2020_06_tabblock20.zip
+
 # Generated output files
 outputs/results.csv
 outputs/precincts.*
 outputs/cvap_tracts.gpkg
+outputs/cvap_blocks.gpkg
 
 # Ignore debug outputs
 debug/*.csv
