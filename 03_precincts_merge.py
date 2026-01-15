@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.2"
 app = marimo.App(width="full")
 
 
@@ -17,8 +17,16 @@ def _():
 
 
 @app.cell
+def _(DATA_EXPORT_FP, EXPORT_DRIVER, precincts_results_merge):
+    precincts_results_merge.to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
+    print(f"Exported merged precincts and results data to {DATA_EXPORT_FP}")
+    return
+
+
+@app.cell
 def _(
     MERGE_COLUMNS,
+    PROJECTED_CRS,
     check_and_export_duplicates,
     pd,
     precincts_gdf,
@@ -62,7 +70,7 @@ def _(
             "Merge completed with duplicates present. Inspect the result to resolve key conflicts."
         )
 
-    precincts_results_merge
+    precincts_results_merge = precincts_results_merge.to_crs(PROJECTED_CRS)
     return (precincts_results_merge,)
 
 
@@ -274,6 +282,16 @@ def _():
 def _():
     RESULTS_CSV_FP = "./outputs/results.csv"
     return (RESULTS_CSV_FP,)
+
+
+@app.cell
+def _():
+    DATA_EXPORT_FP = "./outputs/precinct_results.gpkg"
+    EXPORT_DRIVER = "GPKG"
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    return DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS
 
 
 @app.cell
