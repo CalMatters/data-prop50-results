@@ -4,9 +4,13 @@ generate-precincts-file:
 generate-results-file:
     uv run 02_results.py
 
-generate-precincts-and-results:
+generate-cvap-file:
+    uv run 02_census.py
+
+generate-data:
     just generate-precincts-file
     just generate-results-file
+    just generate-cvap-file
 
 merge-precinct-results:
     uv run 03_precincts_merge.py
