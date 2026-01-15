@@ -85,9 +85,12 @@ def _():
 
 @app.cell
 def _():
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
     OUTPUT_PATH = "./outputs/cvap_blocks.gpkg"
     DRIVER_FORMAT = "GPKG"
-    return DRIVER_FORMAT, OUTPUT_PATH
+    return DRIVER_FORMAT, OUTPUT_PATH, PROJECTED_CRS
 
 
 @app.cell(hide_code=True)
@@ -175,13 +178,21 @@ def _(mo):
 
 
 @app.cell
-def _(DRIVER_FORMAT, OUTPUT_PATH, ca_block_gdf, transformed_rh_cvap_df):
+def _(
+    DRIVER_FORMAT,
+    OUTPUT_PATH,
+    PROJECTED_CRS,
+    ca_block_gdf,
+    transformed_rh_cvap_df,
+):
     assert len(transformed_rh_cvap_df) == len(ca_block_gdf)
     ca_block_cvap_gdf = ca_block_gdf.merge(
         transformed_rh_cvap_df, left_on="GEOID20", right_index=True, validate="1:1"
     )
 
-    ca_block_cvap_gdf.to_file(OUTPUT_PATH, driver=DRIVER_FORMAT)
+    ca_block_cvap_gdf.to_crs(PROJECTED_CRS).to_file(
+        OUTPUT_PATH, driver=DRIVER_FORMAT
+    )
     return
 
 
