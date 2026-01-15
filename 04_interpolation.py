@@ -59,6 +59,12 @@ def _():
     return (CVAP_FP,)
 
 
+@app.cell
+def _():
+    CVAP_BLOCKS_FP = "./outputs/cvap_blocks.gpkg"
+    return (CVAP_BLOCKS_FP,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -103,6 +109,13 @@ def _(CVAP_FP, read_gis_data):
     cvap_gdf = read_gis_data(CVAP_FP)
     cvap_gdf.head()
     return (cvap_gdf,)
+
+
+@app.cell
+def _(CVAP_BLOCKS_FP, read_gis_data):
+    cvap_block_gdf = read_gis_data(CVAP_BLOCKS_FP)
+    cvap_block_gdf.head()
+    return
 
 
 @app.cell(hide_code=True)
