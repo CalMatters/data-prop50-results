@@ -1,15 +1,16 @@
 import marimo
 
 __generated_with = "0.19.2"
-app = marimo.App(width="columns")
+app = marimo.App(width="medium")
 
 
 @app.cell
 def _():
     import geopandas as gpd
     import marimo as mo
+    import pandas as pd
     import tobler
-    return gpd, mo, tobler
+    return gpd, mo, pd, tobler
 
 
 @app.cell(hide_code=True)
@@ -32,6 +33,12 @@ def _():
     return (CVAP_EST_COLUMN_SUFFIX,)
 
 
+@app.cell
+def _():
+    TENTHS_PLACE_ROUNDING = 1
+    return (TENTHS_PLACE_ROUNDING,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -50,6 +57,21 @@ def _():
 def _():
     CVAP_FP = "./outputs/cvap_tracts.gpkg"
     return (CVAP_FP,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Helper functions
+    """)
+    return
+
+
+@app.cell
+def _(TENTHS_PLACE_ROUNDING):
+    def calculate_percentage(numerator, denominator, digits=TENTHS_PLACE_ROUNDING):
+        return round((numerator / denominator) * 100, digits)
+    return (calculate_percentage,)
 
 
 @app.cell(hide_code=True)
@@ -107,6 +129,8 @@ def _(COUNTIES_PASSING_AUIDIT, precinct_results_gdf):
 def _(mo):
     mo.md(r"""
     # Interpolate
+
+    [Tobler example Jupyter notebook interpolating tracts to voting precincts](https://pysal.org/tobler/notebooks/02_areal_interpolation_example.html).
     """)
     return
 
@@ -130,25 +154,54 @@ def _(CVAP_EST_COLUMN_SUFFIX, cvap_gdf):
 @app.cell
 def _(
     audited_precinct_results_gdf,
+    calculate_percentage,
     cvap_gdf,
     extensive_variables_to_interpolate,
+    pd,
+    subgroup_est_columns,
     tobler,
 ):
     cvap_precinct_estimates = tobler.area_weighted.area_interpolate(
         cvap_gdf,
-        audited_precinct_results_gdf,
+        audited_precinct_results_gdf.set_index("precinct_id"),
         extensive_variables=extensive_variables_to_interpolate,
     )
     cvap_precinct_estimates = cvap_precinct_estimates[
         extensive_variables_to_interpolate
     ].apply(round)
-    return
+
+    cvap_precinct_estimates["interpolated_total_est"] = cvap_precinct_estimates[
+        subgroup_est_columns
+    ].sum(axis=1)
+    pct_columns = {
+        f"{column_name}_pct": calculate_percentage(
+            cvap_precinct_estimates[column_name],
+            cvap_precinct_estimates["interpolated_total_est"],
+        )
+        for column_name in subgroup_est_columns
+    }
+    cvap_precinct_estimates = pd.concat(
+        [cvap_precinct_estimates, pd.DataFrame(pct_columns)], axis=1
+    )
+
+    pct_column_names = [
+        column
+        for column in list(cvap_precinct_estimates)
+        if column.endswith("pct")
+    ]
+    cvap_precinct_estimates[pct_column_names]
+    return (cvap_precinct_estimates,)
 
 
 @app.cell
-def _(cvap_gdf, subgroup_est_columns):
-    cvap_gdf["interpolated_total_est"] = cvap_gdf[subgroup_est_columns].sum(axis=1)
-    cvap_gdf
+def _(audited_precinct_results_gdf, cvap_precinct_estimates):
+    precincts_results_cvap_merged = audited_precinct_results_gdf.merge(
+        cvap_precinct_estimates,
+        left_on="precinct_id",
+        right_index=True,
+        validate="1:1",
+    )
+    precincts_results_cvap_merged.plot()
     return
 
 
