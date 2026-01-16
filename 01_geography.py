@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.2"
 app = marimo.App(width="medium")
 
 
@@ -724,7 +724,7 @@ def _(PROJECTED_CRS, gpd):
     )
 
     merced["county"] = "Merced"
-    
+
     merced.head(None)
     return (merced,)
 
@@ -977,36 +977,13 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     sacramento = gpd.read_file(
-        "inputs/counties/sacramento/precincts/Voter_Registration_Precincts.shp"
+        "inputs/counties/sacramento/precincts/ConsolidatedPrecincts_-8549929174186228288.zip"
     ).to_crs(PROJECTED_CRS)
 
     sacramento = alter_df(
         sacramento,
         "Sacramento",
-        {"PrecinctNo": "precinct_id", "Community": "precinct_name"},
-        [
-            "SqMi",
-            "Congress",
-            "Senate",
-            "Assembly",
-            "Supervisor",
-            "City",
-            "BoardofEd",
-            "ComCollege",
-            "UnifSchool",
-            "FacilityID",
-            "HighSchool",
-            "ElemSchool",
-            "CSD",
-            "ResConserv",
-            "Fire",
-            "Irrigation",
-            "Utility",
-            "Flood",
-            "Water",
-            "RecAndPark",
-            "TractNo",
-        ],
+        {"VPrecinct": "precinct_id"}
     )
 
     sacramento.head()
