@@ -115,7 +115,7 @@ def _(CVAP_FP, read_gis_data):
 def _(CVAP_BLOCKS_FP, read_gis_data):
     cvap_block_gdf = read_gis_data(CVAP_BLOCKS_FP)
     cvap_block_gdf.head()
-    return
+    return (cvap_block_gdf,)
 
 
 @app.cell(hide_code=True)
@@ -144,6 +144,14 @@ def _(mo):
     # Interpolate
 
     [Tobler example Jupyter notebook interpolating tracts to voting precincts](https://pysal.org/tobler/notebooks/02_areal_interpolation_example.html).
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## CVAP by tract
     """)
     return
 
@@ -203,19 +211,51 @@ def _(
         if column.endswith("pct")
     ]
     cvap_precinct_estimates[pct_column_names]
-    return (cvap_precinct_estimates,)
+    return
 
 
 @app.cell
-def _(audited_precinct_results_gdf, cvap_precinct_estimates):
+def _(audited_precinct_results_gdf, cvap_block_precinct_estimates):
     precincts_results_cvap_merged = audited_precinct_results_gdf.merge(
-        cvap_precinct_estimates,
+        cvap_block_precinct_estimates,
         left_on="precinct_id",
         right_index=True,
         validate="1:1",
     )
     precincts_results_cvap_merged.plot()
     return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## CVAP by block
+    """)
+    return
+
+
+@app.cell
+def _(audited_precinct_results_gdf, cvap_block_gdf, tobler):
+    _extensive_vars = [
+        "CVAP_TOT23",
+        "CVAP_WHT23",
+        "CVAP_BLK23",
+        "CVAP_2OM23",
+        "_cvap_api23",
+        "_cvap_amw23",
+    ]
+
+    cvap_block_precinct_estimates = tobler.area_weighted.area_interpolate(
+        cvap_block_gdf,
+        audited_precinct_results_gdf.set_index("precinct_id"),
+        extensive_variables=_extensive_vars,
+    )
+    cvap_block_precinct_estimates = cvap_block_precinct_estimates[
+        _extensive_vars
+    ].apply(round)
+
+    cvap_block_precinct_estimates
+    return (cvap_block_precinct_estimates,)
 
 
 @app.cell
