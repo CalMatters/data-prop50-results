@@ -46,6 +46,7 @@ def _():
 def _():
     COLUMNS_TO_RETAIN_AS_IS = [
         "CVAP_TOT23",  # Total Citizen Voting Age Population 2023
+        "CVAP_HSP23",  # Hispanic Citizen Voting Age Population 2023
         "CVAP_WHT23",  # White Citizen Voting Age Population 2023
         "CVAP_BLK23",  # Black or African American Citizen Voting Age Population 2023
         "CVAP_2OM23",  # Two or More Races Citizen Voting Age Population 2023
