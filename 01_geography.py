@@ -530,10 +530,14 @@ def _(extract_fresno_crosswalk_pdf_page, pd, pdfplumber):
 
             # extract the text from each section
             left_page_extracted, last_seen_results_precinct_id = (
-                extract_fresno_crosswalk_pdf_page(left_page)
+                extract_fresno_crosswalk_pdf_page(
+                    left_page, last_seen_results_precinct_id
+                )
             )
             right_page_extracted, last_seen_results_precinct_id = (
-                extract_fresno_crosswalk_pdf_page(right_page)
+                extract_fresno_crosswalk_pdf_page(
+                    right_page, last_seen_results_precinct_id
+                )
             )
 
             # and add the results of both to our list for all pages
