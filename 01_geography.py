@@ -560,7 +560,6 @@ def _(PROJECTED_CRS, fresno_page_rows, gpd):
     fresno["registration_precinct"] = fresno["EIMS_PRCT"]
 
     # merge precincts with crosswalk data
-    fresno_before_merge = len(fresno)
     fresno_merged = fresno.merge(
         fresno_page_rows,
         on="registration_precinct",
@@ -568,7 +567,6 @@ def _(PROJECTED_CRS, fresno_page_rows, gpd):
         how="left",
         indicator=True,
     )
-    fresno_after_merge = len(fresno_merged)
 
     # check for records that did not match
     unmatched = fresno_merged[fresno_merged["_merge"] == "left_only"]
