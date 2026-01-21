@@ -43,7 +43,7 @@ def _():
     import marimo as mo
     import pandas as pd
     import pdfplumber
-    return gpd, mo, pd, pdfplumber, re
+    return gpd, mo, pd, pdfplumber
 
 
 @app.cell
@@ -425,15 +425,15 @@ def _(mo):
 
 
 @app.cell
-def _(re):
+def _():
     def _strip_lang_signifier_from_registration_precinct_id(precinct_id):
         # some precincts have a suffix such as "_H" or "_L"
         # which signify the major language in that precinct
         # we can remove that to complete our merge
-        SUFFIX_REGEX = (
-            r"(_[HLKP]|_?KO)$"  # matches _H, _L, _P, _KO, or KO at the end
-        )
-        return re.sub(SUFFIX_REGEX, "", precinct_id)
+        suffixes_to_remove = ["_H", "_L", "_P", "_KO", "KO"]
+        for suffix in suffixes_to_remove:
+            precinct_id = precinct_id.replace(suffix, "")
+        return precinct_id
 
 
     def extract_fresno_crosswalk_pdf_page(
