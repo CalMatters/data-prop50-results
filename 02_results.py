@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.2"
 app = marimo.App(width="medium")
 
 
@@ -43,8 +43,8 @@ def _(
     inyo,
     kern,
     kings,
-    los_angeles,
     lake,
+    los_angeles,
     madera,
     marin,
     merced,
@@ -1067,7 +1067,7 @@ def _(np, pd):
     los_angeles = los_angeles.reset_index(drop=True)
 
     los_angeles.head(None)
-    return
+    return (los_angeles,)
 
 
 @app.cell(hide_code=True)
@@ -1503,6 +1503,9 @@ def _(pd):
     sacramento = sacramento.rename(
         columns={"Precinct": "precinct_id", "No": "no_votes", "Yes": "yes_votes"}
     )
+
+    # remove leading 00 from precinct_id
+    sacramento["precinct_id"] = sacramento["precinct_id"].str.lstrip("0")
 
     # add total_votes column
     sacramento["total_votes"] = sacramento["no_votes"] + sacramento["yes_votes"]
