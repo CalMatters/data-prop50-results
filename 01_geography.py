@@ -430,7 +430,17 @@ def _():
         # some precincts have a suffix such as "_H" or "_L"
         # which signify the major language in that precinct
         # we can remove that to complete our merge
-        suffixes_to_remove = ["_H", "_L", "_P", "_KO", "KO"]
+        suffixes_to_remove = [
+            "_C",
+            "_H",
+            "_L",
+            "_P",
+            "_T",
+            "_V",
+            "_KH",
+            "_KO",
+            "KO",
+        ]
         for suffix in suffixes_to_remove:
             precinct_id = precinct_id.replace(suffix, "")
         return precinct_id
