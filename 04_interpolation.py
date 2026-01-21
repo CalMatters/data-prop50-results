@@ -6,11 +6,13 @@ app = marimo.App(width="medium")
 
 @app.cell
 def _():
+    from glob import glob
+
     import geopandas as gpd
     import marimo as mo
     import pandas as pd
     import tobler
-    return gpd, mo, pd, tobler
+    return glob, gpd, mo, pd, tobler
 
 
 @app.cell(hide_code=True)
@@ -23,8 +25,13 @@ def _(mo):
 
 @app.cell
 def _():
-    COUNTIES_PASSING_AUIDIT = ["Los Angeles"]
-    return (COUNTIES_PASSING_AUIDIT,)
+    # counties where the audit found a mismatch of 2 or fewer precincts
+    ADDTNL_COUNTIES_PASSING_AUIDIT = [
+        "Los Angeles",
+        "Merced",
+        "Shasta",
+    ]
+    return (ADDTNL_COUNTIES_PASSING_AUIDIT,)
 
 
 @app.cell
@@ -32,6 +39,12 @@ def _():
     CVAP_EST_COLUMN_SUFFIX = "_est"
     CVAP_COLUMN_KEYWORD = "CVAP"
     return CVAP_COLUMN_KEYWORD, CVAP_EST_COLUMN_SUFFIX
+
+
+@app.cell
+def _():
+    MERGE_KEYS = ["precinct_id", "county"]
+    return (MERGE_KEYS,)
 
 
 @app.cell(hide_code=True)
@@ -58,6 +71,12 @@ def _():
 def _():
     CVAP_BLOCKS_FP = "./outputs/cvap_blocks.gpkg"
     return (CVAP_BLOCKS_FP,)
+
+
+@app.cell
+def _():
+    AUDIT_SUMMARY_FILE_PREFIX = "./debug/audit_summary_*"
+    return (AUDIT_SUMMARY_FILE_PREFIX,)
 
 
 @app.cell(hide_code=True)
@@ -180,6 +199,26 @@ def _(CVAP_BLOCKS_FP, read_gis_data):
     return (cvap_block_gdf,)
 
 
+@app.cell
+def _(ADDTNL_COUNTIES_PASSING_AUIDIT, AUDIT_SUMMARY_FILE_PREFIX, glob, pd):
+    audits_fps = sorted(glob(AUDIT_SUMMARY_FILE_PREFIX), reverse=True)
+    latest_audit_summary_fp = audits_fps[0] if audits_fps else ""
+
+    if latest_audit_summary_fp:
+        audit_summary_df = pd.read_csv(latest_audit_summary_fp, index_col=0)
+
+        counties_without_failed_matches = audit_summary_df[
+            (audit_summary_df["missing_in_gis"] == 0)
+            & (audit_summary_df["missing_in_results"] == 0)
+        ].index.tolist()
+
+    counties_passing_audit = (
+        ADDTNL_COUNTIES_PASSING_AUIDIT + counties_without_failed_matches
+    )
+    counties_passing_audit
+    return (counties_passing_audit,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -191,9 +230,9 @@ def _(mo):
 
 
 @app.cell
-def _(COUNTIES_PASSING_AUIDIT, precinct_results_gdf):
+def _(counties_passing_audit, precinct_results_gdf):
     has_county_passed_audit = precinct_results_gdf["county"].isin(
-        COUNTIES_PASSING_AUIDIT
+        counties_passing_audit
     )
     audited_precinct_results_gdf = precinct_results_gdf[has_county_passed_audit]
     audited_precinct_results_gdf
@@ -246,6 +285,7 @@ def _(cvap_precinct_estimates):
 
 @app.cell
 def _(
+    MERGE_KEYS,
     audited_precinct_results_gdf,
     cvap_gdf,
     join_pct_columns,
@@ -255,7 +295,7 @@ def _(
 ):
     cvap_precinct_estimates = tobler.area_weighted.area_interpolate(
         cvap_gdf,
-        audited_precinct_results_gdf.set_index("precinct_id"),
+        audited_precinct_results_gdf.set_index(MERGE_KEYS),
         extensive_variables=tracts_extensive_variables_to_interpolate,
     )
     cvap_precinct_estimates = cvap_precinct_estimates[
@@ -275,15 +315,15 @@ def _(
 
 
 @app.cell
-def _(audited_precinct_results_gdf, cvap_precinct_estimates):
+def _(MERGE_KEYS, audited_precinct_results_gdf, cvap_precinct_estimates):
     precincts_results_cvap_merged = audited_precinct_results_gdf.merge(
         cvap_precinct_estimates,
-        left_on="precinct_id",
+        left_on=MERGE_KEYS,
         right_index=True,
         validate="1:1",
     )
     precincts_results_cvap_merged.plot()
-    return
+    return (precincts_results_cvap_merged,)
 
 
 @app.cell(hide_code=True)
@@ -297,6 +337,7 @@ def _(mo):
 @app.cell
 def _(
     CVAP_COLUMN_KEYWORD,
+    MERGE_KEYS,
     audited_precinct_results_gdf,
     cvap_block_gdf,
     join_pct_columns,
@@ -313,7 +354,7 @@ def _(
 
     cvap_block_precinct_estimates = tobler.area_weighted.area_interpolate(
         cvap_block_gdf,
-        audited_precinct_results_gdf.set_index("precinct_id"),
+        audited_precinct_results_gdf.set_index(MERGE_KEYS),
         extensive_variables=block_extensive_vars,
     )
 
@@ -331,12 +372,16 @@ def _(
 
     precincts_results_cvap_block_merged = audited_precinct_results_gdf.merge(
         cvap_block_precinct_estimates,
-        left_on="precinct_id",
+        left_on=MERGE_KEYS,
         right_index=True,
         validate="1:1",
     )
     precincts_results_cvap_block_merged.plot()
-    return block_subgroup_est_columns, cvap_block_precinct_estimates
+    return (
+        block_subgroup_est_columns,
+        cvap_block_precinct_estimates,
+        precincts_results_cvap_block_merged,
+    )
 
 
 @app.cell(hide_code=True)
@@ -357,7 +402,6 @@ def _(block_subgroup_est_columns, mo, tracts_subgroup_est_columns):
 
 @app.cell
 def _(calculate_percentage, pd):
-
     def evaluate_interpolation_accuracy(
         df: pd.DataFrame,
         subgroup_columns: list[str],
@@ -463,8 +507,14 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
-def _():
+@app.cell
+def _(precincts_results_cvap_block_merged, precincts_results_cvap_merged):
+    precincts_results_cvap_merged.to_file(
+        "./outputs/precincts_results_cvap_tracts.gpkg", driver="GPKG"
+    )
+    precincts_results_cvap_block_merged.to_file(
+        "./outputs/precincts_results_cvap_blocks.gpkg", driver="GPKG"
+    )
     return
 
 
