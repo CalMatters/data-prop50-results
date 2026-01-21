@@ -357,6 +357,7 @@ def _(block_subgroup_est_columns, mo, tracts_subgroup_est_columns):
 
 @app.cell
 def _(calculate_percentage, pd):
+
     def evaluate_interpolation_accuracy(
         df: pd.DataFrame,
         subgroup_columns: list[str],
@@ -414,18 +415,6 @@ def _(calculate_percentage, pd):
 
 
 @app.cell
-def _(tract_interpolation_summary):
-    tract_interpolation_summary
-    return
-
-
-@app.cell
-def _(tract_interpolation_summary):
-    tract_interpolation_summary
-    return
-
-
-@app.cell
 def _(
     block_subgroup_est_columns,
     cvap_block_precinct_estimates,
@@ -466,7 +455,15 @@ def _(block_interpolation_summary, tract_interpolation_summary):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Export
+    """)
+    return
+
+
+@app.cell(hide_code=True)
 def _():
     return
 
