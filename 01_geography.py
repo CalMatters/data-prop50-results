@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.4"
 app = marimo.App(width="medium")
 
 
@@ -37,10 +37,11 @@ def _(combined_reordered):
 
 @app.cell
 def _():
+    import geopandas as gpd
     import marimo as mo
     import pandas as pd
-    import geopandas as gpd
-    return gpd, mo, pd
+    import pdfplumber
+    return gpd, mo, pd, pdfplumber
 
 
 @app.cell
@@ -414,27 +415,138 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
+def _(PROJECTED_CRS, gpd, pd, pdfplumber):
+    last_seen_results_precinct_id = None
+
+
+    def extract_fresno_crosswalk_pdf_page(page):
+        """
+        Extracts the crosswalk from PDF pages the crosswalk connects "Regular Precincts" which are used for voter registration (and therefore called registration_precincts in this code) to "Voting Precincts" which are used for results (and therefore called results_precincts in this code)
+         Parameters:
+             page (pdfplumber.Page): The PDF page to extract
+
+         Returns:
+             list: A list of objects, each with "registration_precinct" and "results_precinct"
+        """
+
+        # the shapefile from the county only has "Regular Precincts"
+        # but the results file only has "Voting Precincts"
+
+        # the variable needs to be global because it needs to
+        # stay stable between pages
+        global last_seen_results_precinct_id
+
+        def strip_lang_signifier_from_registration_precinct_id(precinct_id):
+            # some precincts have a suffix such as "_H" or "_L"
+            # which signify the major language in that precinct
+            # we can remove that to complete our merge
+            return (
+                precinct_id.replace("_H", "")
+                .replace("_L", "")
+                .replace("_P", "")
+                .replace("_KO", "")
+                .replace("KO", "")
+            )
+
+        # create a list to store the page's data in
+        page_rows = []
+
+        # get all of the text from the page and split it into lines
+        page_text = page.extract_text()
+        page_lines = page_text.splitlines()
+
+        # go through each line and split it on white space
+        for line in page_lines:
+            line_split = line.split(" ")
+            line_split_count = len(line_split)
+            # regular data lines have 4 elements after the split
+            if line_split_count == 4:
+                page_rows.append(
+                    {
+                        "registration_precinct": strip_lang_signifier_from_registration_precinct_id(
+                            line_split[2]
+                        ),
+                        "results_precinct": last_seen_results_precinct_id,
+                    }
+                )
+            # if the data has 7 elements after the split that means it has
+            # the results precinct id
+            elif line_split_count == 7:
+                # in which case set the global variable
+                last_seen_results_precinct_id = "%s" % line_split[0]
+                page_rows.append(
+                    {
+                        "registration_precinct": strip_lang_signifier_from_registration_precinct_id(
+                            line_split[5]
+                        ),
+                        "results_precinct": last_seen_results_precinct_id,
+                    }
+                )
+        return page_rows
+
+
+    # create a variable to store all of the extracted row
+    fresno_page_rows = []
+    with pdfplumber.open(
+        "inputs/counties/fresno/ewmr008_votabsregpctxref-2025.pdf"
+    ) as pdf:
+        for page in pdf.pages:
+            # the source pdf has a table that is split into two halves
+
+            # crop the page into two sections
+            left_page = page.crop(bbox=[15, 30, 388, 580])
+            right_page = page.crop(bbox=[390, 30, 760, 580])
+
+            # extract the text from each section
+            left_page_extracted = extract_fresno_crosswalk_pdf_page(left_page)
+            right_page_extracted = extract_fresno_crosswalk_pdf_page(right_page)
+
+            # and add the results of both to our list for all pages
+            fresno_page_rows.extend(left_page_extracted)
+            fresno_page_rows.extend(right_page_extracted)
+
+    # turn the resulting list into a dataframe
+    fresno_page_rows = pd.DataFrame(fresno_page_rows)
+
+    # use fresno registration precicnts
     fresno = gpd.read_file(
-        "inputs/counties/fresno/precincts/ELECTIONS_NOV2024_VOTING_PRECINCTS_VW.zip"
+        "inputs/counties/fresno/precincts/ELECTIONS_PRECINCT_VW.zip"
     ).to_crs(PROJECTED_CRS)
 
+    # create a column to merge on
+    fresno["registration_precinct"] = fresno["EIMS_PRCT"]
+
+    # merge precincts with crosswalk data
+    fresno = fresno.merge(fresno_page_rows, on="registration_precinct")
+
+    # dissolve on the results_precinct column
+    fresno = fresno.dissolve("results_precinct")
+
+    # reset the index so we can use the column
+    fresno = fresno.reset_index()
+
+    # rename and drop columns
     fresno = alter_df(
         fresno,
         "Fresno",
-        {"VP": "precinct_id"},
+        {"results_precinct": "precinct_id"},
         [
-            "OBJECTID_1",
-            "SUM_Poll_C",
-            "SUM_lTotal",
-            "SUM_lSpeci",
-            "Shape_Leng",
+            "OBJECTID",
+            "AREA_",
+            "PERIMETER",
+            "PRCT_",
+            "PRCT_ID",
+            "NO_PRCT",
+            "EIMS_PRCT",
+            "NO_PRCT_RT",
+            "NO_PRCT_SU",
             "Shape__Are",
             "Shape__Len",
+            "registration_precinct",
         ],
     )
 
-    fresno.head()
+    fresno.plot()
     return (fresno,)
 
 
@@ -724,7 +836,7 @@ def _(PROJECTED_CRS, gpd):
     )
 
     merced["county"] = "Merced"
-    
+
     merced.head(None)
     return (merced,)
 
