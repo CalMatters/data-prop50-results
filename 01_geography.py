@@ -1976,7 +1976,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     yolo = gpd.read_file(
-        "inputs/counties/yolo/precincts/Precincts_Consolidated_Open_Data.zip"
+        "inputs/counties/yolo/precincts/PrecinctsConsolidated_20250904.zip"
     ).to_crs(PROJECTED_CRS)
 
     yolo = alter_df(
@@ -1996,7 +1996,7 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    yolo.head()
+    yolo
     return (yolo,)
 
 
