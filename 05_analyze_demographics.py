@@ -225,14 +225,12 @@ def _(plt):
 @app.cell
 def _(
     STANDARDIZED_GROUP_LABELS_PCT,
-    demo_group_dropdown,
     plot_yes_pct_vs_cvap,
     precinct_results_blocks_new,
 ):
-    # Example usage:
     plot_yes_pct_vs_cvap(
         precinct_results_blocks_new,
-        STANDARDIZED_GROUP_LABELS_PCT[demo_group_dropdown.value]["blocks"],
+        STANDARDIZED_GROUP_LABELS_PCT["white"]["blocks"],
         "yes_pct",
         "White",
         "(Blocks)",
@@ -242,7 +240,6 @@ def _(
 
 @app.cell
 def _(plot_yes_pct_vs_cvap, precinct_results_tracts_new):
-    # Example usage:
     plot_yes_pct_vs_cvap(
         precinct_results_tracts_new,
         "white_alone_cvap_est_pct",
@@ -279,7 +276,6 @@ def _(
     plot_yes_pct_vs_cvap,
     precinct_results_blocks_new,
 ):
-    # Example usage:
     plot_yes_pct_vs_cvap(
         precinct_results_blocks_new,
         STANDARDIZED_GROUP_LABELS_PCT[demo_group_dropdown.value]["blocks"],
@@ -297,7 +293,6 @@ def _(
     plot_yes_pct_vs_cvap,
     precinct_results_tracts_new,
 ):
-    # Example usage:
     plot_yes_pct_vs_cvap(
         precinct_results_tracts_new,
         STANDARDIZED_GROUP_LABELS_PCT[demo_group_dropdown.value]["tracts"],
@@ -348,6 +343,14 @@ def _(
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Appendix
+    """)
+    return
+
+
 @app.cell(disabled=True)
 def _(precinct_results_blocks_new):
     # output too large to use this
@@ -366,6 +369,119 @@ def _(precinct_results_blocks_new):
     )
 
     chart
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## AI generated code parking lot
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Linear regression plot
+    """)
+    return
+
+
+@app.cell
+def _(
+    STANDARDIZED_GROUP_LABELS_PCT,
+    demo_group_dropdown,
+    plt,
+    precinct_results_blocks_new,
+):
+    def plot_lnr_yes_pct_vs_cvap(
+        df, cvap_column, yes_pct_column, group_label="White", title_suffix=""
+    ):
+        import numpy as np
+        from sklearn.linear_model import LinearRegression
+
+        # Handle NaN values by dropping them for plotting
+        plot_data = df.dropna(subset=[cvap_column, yes_pct_column])
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        # Reshape data for sklearn
+        X = plot_data[cvap_column].values.reshape(-1, 1)
+        y = plot_data[yes_pct_column].values
+
+        # Fit linear regression
+        model = LinearRegression()
+        model.fit(X, y)
+
+        # Predict for line plot
+        X_range = np.linspace(0, 100, 100).reshape(-1, 1)
+        y_pred = model.predict(X_range)
+
+        # Scatter plot
+        ax.scatter(
+            plot_data[cvap_column],
+            plot_data[yes_pct_column],
+            alpha=0.6,
+            s=50,
+            edgecolor="none",
+            label="Precincts",
+        )
+
+        # Regression line
+        ax.plot(
+            X_range[:, 0],
+            y_pred,
+            color="red",
+            linewidth=2,
+            label=f"Linear fit: y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
+        )
+
+        ax.set_xlabel(f"Percent {group_label} CVAP")
+        ax.set_ylabel("Yes Vote Percentage")
+        ax.set_title(
+            f"Yes Vote Percentage vs. Percent {group_label} CVAP {title_suffix}"
+        )
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+
+        # Set axis limits to ensure full visibility
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+
+        # Use plt.gca() as the last expression
+        return plt.gca()
+
+
+    plot_lnr_yes_pct_vs_cvap(
+        precinct_results_blocks_new,
+        STANDARDIZED_GROUP_LABELS_PCT[demo_group_dropdown.value]["blocks"],
+        "yes_pct",
+        "White",
+        "(Blocks)",
+    )
+    return (plot_lnr_yes_pct_vs_cvap,)
+
+
+@app.cell
+def _(
+    STANDARDIZED_GROUP_LABELS_PCT,
+    demo_group_dropdown,
+    plot_lnr_yes_pct_vs_cvap,
+    precinct_results_tracts_new,
+):
+    plot_lnr_yes_pct_vs_cvap(
+        precinct_results_tracts_new,
+        STANDARDIZED_GROUP_LABELS_PCT[demo_group_dropdown.value]["tracts"],
+        "yes_pct",
+        "White",
+        "(Tracts)",
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
     return
 
 
