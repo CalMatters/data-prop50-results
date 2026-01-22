@@ -202,7 +202,7 @@ def _(plt):
             plot_data[cvap_column],
             plot_data[yes_pct_column],
             alpha=0.6,
-            s=50,
+            s=5,
             edgecolor="none",
         )
 
@@ -303,12 +303,91 @@ def _(
     return
 
 
+@app.cell
+def _(mo):
+    mo.md(r"""
+    # Majority group precincts
+    """)
+    return
+
+
+@app.cell
+def _(
+    STANDARDIZED_GROUP_LABELS_PCT,
+    pd,
+    precinct_results_blocks_new,
+    precinct_results_tracts_new,
+):
+    # Filter for majority group precincts and calculate yes vote split
+    def analyze_majority_group_precincts(
+        df, group_label, dataset_type="blocks", threshold=50
+    ):
+        # Get the CVAP percentage column for the specified group
+        cvap_pct_col = STANDARDIZED_GROUP_LABELS_PCT[group_label][dataset_type]
+
+        # Filter precincts where the group makes up more than the threshold percentage
+        majority_mask = df[cvap_pct_col] > threshold
+        majority_precincts = df[majority_mask].copy()
+
+        # Calculate total yes votes and total votes for majority precincts
+        total_yes_votes = majority_precincts["yes_votes"].sum()
+        total_no_votes = majority_precincts["no_votes"].sum()
+        total_votes = total_yes_votes + total_no_votes
+
+        # Calculate yes vote split percentage using existing helper function
+        yes_split_pct = caclulate_pct(total_yes_votes, total_votes)
+
+        results = {
+            "group": group_label,
+            "dataset_type": dataset_type,
+            "threshold": threshold,
+            "num_precincts": len(majority_precincts),
+            "total_votes": total_votes,
+            "yes_votes": total_yes_votes,
+            "no_votes": total_no_votes,
+            "yes_split_pct": yes_split_pct,
+        }
+
+        return results
+
+
+    # Apply the analysis for each demographic group using the blocks dataset
+    majority_analysis_results_blocks = {}
+    for group in STANDARDIZED_GROUP_LABELS_PCT.keys():
+        majority_analysis_results_blocks[group] = analyze_majority_group_precincts(
+            precinct_results_blocks_new, group, dataset_type="blocks", threshold=50
+        )
+
+    # Apply the analysis for each demographic group using the tracts dataset
+    majority_analysis_results_tracts = {}
+    for group in STANDARDIZED_GROUP_LABELS_PCT.keys():
+        majority_analysis_results_tracts[group] = analyze_majority_group_precincts(
+            precinct_results_tracts_new, group, dataset_type="tracts", threshold=50
+        )
+
+    # Convert results to DataFrames for easier viewing
+    majority_analysis_blocks_df = pd.DataFrame(majority_analysis_results_blocks).T
+    majority_analysis_tracts_df = pd.DataFrame(majority_analysis_results_tracts).T
+    majority_analysis_blocks_df, majority_analysis_tracts_df
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## Demographic correlation coefficient
 
     [User's guide to correlation coefficients](https://pmc.ncbi.nlm.nih.gov/articles/PMC6107969/#sec2)
+
+    Correlation coefficient is a fine exploratory tool, but our data likely does not meet the requirements for this test.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Blocks
     """)
     return
 
@@ -325,6 +404,14 @@ def _(
             "yes_pct",
         ]
     ].dropna().corr(method="pearson")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Tracts
+    """)
     return
 
 
@@ -423,7 +510,7 @@ def _(
             plot_data[cvap_column],
             plot_data[yes_pct_column],
             alpha=0.6,
-            s=50,
+            s=5,
             edgecolor="none",
             label="Precincts",
         )
@@ -433,14 +520,14 @@ def _(
             X_range[:, 0],
             y_pred,
             color="red",
-            linewidth=2,
+            linewidth=1,
             label=f"Linear fit: y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
         )
 
-        ax.set_xlabel(f"Percent {group_label} CVAP")
+        ax.set_xlabel(f"Percent {group_label} Voters")
         ax.set_ylabel("Yes Vote Percentage")
         ax.set_title(
-            f"Yes Vote Percentage vs. Percent {group_label} CVAP {title_suffix}"
+            f"Yes Vote Percentage vs. Percent {group_label} Voters {title_suffix}"
         )
         ax.grid(True, alpha=0.3)
         ax.legend()
@@ -457,7 +544,7 @@ def _(
         precinct_results_blocks_new,
         STANDARDIZED_GROUP_LABELS_PCT[demo_group_dropdown.value]["blocks"],
         "yes_pct",
-        "White",
+        demo_group_dropdown.value.title().replace("_", " "),
         "(Blocks)",
     )
     return (plot_lnr_yes_pct_vs_cvap,)
@@ -474,7 +561,7 @@ def _(
         precinct_results_tracts_new,
         STANDARDIZED_GROUP_LABELS_PCT[demo_group_dropdown.value]["tracts"],
         "yes_pct",
-        "White",
+        demo_group_dropdown.value.title().replace("_", " "),
         "(Tracts)",
     )
     return
