@@ -2695,7 +2695,7 @@ def _(pd, re):
 
     def clean_redacted_precincts(
         _series: pd.Series,
-        laceholder_regex=REDACTED_PLACEHOLDER_REGEX,
+        placeholder_regex=REDACTED_PLACEHOLDER_REGEX,
     ) -> pd.Series:
         _series = _series.replace(placeholder_regex, pd.NA)
         return _series.astype("Int64")
