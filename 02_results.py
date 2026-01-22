@@ -22,11 +22,14 @@ def _(mo):
 
 @app.cell
 def _():
+    import json
+
+    from esridump.dumper import EsriDumper
     import marimo as mo
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return mo, np, pd, pdfplumber
+    return EsriDumper, mo, np, pd, pdfplumber
 
 
 @app.cell
@@ -73,6 +76,7 @@ def _(
     tulare,
     tuolumne,
     ventura,
+    yolo,
     yuba,
 ):
     combined = pd.concat(
@@ -115,9 +119,10 @@ def _(
             stanislaus,
             sutter,
             trinity,
+            tulare,
             tuolumne,
             ventura,
-            tulare,
+            yolo,
             yuba,
         ]
     ).reset_index(drop=True)
@@ -816,83 +821,83 @@ def _(np, pd):
     )
 
     _KERN_PRECINCT_VALUES_TO_REMOVE = [
-        '12th Senatorial District',
-        '12th Senatorial District - Total',
-        '16th Senatorial District',
-        '16th Senatorial District - Total',
-        '1st Supervisorial District',
-        '1st Supervisorial District - Total',
-        '2nd Supervisorial District',
-        '2nd Supervisorial District - Total',
-        '32nd Assembly District',
-        '32nd Assembly District - Total',
-        '34th Assembly District',
-        '34th Assembly District - Total',
-        '35th Assembly District',
-        '35th Assembly District - Total',
-        '3rd Supervisorial District',
-        '3rd Supervisorial District - Total',
-        '4th Supervisorial District',
-        '4th Supervisorial District - Total',
-        '5th Supervisorial District',
-        '5th Supervisorial District - Total',
-        'Board Of Equalization',
-        'Board Of Equalization - Total',
-        'Board of Equalization (State)',
-        'Board of Equalization (State) - Total',
-        'CALIFORNIA',
-        'CALIFORNIA - Total',
-        'Cities',
-        'Cities - Total',
-        'City of Arvin',
-        'City of Arvin - Total',
-        'City of Bakersfield',
-        'City of Bakersfield - Total',
-        'City of California City',
-        'City of California City - Total',
-        'City of Delano',
-        'City of Delano - Total',
-        'City of Maricopa',
-        'City of Maricopa - Total',
-        'City of McFarland',
-        'City of McFarland - Total',
-        'City of Ridgecrest',
-        'City of Ridgecrest - Total',
-        'City of Shafter',
-        'City of Shafter - Total',
-        'City of Taft',
-        'City of Taft - Total',
-        'City of Tehachapi',
-        'City of Tehachapi - Total',
-        'City of Wasco',
-        'City of Wasco - Total',
-        'County',
-        'County - Total',
-        'County Supervisor',
-        'County Supervisor - Total',
-        'Countywide',
-        'Countywide - Total',
-        'Cumulative',
-        'Cumulative - Total',
-        'Electionwide',
-        'Electionwide - Total',
-        'Kern County',
-        'Kern County - Total',
-        'Member of the State Assembly',
-        'Member of the State Assembly - Total',
-        'STATE',
-        'STATE - Total',
-        'State Senator',
-        'State Senator - Total',
-        'Unincorporated',
-        'Unincorporated - Total',
-        'Unincorporated Area',
-        'Unincorporated Area - Total'
+        "12th Senatorial District",
+        "12th Senatorial District - Total",
+        "16th Senatorial District",
+        "16th Senatorial District - Total",
+        "1st Supervisorial District",
+        "1st Supervisorial District - Total",
+        "2nd Supervisorial District",
+        "2nd Supervisorial District - Total",
+        "32nd Assembly District",
+        "32nd Assembly District - Total",
+        "34th Assembly District",
+        "34th Assembly District - Total",
+        "35th Assembly District",
+        "35th Assembly District - Total",
+        "3rd Supervisorial District",
+        "3rd Supervisorial District - Total",
+        "4th Supervisorial District",
+        "4th Supervisorial District - Total",
+        "5th Supervisorial District",
+        "5th Supervisorial District - Total",
+        "Board Of Equalization",
+        "Board Of Equalization - Total",
+        "Board of Equalization (State)",
+        "Board of Equalization (State) - Total",
+        "CALIFORNIA",
+        "CALIFORNIA - Total",
+        "Cities",
+        "Cities - Total",
+        "City of Arvin",
+        "City of Arvin - Total",
+        "City of Bakersfield",
+        "City of Bakersfield - Total",
+        "City of California City",
+        "City of California City - Total",
+        "City of Delano",
+        "City of Delano - Total",
+        "City of Maricopa",
+        "City of Maricopa - Total",
+        "City of McFarland",
+        "City of McFarland - Total",
+        "City of Ridgecrest",
+        "City of Ridgecrest - Total",
+        "City of Shafter",
+        "City of Shafter - Total",
+        "City of Taft",
+        "City of Taft - Total",
+        "City of Tehachapi",
+        "City of Tehachapi - Total",
+        "City of Wasco",
+        "City of Wasco - Total",
+        "County",
+        "County - Total",
+        "County Supervisor",
+        "County Supervisor - Total",
+        "Countywide",
+        "Countywide - Total",
+        "Cumulative",
+        "Cumulative - Total",
+        "Electionwide",
+        "Electionwide - Total",
+        "Kern County",
+        "Kern County - Total",
+        "Member of the State Assembly",
+        "Member of the State Assembly - Total",
+        "STATE",
+        "STATE - Total",
+        "State Senator",
+        "State Senator - Total",
+        "Unincorporated",
+        "Unincorporated - Total",
+        "Unincorporated Area",
+        "Unincorporated Area - Total",
     ]
 
     # get rid of the first two rows that are presentational
     for value in _KERN_PRECINCT_VALUES_TO_REMOVE:
-        kern =  kern[kern["Precinct"] != value].copy()
+        kern = kern[kern["Precinct"] != value].copy()
 
     # drop columns we don't care about at all
     kern = kern.drop(
@@ -2912,6 +2917,46 @@ def _(np, pd):
 
     ventura.head(None)
     return (ventura,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Yolo
+    """)
+    return
+
+
+@app.cell
+def _(EsriDumper, pd):
+    YOLO_COUNTY_PRECINCT_RESULTS_FEATURE_SERVER = "https://services2.arcgis.com/RETsakmE0SJfZXCd/ArcGIS/rest/services/Election_Results_Nov_2025/FeatureServer/0"
+    yolo_features = EsriDumper(YOLO_COUNTY_PRECINCT_RESULTS_FEATURE_SERVER)
+
+    yolo = []
+    # Iterate over each feature and collect the data we want
+    for feature in yolo_features:
+        d = {
+            "county": "Yolo",
+            "precinct_id": feature["properties"]["PRECINCTID"],
+            "no_votes": feature["properties"]["TOTALVOTES_1"],
+            "yes_votes": feature["properties"]["TOTALVOTES_2"],
+        }
+
+        d["total_votes"] = d["no_votes"] + d["yes_votes"]
+
+        if feature["properties"]["RegisteredVoters"] == 0:
+            d["turnout"] = 0
+        else:
+            d["turnout"] = (
+                d["total_votes"] / (feature["properties"]["RegisteredVoters"] or 0)
+            ) * 100
+
+        yolo.append(d)
+
+    yolo = pd.DataFrame(yolo)
+
+    yolo
+    return (yolo,)
 
 
 @app.cell(hide_code=True)
