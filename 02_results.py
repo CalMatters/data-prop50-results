@@ -1231,7 +1231,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(np, pd):
     marin = pd.read_excel(
         "inputs/counties/marin/11-25_SOVC.Final_.xlsx",
         sheet_name="Sheet4",
@@ -1271,6 +1271,10 @@ def _(pd):
     marin["turnout"] = marin["turnout"].fillna(
         0
     )  # Handle cases where Registered Voters is NaN or null
+
+    # replace masked values with nan
+    marin = marin.replace('****', np.nan)
+
 
     # drop the remaining columns we don't care about, including the index
     marin = marin.reset_index(drop=True).drop(
