@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.2"
+__generated_with = "0.19.4"
 app = marimo.App(width="medium")
 
 
@@ -815,9 +815,84 @@ def _(np, pd):
         skipfooter=KERN_CUMULATIVE_FOOTER_N,
     )
 
+    _KERN_PRECINCT_VALUES_TO_REMOVE = [
+        '12th Senatorial District',
+        '12th Senatorial District - Total',
+        '16th Senatorial District',
+        '16th Senatorial District - Total',
+        '1st Supervisorial District',
+        '1st Supervisorial District - Total',
+        '2nd Supervisorial District',
+        '2nd Supervisorial District - Total',
+        '32nd Assembly District',
+        '32nd Assembly District - Total',
+        '34th Assembly District',
+        '34th Assembly District - Total',
+        '35th Assembly District',
+        '35th Assembly District - Total',
+        '3rd Supervisorial District',
+        '3rd Supervisorial District - Total',
+        '4th Supervisorial District',
+        '4th Supervisorial District - Total',
+        '5th Supervisorial District',
+        '5th Supervisorial District - Total',
+        'Board Of Equalization',
+        'Board Of Equalization - Total',
+        'Board of Equalization (State)',
+        'Board of Equalization (State) - Total',
+        'CALIFORNIA',
+        'CALIFORNIA - Total',
+        'Cities',
+        'Cities - Total',
+        'City of Arvin',
+        'City of Arvin - Total',
+        'City of Bakersfield',
+        'City of Bakersfield - Total',
+        'City of California City',
+        'City of California City - Total',
+        'City of Delano',
+        'City of Delano - Total',
+        'City of Maricopa',
+        'City of Maricopa - Total',
+        'City of McFarland',
+        'City of McFarland - Total',
+        'City of Ridgecrest',
+        'City of Ridgecrest - Total',
+        'City of Shafter',
+        'City of Shafter - Total',
+        'City of Taft',
+        'City of Taft - Total',
+        'City of Tehachapi',
+        'City of Tehachapi - Total',
+        'City of Wasco',
+        'City of Wasco - Total',
+        'County',
+        'County - Total',
+        'County Supervisor',
+        'County Supervisor - Total',
+        'Countywide',
+        'Countywide - Total',
+        'Cumulative',
+        'Cumulative - Total',
+        'Electionwide',
+        'Electionwide - Total',
+        'Kern County',
+        'Kern County - Total',
+        'Member of the State Assembly',
+        'Member of the State Assembly - Total',
+        'STATE',
+        'STATE - Total',
+        'State Senator',
+        'State Senator - Total',
+        'Unincorporated',
+        'Unincorporated - Total',
+        'Unincorporated Area',
+        'Unincorporated Area - Total'
+    ]
+
     # get rid of the first two rows that are presentational
-    kern = kern[kern["Precinct"] != "Countywide"].copy()
-    kern = kern[kern["Precinct"] != "Electionwide"].copy()
+    for value in _KERN_PRECINCT_VALUES_TO_REMOVE:
+        kern =  kern[kern["Precinct"] != value].copy()
 
     # drop columns we don't care about at all
     kern = kern.drop(
@@ -857,10 +932,10 @@ def _(np, pd):
     # add a county column
     kern["county"] = "Kern"
 
-    # finally, drop the index
-    kern = kern.reset_index(drop=True)
+    # finally, drop the index and duplicates
+    kern = kern.reset_index(drop=True).drop_duplicates()
 
-    kern.head(None)
+    kern
     return (kern,)
 
 
