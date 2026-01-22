@@ -978,13 +978,20 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    marin = gpd.read_file("inputs/counties/marin/precincts/Marin.shp").to_crs(
-        PROJECTED_CRS
+    marin = gpd.read_file(
+        "inputs/counties/marin/precincts/CONSOLIDATED_PRECINCT.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    marin = alter_df(
+        marin,
+        "Marin",
+        {"Consolidat": "precinct_id"},
+        ["ElectionDa", "SubPrecinc", "SubPreci_1", "ElectionTi", "GlobalID", 'OBJECTID', 'Shape__Are', 'Shape__Len'],
     )
 
-    marin = alter_df(marin, "Marin", {"Precinct": "precinct_id"})
+    marin['precinct_id'] = marin['precinct_id'].str.replace('C', '')
 
-    marin.head()
+    marin
     return (marin,)
 
 
