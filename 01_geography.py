@@ -1554,17 +1554,40 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
+def _(PROJECTED_CRS, gpd, pd, pdfplumber):
+    san_mateo_crosswalk_rows = []
+
+    _sm_crosswalk_pdf_path = (
+        "inputs/counties/san_mateo/50_PrecinctConsolidations Nov2025.pdf"
+    )
+
+    with pdfplumber.open(_sm_crosswalk_pdf_path) as _sm_pdf:
+        for _sm_page in _sm_pdf.pages:
+            _sm_table = _sm_page.extract_tables()
+            for _sm_table_row in _sm_table[0]:
+                if _sm_table_row[0] != 'Voting\nPrecinct':
+                    _sm_precinct_id = _sm_table_row[0]
+                    for _sm_cell in _sm_table_row[1:]:
+                        san_mateo_crosswalk_rows.append({
+                            "consolidated_precinct": _sm_precinct_id,
+                            "regular_precinct": _sm_cell if _sm_cell != "" else _sm_precinct_id
+                        })
+
+    san_mateo_crosswalk_rows = pd.DataFrame(san_mateo_crosswalk_rows).drop_duplicates()
+
     san_mateo = gpd.read_file(
         "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
     ).to_crs(PROJECTED_CRS)
 
+    san_mateo_with_crosswalk = pd.merge(san_mateo, san_mateo_crosswalk_rows, left_on="PrecinctID", right_on="regular_precinct")
+
+    san_mateo = san_mateo_with_crosswalk.dissolve('consolidated_precinct').reset_index()
 
     san_mateo = alter_df(
-        san_mateo, "San Mateo", {"PrecinctID": "precinct_id"}, ["OBJECTID"]
+        san_mateo, "San Mateo", {"consolidated_precinct": "precinct_id"}, ["OBJECTID", "PrecinctID", "regular_precinct"]
     )
 
-    san_mateo.head()
+    san_mateo
     return (san_mateo,)
 
 
