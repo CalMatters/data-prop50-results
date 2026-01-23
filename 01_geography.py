@@ -43,7 +43,7 @@ def _():
     import marimo as mo
     import pandas as pd
     import pdfplumber
-    return gpd, mo, pd, pdfplumber
+    return gpd, mo, pd, pdfplumber, re
 
 
 @app.cell
@@ -532,13 +532,13 @@ def _(extract_fresno_crosswalk_pdf_page, pd, pdfplumber):
         "inputs/counties/fresno/ewmr008_votabsregpctxref-2025.pdf"
     )
 
-    with pdfplumber.open(_crosswalk_pdf_path) as pdf:
-        for page in pdf.pages:
+    with pdfplumber.open(_crosswalk_pdf_path) as fresno_crosswalk_pdf:
+        for fresno_crosswalk_page in fresno_crosswalk_pdf.pages:
             # the source pdf has a table that is split into two halves
 
             # crop the page into two sections
-            left_page = page.crop(bbox=_LEFT_CROP_BOUNDS)
-            right_page = page.crop(bbox=_RIGHT_CROP_BOUNDS)
+            left_page = fresno_crosswalk_page.crop(bbox=_LEFT_CROP_BOUNDS)
+            right_page = fresno_crosswalk_page.crop(bbox=_RIGHT_CROP_BOUNDS)
 
             # extract the text from each section
             left_page_extracted, last_seen_results_precinct_id = (
@@ -626,7 +626,7 @@ def _(PROJECTED_CRS, fresno_page_rows, gpd):
         ],
     )
 
-    fresno.plot()
+    fresno
     return (fresno,)
 
 
@@ -1896,15 +1896,107 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
-    tulare = gpd.read_file(
-        "inputs/counties/tulare/precincts/tulare-precincts.json"
-    ).to_crs(PROJECTED_CRS)
+def _(re):
+    def extract_tulare_crosswalk_pdf_page(
+        page, last_seen_results_precinct_id=None
+    ):
+        """
+        Extracts the crosswalk from PDF pages the crosswalk connects "Regular Precincts" which are used for voter registration (and therefore called registration_precincts in this code) to "Voting Precincts" which are used for results (and therefore called results_precincts in this code)
+         Parameters:
+             page (pdfplumber.Page): The PDF page to extract
 
+         Returns:
+             list: A list of objects, each with "registration_precinct" and "results_precinct"
+        """
+        # create a list to store the page's data in
+        page_rows = []
+
+        # get all of the text from the page and split it into lines
+        page_text = page.extract_text()
+        page_lines = page_text.splitlines()
+
+        # define constants for index positions
+        REGISTRATION_PRECINCT_INDEX = 2
+        last_seen_id = None
+
+        def _extract_precinct_from_page_line(line, last_seen_id):
+            row = {
+                "registration_precinct": None,
+                "results_precinct": None,
+            }
+
+            # the lines with voting precincts (which are like sections)
+            # start with a seven digit number
+            if re.match(r"^\d{7}", line):
+                last_seen_id = line.split(" -")[0]
+                row["results_precinct"] = last_seen_id
+            else:
+                row["results_precinct"] = last_seen_id
+
+            # if the row starts with a "1 " then it contains the
+            # registration precinct
+            if re.match(r"^1 ", line):
+                line_split = line.split(" ")
+                regular_precinct = line_split[REGISTRATION_PRECINCT_INDEX].strip()
+                if re.match(r"^\d{7}$", regular_precinct):
+                    row["registration_precinct"] = regular_precinct
+                else:
+                    breakpoint()
+            else:
+                return None, last_seen_id
+
+            return row, last_seen_id
+
+        # go through each line and split it on white space
+        for line in page_lines:
+            row, last_seen_id = _extract_precinct_from_page_line(
+                line, last_seen_id
+            )
+            if row is not None:
+                page_rows.append(row)
+
+        return page_rows
+    return (extract_tulare_crosswalk_pdf_page,)
+
+
+@app.cell
+def _(PROJECTED_CRS, extract_tulare_crosswalk_pdf_page, gpd, pd, pdfplumber):
+    TULARE_CROSSWALK_PDF_PATH = "inputs/counties/tulare/tularecounty_2025novspec_votabsregpctxrefdetail.pdf"
+    TULARE_PRECINCT_PATH = "inputs/counties/tulare/precincts/tulare-precincts.json"
+
+    # create a variable to store all of the extracted rows
+    tulare_crosswalk = []
+
+    with pdfplumber.open(TULARE_CROSSWALK_PDF_PATH) as tulare_crosswalk_pdf:
+        for page in tulare_crosswalk_pdf.pages:
+            # extract the text from each page
+            page_extracted = extract_tulare_crosswalk_pdf_page(page)
+
+            # and add the results to our list
+            tulare_crosswalk.extend(page_extracted)
+
+    # turn the resulting list into a dataframe
+    tulare_crosswalk = pd.DataFrame(tulare_crosswalk)
+
+    tulare = gpd.read_file(TULARE_PRECINCT_PATH).to_crs(PROJECTED_CRS)
+
+    # make sure the column we'll join on is a string
+    tulare["PrecNum1"] = tulare["PrecNum1"].astype(str)
+
+    # merge the shapefile and the crosswalk file data
+    tulare = pd.merge(
+        tulare,
+        tulare_crosswalk,
+        left_on="PrecNum1",
+        right_on="registration_precinct",
+        how="inner",
+    )
+
+    # and change the resulting dataframe to match our schema
     tulare = alter_df(
         tulare,
         "Tulare",
-        {"PrecNum1": "precinct_id"},
+        {"results_precinct": "precinct_id"},
         [
             "OBJECTID_12",
             "OBJECTID_1",
@@ -1915,6 +2007,7 @@ def _(PROJECTED_CRS, gpd):
             "SECTION",
             "TRA",
             "PrecNum",
+            "PrecNum1",
             "BOS",
             "Shape_Leng",
             "Change",
@@ -1928,10 +2021,17 @@ def _(PROJECTED_CRS, gpd):
             "Precincts_UPDATE_LOCAL_VotingPc",
             "Shape__Area",
             "Shape__Length",
+            "registration_precinct",
         ],
-    )
+    ).reset_index(drop=True)
 
-    tulare.head()
+    # only use features with valid geometry
+    tulare = tulare[tulare.geometry.is_valid]
+
+    # dissolve all precincts with the same precinct_id
+    tulare = tulare.dissolve("precinct_id").reset_index()
+
+    tulare
     return (tulare,)
 
 
