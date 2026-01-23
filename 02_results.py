@@ -23,6 +23,7 @@ def _(mo):
 @app.cell
 def _():
     import json
+    import re
 
     from esridump.dumper import EsriDumper
     import marimo as mo
@@ -1807,6 +1808,16 @@ def _(np, pd):
         }
     )
 
+    # alter the precinct ID format to match with the geography
+    san_diego['precinct_id'] = san_diego['precinct_id'].str.split('-', expand=True)[1]
+
+    san_diego_vote_by_mail_precinct_regex = r"^999"
+
+    # remove vote-by-mail (VBM) result rows since those won't match geography
+    san_diego = san_diego[
+        ~san_diego["precinct_id"].str.match(san_diego_vote_by_mail_precinct_regex)
+    ].copy()
+
     # add county column
     san_diego["county"] = "San Diego"
 
@@ -2583,11 +2594,17 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    sutter_prop_50_sheet_name = "Sheet2"
     sutter = pd.read_excel(
         "inputs/counties/sutter/Statement Of Votes Cast - Countywide.xlsx",
-        sheet_name="Sheet2",
+        sheet_name=sutter_prop_50_sheet_name,
         skiprows=5,
     )
+
+    sutter = sutter[sutter["Electionwide"] != "County - Total"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Cumulative"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Cumulative - Total"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Electionwide - Total"].copy()
     sutter = sutter[sutter["Electionwide"] != "VBM"].copy()
     sutter = sutter[sutter["Electionwide"] != "Polls"].copy()
     sutter = sutter[sutter["Electionwide"] != "Early Voting"].copy()
@@ -2615,7 +2632,7 @@ def _(pd):
     sutter["turnout"] = (sutter["total_votes"] / sutter["Registered Voters"]) * 100
     sutter = sutter.reset_index(drop=True).drop(columns=["Registered Voters"])
     sutter["county"] = "Sutter"
-    sutter.head(None)
+    sutter
     return (sutter,)
 
 
