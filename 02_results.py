@@ -2689,7 +2689,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, re):
+def _(pd, re, np):
     REDACTED_PLACEHOLDER_REGEX = re.compile(r"\*+")
 
 
@@ -2697,7 +2697,7 @@ def _(pd, re):
         _series: pd.Series,
         placeholder_regex=REDACTED_PLACEHOLDER_REGEX,
     ) -> pd.Series:
-        _series = _series.replace(placeholder_regex, pd.NA)
+        _series = _series.replace(placeholder_regex, np.nan)
         return _series.astype("Int64")
     return (clean_redacted_precincts,)
 
