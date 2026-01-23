@@ -1399,10 +1399,11 @@ def _(PROJECTED_CRS, gpd):
     san_bernardino = alter_df(
         san_bernardino,
         "San Bernardino",
-        {"PRECINCTID": "precinct_id", "ABRV_NAME": "precinct_name"},
+        {"ABRV_NAME": "precinct_id"},
         [
             "OBJECTID",
             "PRECINCT",
+            "PRECINCTID",
             "PRECINCT_N",
             "POLLID",
             "PORTION",
