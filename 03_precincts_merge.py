@@ -17,6 +17,13 @@ def _():
 
 
 @app.cell
+def _(DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS, precincts_results_merge):
+    precincts_results_merge.to_crs(PROJECTED_CRS).to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
+    print(f"Exported merged precincts and results data to {DATA_EXPORT_FP}")
+    return
+
+
+@app.cell
 def _(
     MERGE_COLUMNS,
     check_and_export_duplicates,
@@ -274,6 +281,16 @@ def _():
 def _():
     RESULTS_CSV_FP = "./outputs/results.csv"
     return (RESULTS_CSV_FP,)
+
+
+@app.cell
+def _():
+    DATA_EXPORT_FP = "./outputs/precinct_results.gpkg"
+    EXPORT_DRIVER = "GPKG"
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    return DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS
 
 
 @app.cell
