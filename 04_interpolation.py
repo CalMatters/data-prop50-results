@@ -29,8 +29,10 @@ def _():
     # counties where the audit found a mismatch of 2 or fewer precincts
     ADDTNL_COUNTIES_PASSING_AUIDIT = [
         "Los Angeles",
+        "Marin",
         "Merced",
         "Shasta",
+        "Tulare",
     ]
     return (ADDTNL_COUNTIES_PASSING_AUIDIT,)
 
