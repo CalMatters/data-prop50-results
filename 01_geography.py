@@ -60,6 +60,7 @@ def _(
     humboldt,
     imperial,
     inyo,
+    kern,
     lake,
     los_angeles,
     madera,
@@ -112,6 +113,7 @@ def _(
             humboldt,
             imperial,
             inyo,
+            kern,
             lake,
             los_angeles,
             madera,
@@ -742,6 +744,149 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Kern
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, pd):
+    # the kern county crosswalk file is two columns smashed together
+    # so we read them into two different data frames to start
+    kern_1 = (
+        pd.read_excel(
+            "inputs/counties/kern/precincts/2025 Statewide Special Election.xls",
+            usecols="B:Q",  # these columns are the first half of the data
+            skiprows=6,  # skip the header rows
+        )
+        .truncate(
+            after=5690  # the rows after are relevant to cities in the county
+        )
+        .drop(
+            columns=[  # drop columns we don't need
+                "Mail\nBallot ",
+                "Unnamed: 2",
+                "Unnamed: 3",
+                "Unnamed: 4",
+                "Unnamed: 5",
+                "Unnamed: 6",
+                "Unnamed: 8",
+                "Unnamed: 9",
+                "Unnamed: 11",
+                "Unnamed: 12",
+                "Unnamed: 13",
+                "Unnamed: 15",
+                "Ballot \nType",
+            ]
+        )
+    )
+    kern_1 = kern_1.rename(
+        columns={
+            "\nVoting Precinct": "voting_precinct",
+            "\nRegular Precinct": "regular_precinct",
+            "\nRegistration": "registration",
+        }
+    )
+    kern_1["voting_precinct"] = kern_1["voting_precinct"].ffill()
+    kern_1_has_voters = kern_1["registration"].notnull()
+    kern_1 = kern_1[kern_1_has_voters].copy()
+
+    kern_1["voting_precinct"] = kern_1["voting_precinct"].str.split(
+        " ", expand=True
+    )[0]
+    kern_1 = kern_1.reset_index(drop=True)
+
+    kern_2 = (
+        pd.read_excel(
+            "inputs/counties/kern/precincts/2025 Statewide Special Election.xls",
+            usecols="U:AC",
+            skiprows=6,
+        )
+        .truncate(
+            after=5655  # the rows after are relevant to cities in the county
+        )
+        .drop(
+            columns=[
+                "Unnamed: 21",
+                "Mail\nBallot",
+                "Unnamed: 24",
+                "Unnamed: 25",
+                "Unnamed: 26",
+                "Ballot \nType.1",
+            ]
+        )
+    )
+    kern_2 = kern_2.rename(
+        columns={
+            "\nVoting Precinct.1": "voting_precinct",
+            "\nRegular Precinct.1": "regular_precinct",
+            "\nRegistration.1": "registration",
+        }
+    )
+
+    kern_2["voting_precinct"] = kern_2["voting_precinct"].ffill()
+    kern_2_has_voters = kern_2["registration"].notnull()
+    kern_2 = kern_2[kern_2_has_voters].copy()
+
+    kern_2["voting_precinct"] = kern_2["voting_precinct"].str.split(
+        " ", expand=True
+    )[0]
+    kern_2 = kern_2.reset_index(drop=True)
+
+    # and then combine both dataframes to get a single crosswalk dataframe
+    kern_crosswalk = pd.concat([kern_1, kern_2]).reset_index(drop=True)
+
+    # replace multiple spaces with one in preparation for the merge
+    kern_crosswalk["regular_precinct"] = kern_crosswalk[
+        "regular_precinct"
+    ].str.replace("  ", " ")
+
+    # read in the shapefile
+    kern = gpd.read_file(
+        "inputs/counties/kern/precincts/remediainquiryelectionprecinctgeographicfiles/2025 Precincts.shp"
+    ).to_crs(PROJECTED_CRS)
+
+    # create a key for merging with the crosswalk
+    kern["regular_precinct"] = (
+        kern["PrecintID"].astype(str) + " " + kern["Layer"].astype(str)
+    )
+    # which includes replacing multiple spaces with a single space
+    kern["regular_precinct"] = kern["regular_precinct"].str.replace(" +", "")
+
+    # merge the two together
+    kern = pd.merge(
+        kern, kern_crosswalk, on="regular_precinct", how="inner", validate="m:1"
+    )
+
+    # consolidate registration precincts into voting precincts and add data attributes together
+    # (we only care about registration)
+    kern = kern.dissolve(by="voting_precinct", aggfunc="sum").reset_index()
+
+    # cleanup column names to match our schema
+
+    kern = alter_df(
+        kern,
+        "Kern",
+        {"voting_precinct": "precinct_id", "Layer": "precinct_name"},
+        [
+            "OBJECTID_1",
+            "OBJECTID",
+            "Shape_Leng",
+            "Shape_Le_1",
+            "Latitude",
+            "Longitude",
+            "PrecintID",
+            "regular_precinct",
+        ],
+    )
+
+    kern
+    return (kern,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Lake
     """)
     return
@@ -833,13 +978,20 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    marin = gpd.read_file("inputs/counties/marin/precincts/Marin.shp").to_crs(
-        PROJECTED_CRS
+    marin = gpd.read_file(
+        "inputs/counties/marin/precincts/CONSOLIDATED_PRECINCT.zip"
+    ).to_crs(PROJECTED_CRS)
+
+    marin = alter_df(
+        marin,
+        "Marin",
+        {"Consolidat": "precinct_id"},
+        ["ElectionDa", "SubPrecinc", "SubPreci_1", "ElectionTi", "GlobalID", 'OBJECTID', 'Shape__Are', 'Shape__Len'],
     )
 
-    marin = alter_df(marin, "Marin", {"Precinct": "precinct_id"})
+    marin['precinct_id'] = marin['precinct_id'].str.replace('C', '')
 
-    marin.head()
+    marin
     return (marin,)
 
 
@@ -1170,11 +1322,7 @@ def _(PROJECTED_CRS, gpd):
         "inputs/counties/sacramento/precincts/ConsolidatedPrecincts_-8549929174186228288.zip"
     ).to_crs(PROJECTED_CRS)
 
-    sacramento = alter_df(
-        sacramento,
-        "Sacramento",
-        {"VPrecinct": "precinct_id"}
-    )
+    sacramento = alter_df(sacramento, "Sacramento", {"VPrecinct": "precinct_id"})
 
     sacramento.head()
     return (sacramento,)
@@ -1406,17 +1554,40 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
+def _(PROJECTED_CRS, gpd, pd, pdfplumber):
+    san_mateo_crosswalk_rows = []
+
+    _sm_crosswalk_pdf_path = (
+        "inputs/counties/san_mateo/50_PrecinctConsolidations Nov2025.pdf"
+    )
+
+    with pdfplumber.open(_sm_crosswalk_pdf_path) as _sm_pdf:
+        for _sm_page in _sm_pdf.pages:
+            _sm_table = _sm_page.extract_tables()
+            for _sm_table_row in _sm_table[0]:
+                if _sm_table_row[0] != 'Voting\nPrecinct':
+                    _sm_precinct_id = _sm_table_row[0]
+                    for _sm_cell in _sm_table_row[1:]:
+                        san_mateo_crosswalk_rows.append({
+                            "consolidated_precinct": _sm_precinct_id,
+                            "regular_precinct": _sm_cell if _sm_cell != "" else _sm_precinct_id
+                        })
+
+    san_mateo_crosswalk_rows = pd.DataFrame(san_mateo_crosswalk_rows).drop_duplicates()
+
     san_mateo = gpd.read_file(
         "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
     ).to_crs(PROJECTED_CRS)
 
+    san_mateo_with_crosswalk = pd.merge(san_mateo, san_mateo_crosswalk_rows, left_on="PrecinctID", right_on="regular_precinct")
+
+    san_mateo = san_mateo_with_crosswalk.dissolve('consolidated_precinct').reset_index()
 
     san_mateo = alter_df(
-        san_mateo, "San Mateo", {"PrecinctID": "precinct_id"}, ["OBJECTID"]
+        san_mateo, "San Mateo", {"consolidated_precinct": "precinct_id"}, ["OBJECTID", "PrecinctID", "regular_precinct"]
     )
 
-    san_mateo.head()
+    san_mateo
     return (san_mateo,)
 
 
@@ -1835,7 +2006,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     yolo = gpd.read_file(
-        "inputs/counties/yolo/precincts/Precincts_Consolidated_Open_Data.zip"
+        "inputs/counties/yolo/precincts/PrecinctsConsolidated_20250904.zip"
     ).to_crs(PROJECTED_CRS)
 
     yolo = alter_df(
@@ -1855,7 +2026,7 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    yolo.head()
+    yolo
     return (yolo,)
 
 

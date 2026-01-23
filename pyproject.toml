@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "esridump>=1.13.0",
     "folium>=0.12",
     "geopandas>=1.1.1",
     "mapclassify>=2.10.0",
