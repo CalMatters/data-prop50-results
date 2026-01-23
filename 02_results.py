@@ -1274,7 +1274,7 @@ def _(np, pd):
     )  # Handle cases where Registered Voters is NaN or null
 
     # replace masked values with nan
-    marin = marin.replace("****", np.nan)
+    marin = marin.replace('****', np.nan)
 
 
     # drop the remaining columns we don't care about, including the index
@@ -1678,7 +1678,7 @@ def _(np, pd):
     SAN_BERNARDINO_PROP50_RESULTS_SHEET = "Sheet2"
     SAN_BERNARDINO_HEADER_N = 3
     SAN_BERNARDINO_CUMULATIVE_FOOTER_N = 8
-
+    _PRECINT_ID_START_INDEX = -7 # trailing N digits represent matching ID in results
     san_bernardino = pd.read_excel(
         "inputs/counties/san_bernardino/Report_SOVbyPrecinct.xlsx",
         sheet_name=SAN_BERNARDINO_PROP50_RESULTS_SHEET,
@@ -1739,6 +1739,11 @@ def _(np, pd):
             "Total Votes": "total_votes",
         }
     )
+
+    # adjust the precinct id to better match the geography
+    san_bernardino["precinct_id"] = san_bernardino["precinct_id"].str[
+        _PRECINT_ID_START_INDEX:
+    ]
 
     # add county column
     san_bernardino["county"] = "San Bernardino"
