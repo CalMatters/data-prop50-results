@@ -1656,7 +1656,9 @@ def _(np, pd):
     )
 
     # adjust the precinct id to better match the geography
-    san_bernardino['precinct_id'] = san_bernardino['precinct_id'].str[-7:]
+    san_bernardino["precinct_id"] = san_bernardino["precinct_id"].str[
+        _PRECINT_ID_START_INDEX:
+    ]
 
     # add county column
     san_bernardino["county"] = "San Bernardino"
