@@ -219,6 +219,7 @@ outputs/cvap_tracts.gpkg
 outputs/cvap_blocks.gpkg
 outputs/precinct_results.gpkg
 outputs/precincts_results_cvap_*
+outputs/precinct_results.gpkg
 
 # Ignore debug outputs
 debug/*.csv
