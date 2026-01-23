@@ -30,7 +30,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return EsriDumper, mo, np, pd, pdfplumber
+    return json, re, EsriDumper, mo, np, pd, pdfplumber
 
 
 @app.cell
@@ -132,6 +132,12 @@ def _(
     return
 
 
+@app.cell
+def _():
+    VOTE_COUNT_COLUMNS = ["yes_votes", "no_votes", "total_votes"]
+    return (VOTE_COUNT_COLUMNS,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -141,7 +147,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(VOTE_COUNT_COLUMNS, clean_redacted_precincts, pd):
     ALAMEDA_PRECINCT_ID_PATTERN = r"\d{6}"
     ALAMEDA_HEADER_ROWS_N = 5
     alameda = pd.read_excel(
@@ -187,6 +193,10 @@ def _(pd):
     alameda = alameda[
         alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
     ].copy()
+
+    alameda[VOTE_COUNT_COLUMNS] = alameda[VOTE_COUNT_COLUMNS].apply(
+        clean_redacted_precincts
+    )
 
     # get rid of the index column
     alameda = alameda.reset_index(drop=True)
@@ -2647,9 +2657,9 @@ def _(mo):
 @app.cell
 def _(
     calculate_turnout,
+    clean_redacted_precincts,
     pd,
     rename_and_filter_columns,
-    zero_out_insufficient_turnout_precincts,
 ):
     def tulare_df(fp, column_renames=dict()) -> pd.DataFrame:
         COUNTY_NAME = "Tulare"
@@ -2676,9 +2686,7 @@ def _(
         df = dedupe_data(df)
         df = df.dropna(axis=1, how="all", ignore_index=True)
 
-        df[VALUE_COLUMNS] = df[VALUE_COLUMNS].apply(
-            zero_out_insufficient_turnout_precincts
-        )
+        df[VALUE_COLUMNS] = df[VALUE_COLUMNS].apply(clean_redacted_precincts)
 
         df["turnout"] = calculate_turnout(
             df["Total Votes"], df["Registered \nVoters"]
@@ -2785,16 +2793,17 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
-    INSUFFICIENT_TURNOUT_PLACEHOLDER = "****"
+def _(pd, re, np):
+    REDACTED_PLACEHOLDER_REGEX = re.compile(r"\*+")
 
 
-    def zero_out_insufficient_turnout_precincts(
-        _series: pd.Series, placeholder_value=INSUFFICIENT_TURNOUT_PLACEHOLDER
+    def clean_redacted_precincts(
+        _series: pd.Series,
+        placeholder_regex=REDACTED_PLACEHOLDER_REGEX,
     ) -> pd.Series:
-        _series = _series.replace({placeholder_value: "0"})
-        return _series.astype(int)
-    return (zero_out_insufficient_turnout_precincts,)
+        _series = _series.replace(placeholder_regex, np.nan)
+        return _series.astype("Int64")
+    return (clean_redacted_precincts,)
 
 
 @app.cell
