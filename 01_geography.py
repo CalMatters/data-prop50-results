@@ -1785,13 +1785,13 @@ def _(re):
 
 @app.cell
 def _(PROJECTED_CRS, extract_tulare_crosswalk_pdf_page, gpd, pd, pdfplumber):
-    tulare_crosswalk_pdf_path = "inputs/counties/tulare/tularecounty_2025novspec_votabsregpctxrefdetail.pdf"
-    tulare_precinct_path = "inputs/counties/tulare/precincts/tulare-precincts.json"
+    TULARE_CROSSWALK_PDF_PATH = "inputs/counties/tulare/tularecounty_2025novspec_votabsregpctxrefdetail.pdf"
+    TULARE_PRECINCT_PATH = "inputs/counties/tulare/precincts/tulare-precincts.json"
 
     # create a variable to store all of the extracted rows
     tulare_crosswalk = []
 
-    with pdfplumber.open(tulare_crosswalk_pdf_path) as tulare_crosswalk_pdf:
+    with pdfplumber.open(TULARE_CROSSWALK_PDF_PATH) as tulare_crosswalk_pdf:
         for page in tulare_crosswalk_pdf.pages:
             # extract the text from each page
             page_extracted = extract_tulare_crosswalk_pdf_page(page)
@@ -1802,7 +1802,7 @@ def _(PROJECTED_CRS, extract_tulare_crosswalk_pdf_page, gpd, pd, pdfplumber):
     # turn the resulting list into a dataframe
     tulare_crosswalk = pd.DataFrame(tulare_crosswalk)
 
-    tulare = gpd.read_file(tulare_precinct_path).to_crs(PROJECTED_CRS)
+    tulare = gpd.read_file(TULARE_PRECINCT_PATH).to_crs(PROJECTED_CRS)
 
     # make sure the column we'll join on is a string
     tulare["PrecNum1"] = tulare["PrecNum1"].astype(str)
