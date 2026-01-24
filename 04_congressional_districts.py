@@ -118,10 +118,33 @@ def _(cd_party, pd, precincts_joined_cd_gdf):
 
 @app.cell
 def _(precincts_with_results_and_district_gdf):
-    x = precincts_with_results_and_district_gdf.groupby(
+    precincts_with_results_and_district_gdf.groupby(
         ["representative_party_in_congress"]
     )[["yes_votes", "no_votes", "total_votes"]].sum()
-    x
+    return
+
+
+@app.cell
+def _(precincts_with_results_and_district_gdf):
+    precincts_with_results_and_district_gdf.groupby(
+        ["representative_party_in_congress"]
+    )[["yes_percent"]].median()
+    return
+
+
+@app.cell
+def _(precincts_with_results_and_district_gdf):
+    precincts_with_results_and_district_gdf.groupby(
+        ["county", "representative_party_in_congress"]
+    )[["yes_votes", "no_votes", "total_votes"]].sum()
+    return
+
+
+@app.cell
+def _(precincts_with_results_and_district_gdf):
+    precincts_with_results_and_district_gdf.groupby(
+        ["county", "representative_party_in_congress"]
+    )[["yes_percent"]].median()
     return
 
 
