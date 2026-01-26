@@ -17,8 +17,8 @@ def _():
 
 
 @app.cell
-def _(DATA_EXPORT_FP, EXPORT_DRIVER, precincts_results_merge):
-    precincts_results_merge.to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
+def _(DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS, precincts_results_merge):
+    precincts_results_merge.to_crs(PROJECTED_CRS).to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
     print(f"Exported merged precincts and results data to {DATA_EXPORT_FP}")
     return
 
