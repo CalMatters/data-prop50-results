@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.4"
 app = marimo.App(width="medium")
 
 
@@ -22,11 +22,15 @@ def _(mo):
 
 @app.cell
 def _():
+    import json
+    import re
+
+    from esridump.dumper import EsriDumper
     import marimo as mo
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return mo, np, pd, pdfplumber
+    return json, re, EsriDumper, mo, np, pd, pdfplumber
 
 
 @app.cell
@@ -44,11 +48,13 @@ def _(
     kern,
     kings,
     lake,
+    los_angeles,
     madera,
     marin,
     merced,
     monterey,
     napa,
+    orange,
     pd,
     sacramento,
     san_benito,
@@ -71,6 +77,7 @@ def _(
     tulare,
     tuolumne,
     ventura,
+    yolo,
     yuba,
 ):
     combined = pd.concat(
@@ -88,11 +95,13 @@ def _(
             kern,
             kings,
             lake,
+            los_angeles,
             madera,
             marin,
             merced,
             monterey,
             napa,
+            orange,
             sacramento,
             san_benito,
             san_bernardino,
@@ -111,15 +120,22 @@ def _(
             stanislaus,
             sutter,
             trinity,
+            tulare,
             tuolumne,
             ventura,
-            tulare,
+            yolo,
             yuba,
         ]
     ).reset_index(drop=True)
     combined.to_csv("outputs/results.csv", index=False)
     combined.head(None)
     return
+
+
+@app.cell
+def _():
+    VOTE_COUNT_COLUMNS = ["yes_votes", "no_votes", "total_votes"]
+    return (VOTE_COUNT_COLUMNS,)
 
 
 @app.cell(hide_code=True)
@@ -131,7 +147,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(VOTE_COUNT_COLUMNS, clean_redacted_precincts, pd):
     ALAMEDA_PRECINCT_ID_PATTERN = r"\d{6}"
     ALAMEDA_HEADER_ROWS_N = 5
     alameda = pd.read_excel(
@@ -177,6 +193,10 @@ def _(pd):
     alameda = alameda[
         alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
     ].copy()
+
+    alameda[VOTE_COUNT_COLUMNS] = alameda[VOTE_COUNT_COLUMNS].apply(
+        clean_redacted_precincts
+    )
 
     # get rid of the index column
     alameda = alameda.reset_index(drop=True)
@@ -811,9 +831,84 @@ def _(np, pd):
         skipfooter=KERN_CUMULATIVE_FOOTER_N,
     )
 
+    _KERN_PRECINCT_VALUES_TO_REMOVE = [
+        "12th Senatorial District",
+        "12th Senatorial District - Total",
+        "16th Senatorial District",
+        "16th Senatorial District - Total",
+        "1st Supervisorial District",
+        "1st Supervisorial District - Total",
+        "2nd Supervisorial District",
+        "2nd Supervisorial District - Total",
+        "32nd Assembly District",
+        "32nd Assembly District - Total",
+        "34th Assembly District",
+        "34th Assembly District - Total",
+        "35th Assembly District",
+        "35th Assembly District - Total",
+        "3rd Supervisorial District",
+        "3rd Supervisorial District - Total",
+        "4th Supervisorial District",
+        "4th Supervisorial District - Total",
+        "5th Supervisorial District",
+        "5th Supervisorial District - Total",
+        "Board Of Equalization",
+        "Board Of Equalization - Total",
+        "Board of Equalization (State)",
+        "Board of Equalization (State) - Total",
+        "CALIFORNIA",
+        "CALIFORNIA - Total",
+        "Cities",
+        "Cities - Total",
+        "City of Arvin",
+        "City of Arvin - Total",
+        "City of Bakersfield",
+        "City of Bakersfield - Total",
+        "City of California City",
+        "City of California City - Total",
+        "City of Delano",
+        "City of Delano - Total",
+        "City of Maricopa",
+        "City of Maricopa - Total",
+        "City of McFarland",
+        "City of McFarland - Total",
+        "City of Ridgecrest",
+        "City of Ridgecrest - Total",
+        "City of Shafter",
+        "City of Shafter - Total",
+        "City of Taft",
+        "City of Taft - Total",
+        "City of Tehachapi",
+        "City of Tehachapi - Total",
+        "City of Wasco",
+        "City of Wasco - Total",
+        "County",
+        "County - Total",
+        "County Supervisor",
+        "County Supervisor - Total",
+        "Countywide",
+        "Countywide - Total",
+        "Cumulative",
+        "Cumulative - Total",
+        "Electionwide",
+        "Electionwide - Total",
+        "Kern County",
+        "Kern County - Total",
+        "Member of the State Assembly",
+        "Member of the State Assembly - Total",
+        "STATE",
+        "STATE - Total",
+        "State Senator",
+        "State Senator - Total",
+        "Unincorporated",
+        "Unincorporated - Total",
+        "Unincorporated Area",
+        "Unincorporated Area - Total",
+    ]
+
     # get rid of the first two rows that are presentational
-    kern = kern[kern["Precinct"] != "Countywide"].copy()
-    kern = kern[kern["Precinct"] != "Electionwide"].copy()
+    for value in _KERN_PRECINCT_VALUES_TO_REMOVE:
+        kern = kern[kern["Precinct"] != value].copy()
 
     # drop columns we don't care about at all
     kern = kern.drop(
@@ -853,10 +948,10 @@ def _(np, pd):
     # add a county column
     kern["county"] = "Kern"
 
-    # finally, drop the index
-    kern = kern.reset_index(drop=True)
+    # finally, drop the index and duplicates
+    kern = kern.reset_index(drop=True).drop_duplicates()
 
-    kern.head(None)
+    kern
     return (kern,)
 
 
@@ -1063,7 +1158,7 @@ def _(np, pd):
     los_angeles = los_angeles.reset_index(drop=True)
 
     los_angeles.head(None)
-    return
+    return (los_angeles,)
 
 
 @app.cell(hide_code=True)
@@ -1147,7 +1242,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(np, pd):
     marin = pd.read_excel(
         "inputs/counties/marin/11-25_SOVC.Final_.xlsx",
         sheet_name="Sheet4",
@@ -1187,6 +1282,10 @@ def _(pd):
     marin["turnout"] = marin["turnout"].fillna(
         0
     )  # Handle cases where Registered Voters is NaN or null
+
+    # replace masked values with nan
+    marin = marin.replace('****', np.nan)
+
 
     # drop the remaining columns we don't care about, including the index
     marin = marin.reset_index(drop=True).drop(
@@ -1348,7 +1447,7 @@ def _(pd, pdfplumber):
 
     _PROP50_END_PAGE = 6
 
-    
+
     def extract_napa_pdf():
         napa = None
         # extract the tables from the Prop 50 results pages in the PDF document
@@ -1415,6 +1514,52 @@ def _(pd, pdfplumber):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Orange
+
+    Orange has a precinct with ID `99999`. The precinct's record says it has 976 registered voters with 430 votes cast. It has null value for turnout. It may be worth it to reach out to county to ask which voters are registered to this precinct. My guess is these are Americans voting from abroad.
+
+    Orange results data has two different precinct identifiers. I determined which one to use by cross referencing with the counties precinct GIS file.
+    """)
+    return
+
+
+@app.cell
+def _(calculate_total_votes, pd):
+    _DATA_FP = "./inputs/counties/orange/media.zip"
+    _TAB_SEP = "\t"
+    _DTYPE_MAP = {".Precinct": str, "Precinct ID": str}
+    _COLUMN_NAMES = ["precinct_id", "no_votes", "yes_votes", "turnout", "to_drop"]
+
+    orange = pd.read_csv(_DATA_FP, sep=_TAB_SEP, dtype=_DTYPE_MAP)
+    orange = orange.pivot_table(
+        values=["Total Votes", "Turnout Percentage"],
+        index=[".Precinct"],
+        columns=["Choice Name1"],
+        dropna=False,
+    ).reset_index()
+
+    # Precinct 99999 should be the only precinct without turnout set
+    # this precinct does not exist in geography file, so it will likely be dropped
+    # assertion included b/c we pivot on the turnout records from the source data
+    assert (
+        orange[("Turnout Percentage", "No")]
+        != orange[("Turnout Percentage", "Yes")]
+    ).sum() == 1
+
+    orange.columns = _COLUMN_NAMES
+    orange = orange[orange.columns[:-1]].copy()
+
+    orange["total_votes"] = calculate_total_votes(orange)
+    orange["county"] = "Orange"
+
+
+    orange
+    return (orange,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Sacramento
     """)
     return
@@ -1454,6 +1599,9 @@ def _(pd):
         columns={"Precinct": "precinct_id", "No": "no_votes", "Yes": "yes_votes"}
     )
 
+    # remove leading 00 from precinct_id
+    sacramento["precinct_id"] = sacramento["precinct_id"].str.lstrip("0")
+
     # add total_votes column
     sacramento["total_votes"] = sacramento["no_votes"] + sacramento["yes_votes"]
 
@@ -1474,6 +1622,7 @@ def _(pd):
     SAN_BENITO_PROP50_RESULTS_SHEET = "Proposition 50"
     SAN_BENITO_HEADER_N = 2
     SAN_BENITO_CUMULATIVE_FOOTER_N = 3
+    _PRECINCT_PATTERN = r"[a-zA-Z]\d{5}"
 
     san_benito = pd.read_excel(
         "inputs/counties/san_benito/November 4, 2025 Special Election Statement of Vote - By Precinct.xlsx",
@@ -1505,10 +1654,6 @@ def _(pd):
     san_benito = san_benito.drop(
         columns=["Times Cast", "Registered \nVoters", "Unnamed: 3"]
     )
-    _PRECINCT_PATTERN = r"[a-zA-Z]\d{5}"
-    san_benito = san_benito[
-        san_benito["precinct_id"].str.match(_PRECINCT_PATTERN)
-    ].reset_index(drop=True)
     # and rename the ones we do want to keep
     san_benito = san_benito.rename(
         columns={
@@ -1519,8 +1664,9 @@ def _(pd):
         }
     )
 
-    # and then get rid of the index
-    san_benito = san_benito.reset_index(drop=True)
+    san_benito = san_benito[
+        san_benito["precinct_id"].str.match(_PRECINCT_PATTERN)
+    ].reset_index(drop=True)
 
     # finally add a county column
     san_benito["county"] = "San Benito"
@@ -1542,7 +1688,7 @@ def _(np, pd):
     SAN_BERNARDINO_PROP50_RESULTS_SHEET = "Sheet2"
     SAN_BERNARDINO_HEADER_N = 3
     SAN_BERNARDINO_CUMULATIVE_FOOTER_N = 8
-
+    _PRECINT_ID_START_INDEX = -7 # trailing N digits represent matching ID in results
     san_bernardino = pd.read_excel(
         "inputs/counties/san_bernardino/Report_SOVbyPrecinct.xlsx",
         sheet_name=SAN_BERNARDINO_PROP50_RESULTS_SHEET,
@@ -1603,6 +1749,11 @@ def _(np, pd):
             "Total Votes": "total_votes",
         }
     )
+
+    # adjust the precinct id to better match the geography
+    san_bernardino["precinct_id"] = san_bernardino["precinct_id"].str[
+        _PRECINT_ID_START_INDEX:
+    ]
 
     # add county column
     san_bernardino["county"] = "San Bernardino"
@@ -1666,6 +1817,16 @@ def _(np, pd):
             "Total Votes": "total_votes",
         }
     )
+
+    # alter the precinct ID format to match with the geography
+    san_diego['precinct_id'] = san_diego['precinct_id'].str.split('-', expand=True)[1]
+
+    san_diego_vote_by_mail_precinct_regex = r"^999"
+
+    # remove vote-by-mail (VBM) result rows since those won't match geography
+    san_diego = san_diego[
+        ~san_diego["precinct_id"].str.match(san_diego_vote_by_mail_precinct_regex)
+    ].copy()
 
     # add county column
     san_diego["county"] = "San Diego"
@@ -1776,7 +1937,9 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[_PROP50_PAGE_RANGE[0]:_PROP50_PAGE_RANGE[1]]
+            prop_50_pages = pdf.pages[
+                _PROP50_PAGE_RANGE[0] : _PROP50_PAGE_RANGE[1]
+            ]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -2385,7 +2548,7 @@ def _(pd, pdfplumber):
         ) as pdf:
             extracted_pages = []
             # just a few pages from the document are related to Prop 50
-            prop_50_pages = pdf.pages[_PROP5_PAGE_RANGE[0]:_PROP5_PAGE_RANGE[1]]
+            prop_50_pages = pdf.pages[_PROP5_PAGE_RANGE[0] : _PROP5_PAGE_RANGE[1]]
 
             for page in prop_50_pages:
                 table = page.extract_table()
@@ -2441,11 +2604,17 @@ def _(mo):
 
 @app.cell
 def _(pd):
+    sutter_prop_50_sheet_name = "Sheet2"
     sutter = pd.read_excel(
         "inputs/counties/sutter/Statement Of Votes Cast - Countywide.xlsx",
-        sheet_name="Sheet2",
+        sheet_name=sutter_prop_50_sheet_name,
         skiprows=5,
     )
+
+    sutter = sutter[sutter["Electionwide"] != "County - Total"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Cumulative"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Cumulative - Total"].copy()
+    sutter = sutter[sutter["Electionwide"] != "Electionwide - Total"].copy()
     sutter = sutter[sutter["Electionwide"] != "VBM"].copy()
     sutter = sutter[sutter["Electionwide"] != "Polls"].copy()
     sutter = sutter[sutter["Electionwide"] != "Early Voting"].copy()
@@ -2473,7 +2642,7 @@ def _(pd):
     sutter["turnout"] = (sutter["total_votes"] / sutter["Registered Voters"]) * 100
     sutter = sutter.reset_index(drop=True).drop(columns=["Registered Voters"])
     sutter["county"] = "Sutter"
-    sutter.head(None)
+    sutter
     return (sutter,)
 
 
@@ -2488,9 +2657,9 @@ def _(mo):
 @app.cell
 def _(
     calculate_turnout,
+    clean_redacted_precincts,
     pd,
     rename_and_filter_columns,
-    zero_out_insufficient_turnout_precincts,
 ):
     def tulare_df(fp, column_renames=dict()) -> pd.DataFrame:
         COUNTY_NAME = "Tulare"
@@ -2517,9 +2686,7 @@ def _(
         df = dedupe_data(df)
         df = df.dropna(axis=1, how="all", ignore_index=True)
 
-        df[VALUE_COLUMNS] = df[VALUE_COLUMNS].apply(
-            zero_out_insufficient_turnout_precincts
-        )
+        df[VALUE_COLUMNS] = df[VALUE_COLUMNS].apply(clean_redacted_precincts)
 
         df["turnout"] = calculate_turnout(
             df["Total Votes"], df["Registered \nVoters"]
@@ -2626,16 +2793,17 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
-    INSUFFICIENT_TURNOUT_PLACEHOLDER = "****"
+def _(pd, re, np):
+    REDACTED_PLACEHOLDER_REGEX = re.compile(r"\*+")
 
 
-    def zero_out_insufficient_turnout_precincts(
-        _series: pd.Series, placeholder_value=INSUFFICIENT_TURNOUT_PLACEHOLDER
+    def clean_redacted_precincts(
+        _series: pd.Series,
+        placeholder_regex=REDACTED_PLACEHOLDER_REGEX,
     ) -> pd.Series:
-        _series = _series.replace({placeholder_value: "0"})
-        return _series.astype(int)
-    return (zero_out_insufficient_turnout_precincts,)
+        _series = _series.replace(placeholder_regex, np.nan)
+        return _series.astype("Int64")
+    return (clean_redacted_precincts,)
 
 
 @app.cell
@@ -2653,6 +2821,13 @@ def _(pd):
         registered_voter_count = registered_voter_count.replace(0, 1)
         return round((votes_cast / registered_voter_count) * 100, 1)
     return (calculate_turnout,)
+
+
+@app.cell
+def _(pd):
+    def calculate_total_votes(df_clean: pd.DataFrame) -> pd.Series:
+        return df_clean["yes_votes"] + df_clean["no_votes"]
+    return (calculate_total_votes,)
 
 
 @app.cell(hide_code=True)
@@ -2777,6 +2952,46 @@ def _(np, pd):
 
     ventura.head(None)
     return (ventura,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Yolo
+    """)
+    return
+
+
+@app.cell
+def _(EsriDumper, pd):
+    YOLO_COUNTY_PRECINCT_RESULTS_FEATURE_SERVER = "https://services2.arcgis.com/RETsakmE0SJfZXCd/ArcGIS/rest/services/Election_Results_Nov_2025/FeatureServer/0"
+    yolo_features = EsriDumper(YOLO_COUNTY_PRECINCT_RESULTS_FEATURE_SERVER)
+
+    yolo = []
+    # Iterate over each feature and collect the data we want
+    for feature in yolo_features:
+        d = {
+            "county": "Yolo",
+            "precinct_id": feature["properties"]["PRECINCTID"],
+            "no_votes": feature["properties"]["TOTALVOTES_1"],
+            "yes_votes": feature["properties"]["TOTALVOTES_2"],
+        }
+
+        d["total_votes"] = d["no_votes"] + d["yes_votes"]
+
+        if feature["properties"]["RegisteredVoters"] == 0:
+            d["turnout"] = 0
+        else:
+            d["turnout"] = (
+                d["total_votes"] / (feature["properties"]["RegisteredVoters"] or 0)
+            ) * 100
+
+        yolo.append(d)
+
+    yolo = pd.DataFrame(yolo)
+
+    yolo
+    return (yolo,)
 
 
 @app.cell(hide_code=True)

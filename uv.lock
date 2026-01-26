@@ -319,6 +319,7 @@ name = "data-prop50-results"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "esridump" },
     { name = "folium" },
     { name = "geopandas" },
     { name = "mapclassify" },
@@ -336,6 +337,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "esridump", specifier = ">=1.13.0" },
     { name = "folium", specifier = ">=0.12" },
     { name = "geopandas", specifier = ">=1.1.1" },
     { name = "mapclassify", specifier = ">=2.10.0" },
@@ -395,6 +397,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c6/5f/87e43af2e4a0135f9675449563e7c2f9b6f1fe6a2d1691c96b091f3904dd/duckdb-1.4.3-cp314-cp314-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1b35491db98ccd11d151165497c084a9d29d3dc42fc80abea2715a6c861ca43d", size = 20497138, upload-time = "2025-12-09T10:59:01.241Z" },
     { url = "https://files.pythonhosted.org/packages/94/41/abec537cc7c519121a2a83b9a6f180af8915fabb433777dc147744513e74/duckdb-1.4.3-cp314-cp314-win_amd64.whl", hash = "sha256:23b12854032c1a58d0452e2b212afa908d4ce64171862f3792ba9a596ba7c765", size = 12836056, upload-time = "2025-12-09T10:59:03.388Z" },
     { url = "https://files.pythonhosted.org/packages/b1/5a/8af5b96ce5622b6168854f479ce846cf7fb589813dcc7d8724233c37ded3/duckdb-1.4.3-cp314-cp314-win_arm64.whl", hash = "sha256:90f241f25cffe7241bf9f376754a5845c74775e00e1c5731119dc88cd71e0cb2", size = 13527759, upload-time = "2025-12-09T10:59:05.496Z" },
+]
+
+[[package]]
+name = "esridump"
+version = "1.13.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/99/4e/aa53b76eda05c519aad88893384006046cef7ca5b94b2f9f5c364a78069f/esridump-1.13.0.tar.gz", hash = "sha256:3ea0b856da1a55b327375fb1eec24d08ec2a5eeda8700a9e696159252876dca7", size = 12818, upload-time = "2023-02-01T15:00:59.194Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/19/e50bb3760155afed155b349473ceec30f5f6fed93b3bcd7433736e4eaec1/esridump-1.13.0-py3-none-any.whl", hash = "sha256:bfda87d3b9fc55dcfe1c1df583c98a7117f3861c02443e1350f77ffcca2237a2", size = 12057, upload-time = "2023-02-01T15:00:57.676Z" },
 ]
 
 [[package]]
