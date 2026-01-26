@@ -775,20 +775,68 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd, pd):
-    # the kern county crosswalk file is two columns smashed together
-    # so we read them into two different data frames to start
-    kern_1 = (
-        pd.read_excel(
-            "inputs/counties/kern/precincts/2025 Statewide Special Election.xls",
-            usecols="B:Q",  # these columns are the first half of the data
-            skiprows=6,  # skip the header rows
+def _(pd):
+    def process_kern_crosswalk_section(
+        file_path,
+        usecols,
+        skiprows,
+        truncate_after,
+        columns_to_drop,
+        rename_mapping,
+    ):
+        """
+        Process a single section of the Kern county crosswalk Excel file.
+
+        Parameters:
+            file_path: Path to the Excel file
+            usecols: Column range to read (e.g., "B:Q")
+            skiprows: Number of header rows to skip
+            truncate_after: Row index to truncate after
+            columns_to_drop: List of column names to drop
+            rename_mapping: Dictionary mapping old column names to new ones
+            pd: pandas module
+
+        Returns:
+            Processed DataFrame with voting_precinct, regular_precinct, and registration columns
+        """
+        df = (
+            pd.read_excel(
+                file_path,
+                usecols=usecols,
+                skiprows=skiprows,
+            )
+            .truncate(after=truncate_after)
+            .drop(columns=columns_to_drop)
         )
-        .truncate(
-            after=5690  # the rows after are relevant to cities in the county
-        )
-        .drop(
-            columns=[  # drop columns we don't need
+
+        df = df.rename(columns=rename_mapping)
+        df["voting_precinct"] = df["voting_precinct"].ffill()
+        df_has_voters = df["registration"].notnull()
+        df = df[df_has_voters].copy()
+
+        df["voting_precinct"] = df["voting_precinct"].str.split(" ", expand=True)[
+            0
+        ]
+        df = df.reset_index(drop=True)
+
+        return df
+    return (process_kern_crosswalk_section,)
+
+
+@app.cell
+def _(pd, process_kern_crosswalk_section):
+    # Constants for crosswalk file processing
+    _CROSSWALK_EXCEL_PATH = (
+        "inputs/counties/kern/precincts/2025 Statewide Special Election.xls"
+    )
+    _CROSSWALK_SKIPROWS = 6  # skip the header rows
+
+    # Configuration for left and right sections
+    _CROSSWALK_SECTIONS = {
+        "left": {
+            "usecols": "B:Q",  # left half of the data
+            "truncate_after": 5690,  # rows after are relevant to cities in the county
+            "columns_to_drop": [
                 "Mail\nBallot ",
                 "Unnamed: 2",
                 "Unnamed: 3",
@@ -802,73 +850,70 @@ def _(PROJECTED_CRS, gpd, pd):
                 "Unnamed: 13",
                 "Unnamed: 15",
                 "Ballot \nType",
-            ]
-        )
-    )
-    kern_1 = kern_1.rename(
-        columns={
-            "\nVoting Precinct": "voting_precinct",
-            "\nRegular Precinct": "regular_precinct",
-            "\nRegistration": "registration",
-        }
-    )
-    kern_1["voting_precinct"] = kern_1["voting_precinct"].ffill()
-    kern_1_has_voters = kern_1["registration"].notnull()
-    kern_1 = kern_1[kern_1_has_voters].copy()
-
-    kern_1["voting_precinct"] = kern_1["voting_precinct"].str.split(
-        " ", expand=True
-    )[0]
-    kern_1 = kern_1.reset_index(drop=True)
-
-    kern_2 = (
-        pd.read_excel(
-            "inputs/counties/kern/precincts/2025 Statewide Special Election.xls",
-            usecols="U:AC",
-            skiprows=6,
-        )
-        .truncate(
-            after=5655  # the rows after are relevant to cities in the county
-        )
-        .drop(
-            columns=[
+            ],
+            "rename_mapping": {
+                "\nVoting Precinct": "voting_precinct",
+                "\nRegular Precinct": "regular_precinct",
+                "\nRegistration": "registration",
+            },
+        },
+        "right": {
+            "usecols": "U:AC",  # right half of the data
+            "truncate_after": 5655,  # rows after are relevant to cities in the county
+            "columns_to_drop": [
                 "Unnamed: 21",
                 "Mail\nBallot",
                 "Unnamed: 24",
                 "Unnamed: 25",
                 "Unnamed: 26",
                 "Ballot \nType.1",
-            ]
+            ],
+            "rename_mapping": {
+                "\nVoting Precinct.1": "voting_precinct",
+                "\nRegular Precinct.1": "regular_precinct",
+                "\nRegistration.1": "registration",
+            },
+        },
+    }
+
+    # the crosswalk file is two columns smashed together
+    # so we read them into two different data frames to start
+    kern_sections = [
+        process_kern_crosswalk_section(
+            file_path=_CROSSWALK_EXCEL_PATH,
+            skiprows=_CROSSWALK_SKIPROWS,
+            **section_config,
         )
-    )
-    kern_2 = kern_2.rename(
-        columns={
-            "\nVoting Precinct.1": "voting_precinct",
-            "\nRegular Precinct.1": "regular_precinct",
-            "\nRegistration.1": "registration",
-        }
-    )
+        for section_config in _CROSSWALK_SECTIONS.values()
+    ]
 
-    kern_2["voting_precinct"] = kern_2["voting_precinct"].ffill()
-    kern_2_has_voters = kern_2["registration"].notnull()
-    kern_2 = kern_2[kern_2_has_voters].copy()
-
-    kern_2["voting_precinct"] = kern_2["voting_precinct"].str.split(
-        " ", expand=True
-    )[0]
-    kern_2 = kern_2.reset_index(drop=True)
-
-    # and then combine both dataframes to get a single crosswalk dataframe
-    kern_crosswalk = pd.concat([kern_1, kern_2]).reset_index(drop=True)
+    # combine both dataframes to get a single crosswalk dataframe
+    kern_crosswalk = pd.concat(kern_sections).reset_index(drop=True)
 
     # replace multiple spaces with one in preparation for the merge
     kern_crosswalk["regular_precinct"] = kern_crosswalk[
         "regular_precinct"
     ].str.replace("  ", " ")
+    return (kern_crosswalk,)
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, kern_crosswalk, pd):
+    # Constants for shapefile processing
+    _GIS_PATH = "inputs/counties/kern/precincts/remediainquiryelectionprecinctgeographicfiles/2025 Precincts.shp"
+    _DROP_COLUMNS = [
+        "OBJECTID_1",
+        "OBJECTID",
+        "Shape_Leng",
+        "Shape_Le_1",
+        "Latitude",
+        "Longitude",
+        "PrecintID",
+        "regular_precinct",
+    ]
 
     # read in the shapefile
-    _GIS_FP = "inputs/counties/kern/precincts/remediainquiryelectionprecinctgeographicfiles/2025 Precincts.shp"
-    kern = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+    kern = gpd.read_file(_GIS_PATH).to_crs(PROJECTED_CRS)
 
     # create a key for merging with the crosswalk
     kern["regular_precinct"] = (
@@ -887,21 +932,11 @@ def _(PROJECTED_CRS, gpd, pd):
     kern = kern.dissolve(by="voting_precinct", aggfunc="sum").reset_index()
 
     # cleanup column names to match our schema
-
     kern = alter_df(
         df=kern,
         county="Kern",
         rename={"voting_precinct": "precinct_id", "Layer": "precinct_name"},
-        drop=[
-            "OBJECTID_1",
-            "OBJECTID",
-            "Shape_Leng",
-            "Shape_Le_1",
-            "Latitude",
-            "Longitude",
-            "PrecintID",
-            "regular_precinct",
-        ],
+        drop=_DROP_COLUMNS,
     )
 
     kern
