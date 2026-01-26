@@ -20,6 +20,25 @@ def _(mo):
 
 @app.cell
 def _():
+    import re
+
+    import geopandas as gpd
+    import marimo as mo
+    import pandas as pd
+    import pdfplumber
+    return gpd, mo, pd, pdfplumber, re
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Constants
+    """)
+    return
+
+
+@app.cell
+def _():
     PROJECTED_CRS = (
         "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
     )
@@ -28,22 +47,19 @@ def _():
     return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, PROJECTED_CRS
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Merge and export
+    """)
+    return
+
+
 @app.cell
 def _(combined_reordered):
     # show the counties that are included in the workflow
     combined_reordered.plot()
     return
-
-
-@app.cell
-def _():
-    import re
-
-    import geopandas as gpd
-    import marimo as mo
-    import pandas as pd
-    import pdfplumber
-    return gpd, mo, pd, pdfplumber, re
 
 
 @app.cell
@@ -170,6 +186,14 @@ def _(
     return (combined_reordered,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Helper functions
+    """)
+    return
+
+
 @app.function
 def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
     """
@@ -226,6 +250,16 @@ def alter_df(df, county, rename={}, drop=[]):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    # Extract and transform by county
+
+    Each county's indepedent election adminstrator produces an election precincts map that needs to read in and transformed into our standardized format
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Alameda
     """)
     return
@@ -233,8 +267,6 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    # this pattern is used for all counties
-
     # read in the source file with geopandas and reproject to PROJECTED_CRS
     alameda = gpd.read_file(
         "inputs/counties/alameda/precincts/Consolidated_Precincts_-_November_4%2C_2025_Statewide_Special_Election.geojson"
@@ -986,10 +1018,19 @@ def _(PROJECTED_CRS, gpd):
         marin,
         "Marin",
         {"Consolidat": "precinct_id"},
-        ["ElectionDa", "SubPrecinc", "SubPreci_1", "ElectionTi", "GlobalID", 'OBJECTID', 'Shape__Are', 'Shape__Len'],
+        [
+            "ElectionDa",
+            "SubPrecinc",
+            "SubPreci_1",
+            "ElectionTi",
+            "GlobalID",
+            "OBJECTID",
+            "Shape__Are",
+            "Shape__Len",
+        ],
     )
 
-    marin['precinct_id'] = marin['precinct_id'].str.replace('C', '')
+    marin["precinct_id"] = marin["precinct_id"].str.replace("C", "")
 
     marin
     return (marin,)
@@ -1566,26 +1607,42 @@ def _(PROJECTED_CRS, gpd, pd, pdfplumber):
         for _sm_page in _sm_pdf.pages:
             _sm_table = _sm_page.extract_tables()
             for _sm_table_row in _sm_table[0]:
-                if _sm_table_row[0] != 'Voting\nPrecinct':
+                if _sm_table_row[0] != "Voting\nPrecinct":
                     _sm_precinct_id = _sm_table_row[0]
                     for _sm_cell in _sm_table_row[1:]:
-                        san_mateo_crosswalk_rows.append({
-                            "consolidated_precinct": _sm_precinct_id,
-                            "regular_precinct": _sm_cell if _sm_cell != "" else _sm_precinct_id
-                        })
+                        san_mateo_crosswalk_rows.append(
+                            {
+                                "consolidated_precinct": _sm_precinct_id,
+                                "regular_precinct": _sm_cell
+                                if _sm_cell != ""
+                                else _sm_precinct_id,
+                            }
+                        )
 
-    san_mateo_crosswalk_rows = pd.DataFrame(san_mateo_crosswalk_rows).drop_duplicates()
+    san_mateo_crosswalk_rows = pd.DataFrame(
+        san_mateo_crosswalk_rows
+    ).drop_duplicates()
 
     san_mateo = gpd.read_file(
         "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
     ).to_crs(PROJECTED_CRS)
 
-    san_mateo_with_crosswalk = pd.merge(san_mateo, san_mateo_crosswalk_rows, left_on="PrecinctID", right_on="regular_precinct")
+    san_mateo_with_crosswalk = pd.merge(
+        san_mateo,
+        san_mateo_crosswalk_rows,
+        left_on="PrecinctID",
+        right_on="regular_precinct",
+    )
 
-    san_mateo = san_mateo_with_crosswalk.dissolve('consolidated_precinct').reset_index()
+    san_mateo = san_mateo_with_crosswalk.dissolve(
+        "consolidated_precinct"
+    ).reset_index()
 
     san_mateo = alter_df(
-        san_mateo, "San Mateo", {"consolidated_precinct": "precinct_id"}, ["OBJECTID", "PrecinctID", "regular_precinct"]
+        san_mateo,
+        "San Mateo",
+        {"consolidated_precinct": "precinct_id"},
+        ["OBJECTID", "PrecinctID", "regular_precinct"],
     )
 
     san_mateo
@@ -1887,7 +1944,7 @@ def _(PROJECTED_CRS, gpd):
     return (tehama,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## Tulare
