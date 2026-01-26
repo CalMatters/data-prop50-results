@@ -406,9 +406,10 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     _GIS_FP = "inputs/counties/contra_costa/precincts/PrecinctSet_PDMJ017.json"
+    _ZERO_REGISTRATION_FLAG = 1
     contra_costa = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
-    has_voters = contra_costa["iZeroRegistrationPct"] != 1
+    has_voters = contra_costa["iZeroRegistrationPct"] != _ZERO_REGISTRATION_FLAG
     contra_costa = contra_costa[has_voters].copy()
 
     contra_costa = alter_df(
@@ -610,7 +611,7 @@ def _(PROJECTED_CRS, fresno_page_rows, gpd):
 
     # check for records that did not match
     unmatched = fresno_merged[fresno_merged["_merge"] == "left_only"]
-    if len(unmatched) > 0:
+    if len(unmatched) != 0:
         print(
             f"Warning: {len(unmatched)} precincts did not match in the crosswalk data."
         )
@@ -1001,6 +1002,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     _GIS_FP = "inputs/counties/marin/precincts/CONSOLIDATED_PRECINCT.zip"
+    _MARIN_PRECINCT_PREFIX = "C"
     marin = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     marin = alter_df(
@@ -1019,7 +1021,9 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    marin["precinct_id"] = marin["precinct_id"].str.replace("C", "")
+    marin["precinct_id"] = marin["precinct_id"].str.replace(
+        _MARIN_PRECINCT_PREFIX, ""
+    )
 
     marin
     return (marin,)
@@ -1364,6 +1368,7 @@ def _(PROJECTED_CRS, gpd):
     _GIS_FP = (
         "inputs/counties/san_benito/precincts/San_Benito_Base_Precincts_2025.zip"
     )
+    _UNPOPULATED_PRECINCT_ID = "0"
     san_benito = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_benito = alter_df(
@@ -1387,7 +1392,9 @@ def _(PROJECTED_CRS, gpd):
     assert len(check_duplicates(san_benito)) > 0, (
         "Expected duplicates but found none"
     )
-    unpopulated_precinct_count = (san_benito["precinct_id"] == "0").sum()
+    unpopulated_precinct_count = (
+        san_benito["precinct_id"] == _UNPOPULATED_PRECINCT_ID
+    ).sum()
     _predissolve_precinct_count = len(san_benito)
     san_benito = san_benito.dissolve("precinct_id", as_index=False)
     expected_count = _predissolve_precinct_count - (unpopulated_precinct_count - 1)
@@ -1537,7 +1544,7 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    san_joaquin.head(200)
+    san_joaquin
     return (san_joaquin,)
 
 
@@ -1582,13 +1589,15 @@ def _(PROJECTED_CRS, gpd, pd, pdfplumber):
     _SM_CROSSWALK_PDF_PATH = (
         "inputs/counties/san_mateo/50_PrecinctConsolidations Nov2025.pdf"
     )
+    _FIRST_TABLE_INDEX = 0
+    _VOTING_PRECINCT_HEADER = "Voting\nPrecinct"
 
     with pdfplumber.open(_SM_CROSSWALK_PDF_PATH) as _sm_pdf:
         for _sm_page in _sm_pdf.pages:
             _sm_table = _sm_page.extract_tables()
-            for _sm_table_row in _sm_table[0]:
-                if _sm_table_row[0] != "Voting\nPrecinct":
-                    _sm_precinct_id = _sm_table_row[0]
+            for _sm_table_row in _sm_table[_FIRST_TABLE_INDEX]:
+                if _sm_table_row[_FIRST_TABLE_INDEX] != _VOTING_PRECINCT_HEADER:
+                    _sm_precinct_id = _sm_table_row[_FIRST_TABLE_INDEX]
                     for _sm_cell in _sm_table_row[1:]:
                         san_mateo_crosswalk_rows.append(
                             {
@@ -1954,6 +1963,8 @@ def _(re):
 
         # define constants for index positions
         REGISTRATION_PRECINCT_INDEX = 2
+        _PRECINCT_ID_DIGIT_COUNT = 7
+        _REGISTRATION_PRECINCT_PREFIX = "1 "
         last_seen_id = None
 
         def _extract_precinct_from_page_line(line, last_seen_id):
@@ -1964,7 +1975,7 @@ def _(re):
 
             # the lines with voting precincts (which are like sections)
             # start with a seven digit number
-            if re.match(r"^\d{7}", line):
+            if re.match(rf"^\d{{{_PRECINCT_ID_DIGIT_COUNT}}}", line):
                 last_seen_id = line.split(" -")[0]
                 row["results_precinct"] = last_seen_id
             else:
@@ -1972,10 +1983,12 @@ def _(re):
 
             # if the row starts with a "1 " then it contains the
             # registration precinct
-            if re.match(r"^1 ", line):
+            if re.match(rf"^{_REGISTRATION_PRECINCT_PREFIX}", line):
                 line_split = line.split(" ")
                 regular_precinct = line_split[REGISTRATION_PRECINCT_INDEX].strip()
-                if re.match(r"^\d{7}$", regular_precinct):
+                if re.match(
+                    rf"^\d{{{_PRECINCT_ID_DIGIT_COUNT}}}$", regular_precinct
+                ):
                     row["registration_precinct"] = regular_precinct
                 else:
                     breakpoint()
