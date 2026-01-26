@@ -229,21 +229,21 @@ def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
 
 
 @app.function
-def alter_df(df, county, rename={}, drop=[]):
+def alter_df(df, county, rename=None, drop=None):
     """
     Alter the dataframe, in place, by renaming and dropping columns
     """
     df["county"] = county
-    df.rename(
-        columns=rename,
-        inplace=True,
-    )
-    df.drop(
-        labels=drop,
-        axis="columns",
-        inplace=True,
-        errors="ignore",
-    )
+    if rename:
+        df = df.rename(
+            columns=rename,
+        )
+    if drop:
+        df = df.drop(
+            labels=drop,
+            axis="columns",
+            errors="ignore",
+        )
     return df
 
 
@@ -268,16 +268,15 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     # read in the source file with geopandas and reproject to PROJECTED_CRS
-    alameda = gpd.read_file(
-        "inputs/counties/alameda/precincts/Consolidated_Precincts_-_November_4%2C_2025_Statewide_Special_Election.geojson"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/alameda/precincts/Consolidated_Precincts_-_November_4%2C_2025_Statewide_Special_Election.geojson"
+    alameda = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     # use alter_df to clean, renaming some columns and dropping others
     alameda = alter_df(
-        alameda,
-        "Alameda",
-        {"Precinct_ID": "precinct_id"},
-        [
+        df=alameda,
+        county="Alameda",
+        rename={"Precinct_ID": "precinct_id"},
+        drop=[
             "Election_Name",
             "Precinct_ID",
             "OBJECTID",
@@ -301,9 +300,10 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    amador = gpd.read_file(
+    _GIS_FP = (
         "inputs/counties/amador/precincts/VotingDistricts_2021_Updated3-18-22.zip"
-    ).to_crs(PROJECTED_CRS)
+    )
+    amador = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     # the spatial data is more granular than the results so we should combine
     # features based on the value in the "CP" column
@@ -311,10 +311,10 @@ def _(PROJECTED_CRS, gpd):
     # We are (safely) assuming "CP" is consolidated precincts and dissolving the data appropriately
     amador = amador.dissolve(by="CP").reset_index()
     amador = alter_df(
-        amador,
-        "Amador",
-        {"CP": "precinct_id"},
-        [
+        df=amador,
+        county="Amador",
+        rename={"CP": "precinct_id"},
+        drop=[
             "PRECINCT",
             "LOCATION",
             "SUPDIST",
@@ -342,15 +342,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    butte = gpd.read_file(
-        "inputs/counties/butte/precincts/Butte Precincts 2025.kmz"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/butte/precincts/Butte Precincts 2025.kmz"
+    butte = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     butte = alter_df(
-        butte,
-        "Butte",
-        {"Name": "precinct_name", "id": "precinct_id"},
-        [
+        df=butte,
+        county="Butte",
+        rename={"Name": "precinct_name", "id": "precinct_id"},
+        drop=[
             "id",
             "Name",
             "description",
@@ -380,15 +379,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    colusa = gpd.read_file(
-        "inputs/counties/colusa/precincts/Voting Precincts - 2020.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/colusa/precincts/Voting Precincts - 2020.shp"
+    colusa = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     colusa = alter_df(
-        colusa,
-        "Colusa",
-        {"PRECINCTNU": "precinct_id", "PRECINCT": "precinct_name"},
-        ["DISTRICT"],
+        df=colusa,
+        county="Colusa",
+        rename={"PRECINCTNU": "precinct_id", "PRECINCT": "precinct_name"},
+        drop=["DISTRICT"],
     )
 
     colusa.head()
@@ -407,18 +405,17 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    contra_costa = gpd.read_file(
-        "inputs/counties/contra_costa/precincts/PrecinctSet_PDMJ017.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/contra_costa/precincts/PrecinctSet_PDMJ017.json"
+    contra_costa = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     has_voters = contra_costa["iZeroRegistrationPct"] != 1
     contra_costa = contra_costa[has_voters].copy()
 
     contra_costa = alter_df(
-        contra_costa,
-        "Contra Costa",
-        {"sPrecinctID": "precinct_id", "szPrecinctName": "precinct_name"},
-        [
+        df=contra_costa,
+        county="Contra Costa",
+        rename={"sPrecinctID": "precinct_id", "szPrecinctName": "precinct_name"},
+        drop=[
             "OBJECTID",
             "sPrecinctPortion",
             "sMapNumber",
@@ -560,11 +557,11 @@ def _(extract_fresno_crosswalk_pdf_page, pd, pdfplumber):
     _LEFT_CROP_BOUNDS = [15, 30, 388, 580]
     _RIGHT_CROP_BOUNDS = [390, 30, 760, 580]
 
-    _crosswalk_pdf_path = (
+    _CROSSWALK_PDF_PATH = (
         "inputs/counties/fresno/ewmr008_votabsregpctxref-2025.pdf"
     )
 
-    with pdfplumber.open(_crosswalk_pdf_path) as fresno_crosswalk_pdf:
+    with pdfplumber.open(_CROSSWALK_PDF_PATH) as fresno_crosswalk_pdf:
         for fresno_crosswalk_page in fresno_crosswalk_pdf.pages:
             # the source pdf has a table that is split into two halves
 
@@ -596,9 +593,8 @@ def _(extract_fresno_crosswalk_pdf_page, pd, pdfplumber):
 @app.cell
 def _(PROJECTED_CRS, fresno_page_rows, gpd):
     # use fresno registration precicnts
-    fresno = gpd.read_file(
-        "inputs/counties/fresno/precincts/ELECTIONS_PRECINCT_VW.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/fresno/precincts/ELECTIONS_PRECINCT_VW.zip"
+    fresno = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     # create a column to merge on
     fresno["registration_precinct"] = fresno["EIMS_PRCT"]
@@ -639,10 +635,10 @@ def _(PROJECTED_CRS, fresno_page_rows, gpd):
 
     # rename and drop columns
     fresno = alter_df(
-        fresno,
-        "Fresno",
-        {"results_precinct": "precinct_id"},
-        [
+        df=fresno,
+        county="Fresno",
+        rename={"results_precinct": "precinct_id"},
+        drop=[
             "OBJECTID",
             "AREA_",
             "PERIMETER",
@@ -672,17 +668,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    glenn = (
-        gpd.read_file("inputs/counties/glenn/precincts/Precincts_9_3_2.json")
-        .to_crs(PROJECTED_CRS)
-        .to_crs(PROJECTED_CRS)
-    )
+    _GIS_FP = "inputs/counties/glenn/precincts/Precincts_9_3_2.json"
+    glenn = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     glenn = alter_df(
-        glenn,
-        "Glenn",
-        {"PREC": "precinct_id"},
-        [
+        df=glenn,
+        county="Glenn",
+        rename={"PREC": "precinct_id"},
+        drop=[
             "OBJECTID",
             "P00C58RB_I",
             "COUNTY",
@@ -709,15 +702,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    humboldt = gpd.read_file(
+    _GIS_FP = (
         "inputs/counties/humboldt/precincts/precincts17sp_202507111714287445.zip"
-    ).to_crs(PROJECTED_CRS)
+    )
+    humboldt = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     humboldt = alter_df(
-        humboldt,
-        "Humboldt",
-        {"PRECINCT": "precinct_name", "Prcnct_Num": "precinct_id"},
-        ["DISTRICT", "ACRES", "POP2010", "Shape_Leng", "Shape_Area"],
+        df=humboldt,
+        county="Humboldt",
+        rename={"PRECINCT": "precinct_name", "Prcnct_Num": "precinct_id"},
+        drop=["DISTRICT", "ACRES", "POP2010", "Shape_Leng", "Shape_Area"],
     )
 
     humboldt.head()
@@ -734,14 +728,13 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    imperial = gpd.read_file(
-        "inputs/counties/imperial/precincts/Voting_Precincts.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/imperial/precincts/Voting_Precincts.shp"
+    imperial = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     imperial = alter_df(
-        imperial,
-        "Imperial",
-        {"precinctid": "precinct_id", "name": "precinct_name"},
+        df=imperial,
+        county="Imperial",
+        rename={"precinctid": "precinct_id", "name": "precinct_name"},
     )
 
     imperial.head()
@@ -758,15 +751,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    inyo = gpd.read_file("inputs/counties/inyo/precincts/consolidated.zip").to_crs(
-        PROJECTED_CRS
-    )
+    _GIS_FP = "inputs/counties/inyo/precincts/consolidated.zip"
+    inyo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     inyo = alter_df(
-        inyo,
-        "Inyo",
-        {"cons_prec": "precinct_id"},
-        ["OBJECTID", "GlobalID", "Shape__Are", "Shape__Len"],
+        df=inyo,
+        county="Inyo",
+        rename={"cons_prec": "precinct_id"},
+        drop=["OBJECTID", "GlobalID", "Shape__Are", "Shape__Len"],
     )
 
     inyo.head()
@@ -874,9 +866,8 @@ def _(PROJECTED_CRS, gpd, pd):
     ].str.replace("  ", " ")
 
     # read in the shapefile
-    kern = gpd.read_file(
-        "inputs/counties/kern/precincts/remediainquiryelectionprecinctgeographicfiles/2025 Precincts.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/kern/precincts/remediainquiryelectionprecinctgeographicfiles/2025 Precincts.shp"
+    kern = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     # create a key for merging with the crosswalk
     kern["regular_precinct"] = (
@@ -897,10 +888,10 @@ def _(PROJECTED_CRS, gpd, pd):
     # cleanup column names to match our schema
 
     kern = alter_df(
-        kern,
-        "Kern",
-        {"voting_precinct": "precinct_id", "Layer": "precinct_name"},
-        [
+        df=kern,
+        county="Kern",
+        rename={"voting_precinct": "precinct_id", "Layer": "precinct_name"},
+        drop=[
             "OBJECTID_1",
             "OBJECTID",
             "Shape_Leng",
@@ -926,9 +917,8 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    lake = gpd.read_file("inputs/counties/lake/precincts/precincts.zip").to_crs(
-        PROJECTED_CRS
-    )
+    _GIS_FP = "inputs/counties/lake/precincts/precincts.zip"
+    lake = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     lake = alter_df(
         lake,
@@ -951,15 +941,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    los_angeles = gpd.read_file(
-        "inputs/counties/los_angeles/precincts/Registrar_Recorder_Election_Precincts_.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/los_angeles/precincts/Registrar_Recorder_Election_Precincts_.shp"
+    los_angeles = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     los_angeles = alter_df(
-        los_angeles,
-        "Los Angeles",
-        {"Precinct": "precinct_id"},
-        [
+        df=los_angeles,
+        county="Los Angeles",
+        rename={"Precinct": "precinct_id"},
+        drop=[
             "OBJECTID",
             "VoteByMail",
             "BallotGrou",
@@ -985,15 +974,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    madera = gpd.read_file(
+    _GIS_FP = (
         "inputs/counties/madera/precincts/VotingPrecincts_2025SpecialElection.zip"
-    ).to_crs(PROJECTED_CRS)
+    )
+    madera = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     madera = alter_df(
-        madera,
-        "Madera",
-        {"VotingPrec": "precinct_id"},
-        ["CreatedBy", "CreatedDat", "ModifyBy", "ModifyDate"],
+        df=madera,
+        county="Madera",
+        rename={"VotingPrec": "precinct_id"},
+        drop=["CreatedBy", "CreatedDat", "ModifyBy", "ModifyDate"],
     )
 
     madera.head()
@@ -1010,15 +1000,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    marin = gpd.read_file(
-        "inputs/counties/marin/precincts/CONSOLIDATED_PRECINCT.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/marin/precincts/CONSOLIDATED_PRECINCT.zip"
+    marin = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     marin = alter_df(
-        marin,
-        "Marin",
-        {"Consolidat": "precinct_id"},
-        [
+        df=marin,
+        county="Marin",
+        rename={"Consolidat": "precinct_id"},
+        drop=[
             "ElectionDa",
             "SubPrecinc",
             "SubPreci_1",
@@ -1046,15 +1035,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    mariposa = gpd.read_file(
-        "inputs/counties/mariposa/precincts/Voting_Precincts_2021_public_view_-5183800690768860583.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/mariposa/precincts/Voting_Precincts_2021_public_view_-5183800690768860583.zip"
+    mariposa = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     mariposa = alter_df(
-        mariposa,
-        "Mariposa",
-        {"Name": "precinct_name", "PrecinctID": "precinct_id"},
-        ["District", "Supervisor", "YEAR_CREAT"],
+        df=mariposa,
+        county="Mariposa",
+        rename={"Name": "precinct_name", "PrecinctID": "precinct_id"},
+        drop=["District", "Supervisor", "YEAR_CREAT"],
     )
 
     mariposa.head()
@@ -1071,14 +1059,13 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    mendocino = gpd.read_file(
-        "inputs/counties/mendocino/precincts/voterprecincts.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/mendocino/precincts/voterprecincts.zip"
+    mendocino = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     mendocino = alter_df(
-        mendocino,
-        "Mendocino",
-        {"NUMBER": "precinct_id", "VOTE_DIST": "precinct_name"},
+        df=mendocino,
+        county="Mendocino",
+        rename={"NUMBER": "precinct_id", "VOTE_DIST": "precinct_name"},
     )
 
     mendocino.head()
@@ -1095,18 +1082,15 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    merced = gpd.read_file(
-        "inputs/counties/merced/Merced County Pct Shapefile/MercedCountyPrecincts.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/merced/Merced County Pct Shapefile/MercedCountyPrecincts.shp"
+    merced = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     merced = alter_df(
-        merced,
-        "Merced",
-        {"REF_NUM_28": "precinct_id", "PCT_NAME_1": "precinct_name"},
-        ["Ballot_Lin", "Shape_Leng", "Shape_Area"],
+        df=merced,
+        county="Merced",
+        rename={"REF_NUM_28": "precinct_id", "PCT_NAME_1": "precinct_name"},
+        drop=["Ballot_Lin", "Shape_Leng", "Shape_Area"],
     )
-
-    merced["county"] = "Merced"
 
     merced.head(None)
     return (merced,)
@@ -1122,15 +1106,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    modoc = gpd.read_file(
-        "inputs/counties/modoc/precincts/Modoc_Voter_Precincts_2024.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/modoc/precincts/Modoc_Voter_Precincts_2024.json"
+    modoc = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     modoc = alter_df(
-        modoc,
-        "Modoc",
-        {"Name": "precinct_name", "Precinct_ID": "precinct_id"},
-        ["OBJECTID", "Id", "Disclaimer", "Shape__Area", "Shape__Length"],
+        df=modoc,
+        county="Modoc",
+        rename={"Name": "precinct_name", "Precinct_ID": "precinct_id"},
+        drop=["OBJECTID", "Id", "Disclaimer", "Shape__Area", "Shape__Length"],
     )
 
     modoc.head()
@@ -1147,15 +1130,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    mono = gpd.read_file(
-        "inputs/counties/mono/precincts/Voting_Precincts.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/mono/precincts/Voting_Precincts.zip"
+    mono = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     mono = alter_df(
-        mono,
-        "Mono",
-        {"VotingPrct": "precinct_id"},
-        [
+        df=mono,
+        county="Mono",
+        rename={"VotingPrct": "precinct_id"},
+        drop=[
             "OBJECTID",
             "SupDist",
             "Supervisor",
@@ -1184,15 +1166,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    monterey = gpd.read_file(
-        "inputs/counties/monterey/precincts/2024-11-05 Precincts.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/monterey/precincts/2024-11-05 Precincts.zip"
+    monterey = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     monterey = alter_df(
-        monterey,
-        "Monterey",
-        {"precinct": "precinct_id", "precinct_n": "precinct_name"},
-        ["Shape_Leng", "Shape_Area"],
+        df=monterey,
+        county="Monterey",
+        rename={"precinct": "precinct_id", "precinct_n": "precinct_name"},
+        drop=["Shape_Leng", "Shape_Area"],
     )
 
     monterey.head()
@@ -1209,15 +1190,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    napa = gpd.read_file("inputs/counties/napa/precincts/Precincts.zip").to_crs(
-        PROJECTED_CRS
-    )
+    _GIS_FP = "inputs/counties/napa/precincts/Precincts.zip"
+    napa = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     napa = alter_df(
-        napa,
-        "Napa",
-        {"precinct": "precinct_id"},
-        [
+        df=napa,
+        county="Napa",
+        rename={"precinct": "precinct_id"},
+        drop=[
             "objectid",
             "pdflink",
             "supervisor",
@@ -1249,15 +1229,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    nevada = gpd.read_file(
-        "inputs/counties/nevada/precincts/Voter Precincts.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/nevada/precincts/Voter Precincts.json"
+    nevada = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     nevada = alter_df(
-        nevada,
-        "Nevada",
-        {"PRECINCT": "precinct_id", "PREC_NAME": "precinct_name"},
-        ["GlobalID", "Shape__Area", "Shape__Length", "EditDate", "CONS_PREC"],
+        df=nevada,
+        county="Nevada",
+        rename={"PRECINCT": "precinct_id", "PREC_NAME": "precinct_name"},
+        drop=["GlobalID", "Shape__Area", "Shape__Length", "EditDate", "CONS_PREC"],
     )
 
     nevada.head()
@@ -1274,12 +1253,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    orange = gpd.read_file(
-        "inputs/counties/orange/precincts/OC_Precinct_2024GE.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/orange/precincts/OC_Precinct_2024GE.zip"
+    orange = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     orange = alter_df(
-        orange, "Orange", {"Precinct": "precinct_id"}, ["Shape_Leng", "Shape_Area"]
+        df=orange,
+        county="Orange",
+        rename={"Precinct": "precinct_id"},
+        drop=["Shape_Leng", "Shape_Area"],
     )
 
     orange.head()
@@ -1296,15 +1277,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    placer = gpd.read_file(
-        "inputs/counties/placer/precincts/PlacerCo_VotingPrecincts_2025Spec/PlacerCo_VotingPrecincts_2025Spec.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/placer/precincts/PlacerCo_VotingPrecincts_2025Spec/PlacerCo_VotingPrecincts_2025Spec.shp"
+    placer = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     placer = alter_df(
-        placer,
-        "Placer",
-        {"VOTINGPREC": "precinct_id"},
-        ["SHAPE_Leng", "SHAPE_Area"],
+        df=placer,
+        county="Placer",
+        rename={"VOTINGPREC": "precinct_id"},
+        drop=["SHAPE_Leng", "SHAPE_Area"],
     )
 
     placer.head()
@@ -1321,15 +1301,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    riverside = gpd.read_file(
-        "inputs/counties/riverside/precincts/Final Voting Precincts.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/riverside/precincts/Final Voting Precincts.zip"
+    riverside = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     riverside = alter_df(
-        riverside,
-        "Riverside",
-        {"PRIMARY_NE": "precinct_id"},
-        [
+        df=riverside,
+        county="Riverside",
+        rename={"PRIMARY_NE": "precinct_id"},
+        drop=[
             "SUM_lTotal",
             "sVotingPre",
             "SUM_lTot_1",
@@ -1359,11 +1338,12 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    sacramento = gpd.read_file(
-        "inputs/counties/sacramento/precincts/ConsolidatedPrecincts_-8549929174186228288.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/sacramento/precincts/ConsolidatedPrecincts_-8549929174186228288.zip"
+    sacramento = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
-    sacramento = alter_df(sacramento, "Sacramento", {"VPrecinct": "precinct_id"})
+    sacramento = alter_df(
+        df=sacramento, county="Sacramento", rename={"VPrecinct": "precinct_id"}
+    )
 
     sacramento.head()
     return (sacramento,)
@@ -1381,15 +1361,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    san_benito = gpd.read_file(
+    _GIS_FP = (
         "inputs/counties/san_benito/precincts/San_Benito_Base_Precincts_2025.zip"
-    ).to_crs(PROJECTED_CRS)
+    )
+    san_benito = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_benito = alter_df(
-        san_benito,
-        "San Benito",
-        {"PrecinctID": "precinct_id", "Name": "precinct_name"},
-        [
+        df=san_benito,
+        county="San Benito",
+        rename={"PrecinctID": "precinct_id", "Name": "precinct_name"},
+        drop=[
             "FID",
             "OBJECTID",
             "Id",
@@ -1433,15 +1414,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    san_bernardino = gpd.read_file(
-        "inputs/counties/san_bernardino/precincts/ROV_Precincts.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/san_bernardino/precincts/ROV_Precincts.zip"
+    san_bernardino = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_bernardino = alter_df(
-        san_bernardino,
-        "San Bernardino",
-        {"ABRV_NAME": "precinct_id"},
-        [
+        df=san_bernardino,
+        county="San Bernardino",
+        rename={"ABRV_NAME": "precinct_id"},
+        drop=[
             "OBJECTID",
             "PRECINCT",
             "PRECINCTID",
@@ -1468,15 +1448,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    san_diego = gpd.read_file(
+    _GIS_FP = (
         "inputs/counties/san_diego/precincts/Election_Precinct_2025_11_04.json"
-    ).to_crs(PROJECTED_CRS)
+    )
+    san_diego = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_diego = alter_df(
-        san_diego,
-        "San Diego",
-        {"consnum": "precinct_id", "consname": "precinct_name"},
-        [
+        df=san_diego,
+        county="San Diego",
+        rename={"consnum": "precinct_id", "consname": "precinct_name"},
+        drop=[
             "eid",
             "bt",
             "rv_totals",
@@ -1503,15 +1484,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    san_francisco = gpd.read_file(
-        "inputs/counties/san_francisco/precincts/Election Precincts - Current, Defined 2022_20251120.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/san_francisco/precincts/Election Precincts - Current, Defined 2022_20251120.zip"
+    san_francisco = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_francisco = alter_df(
-        san_francisco,
-        "San Francisco",
-        {"neigh22": "precinct_name", "prec_2022": "precinct_id"},
-        [
+        df=san_francisco,
+        county="San Francisco",
+        rename={"neigh22": "precinct_name", "prec_2022": "precinct_id"},
+        drop=[
             "supe22",
             "assemb22",
             "cong22",
@@ -1538,15 +1518,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    san_joaquin = gpd.read_file(
-        "inputs/counties/san_joaquin/precincts/Precincts_2025.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/san_joaquin/precincts/Precincts_2025.json"
+    san_joaquin = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_joaquin = alter_df(
-        san_joaquin,
-        "San Joaquin",
-        {"PRECINCT": "precinct_id"},
-        [
+        df=san_joaquin,
+        county="San Joaquin",
+        rename={"PRECINCT": "precinct_id"},
+        drop=[
             "OBJECTID_1",
             "OBJECTID",
             "PERIMETER",
@@ -1572,15 +1551,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    san_luis_obispo = gpd.read_file(
+    _GIS_FP = (
         "inputs/counties/san_luis_obispo/precincts/Voter_Precincts_-_2023.zip"
-    ).to_crs(PROJECTED_CRS)
+    )
+    san_luis_obispo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_luis_obispo = alter_df(
-        san_luis_obispo,
-        "San Luis Obispo",
-        {"PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
-        ["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"],
+        df=san_luis_obispo,
+        county="San Luis Obispo",
+        rename={"PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
+        drop=["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"],
     )
 
     san_luis_obispo.head()
@@ -1599,11 +1579,11 @@ def _(mo):
 def _(PROJECTED_CRS, gpd, pd, pdfplumber):
     san_mateo_crosswalk_rows = []
 
-    _sm_crosswalk_pdf_path = (
+    _SM_CROSSWALK_PDF_PATH = (
         "inputs/counties/san_mateo/50_PrecinctConsolidations Nov2025.pdf"
     )
 
-    with pdfplumber.open(_sm_crosswalk_pdf_path) as _sm_pdf:
+    with pdfplumber.open(_SM_CROSSWALK_PDF_PATH) as _sm_pdf:
         for _sm_page in _sm_pdf.pages:
             _sm_table = _sm_page.extract_tables()
             for _sm_table_row in _sm_table[0]:
@@ -1623,9 +1603,8 @@ def _(PROJECTED_CRS, gpd, pd, pdfplumber):
         san_mateo_crosswalk_rows
     ).drop_duplicates()
 
-    san_mateo = gpd.read_file(
-        "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
+    san_mateo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_mateo_with_crosswalk = pd.merge(
         san_mateo,
@@ -1639,10 +1618,10 @@ def _(PROJECTED_CRS, gpd, pd, pdfplumber):
     ).reset_index()
 
     san_mateo = alter_df(
-        san_mateo,
-        "San Mateo",
-        {"consolidated_precinct": "precinct_id"},
-        ["OBJECTID", "PrecinctID", "regular_precinct"],
+        df=san_mateo,
+        county="San Mateo",
+        rename={"consolidated_precinct": "precinct_id"},
+        drop=["OBJECTID", "PrecinctID", "regular_precinct"],
     )
 
     san_mateo
@@ -1659,15 +1638,20 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    santa_barbara = gpd.read_file(
-        "inputs/counties/santa_barbara/precincts/PrecinctsAug2025.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/santa_barbara/precincts/PrecinctsAug2025.json"
+    santa_barbara = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     santa_barbara = alter_df(
-        santa_barbara,
-        "Santa Barbara",
-        {"PRECINCTID": "precinct_id", "ABRV_NAME": "precinct_name"},
-        ["PRECINCT_N", "PRCNCT_PRT", "OBJECTID", "Shape__Area", "Shape__Length"],
+        df=santa_barbara,
+        county="Santa Barbara",
+        rename={"PRECINCTID": "precinct_id", "ABRV_NAME": "precinct_name"},
+        drop=[
+            "PRECINCT_N",
+            "PRCNCT_PRT",
+            "OBJECTID",
+            "Shape__Area",
+            "Shape__Length",
+        ],
     )
 
     santa_barbara.head()
@@ -1684,15 +1668,16 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    santa_cruz = gpd.read_file(
+    _GIS_FP = (
         "inputs/counties/santa_cruz/precincts/Precincts_5962167425846516299.zip"
-    ).to_crs(PROJECTED_CRS)
+    )
+    santa_cruz = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     santa_cruz = alter_df(
-        santa_cruz,
-        "Santa Cruz",
-        {"Precinct": "precinct_id"},
-        [
+        df=santa_cruz,
+        county="Santa Cruz",
+        rename={"Precinct": "precinct_id"},
+        drop=[
             "XCOORD",
             "YCOORD",
             "CITYLIMITS",
@@ -1741,15 +1726,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    shasta = gpd.read_file(
-        "inputs/counties/shasta/precincts/Consolidated_Precincts.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/shasta/precincts/Consolidated_Precincts.shp"
+    shasta = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     shasta = alter_df(
-        shasta,
-        "Shasta",
-        {"CONS_PCTNU": "precinct_id", "PP_Name": "precinct_name"},
-        [
+        df=shasta,
+        county="Shasta",
+        rename={"CONS_PCTNU": "precinct_id", "PP_Name": "precinct_name"},
+        drop=[
             "OBJECTID",
             "CONS_PCTNA",
             "Mail_Only",
@@ -1774,13 +1758,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    sierra = gpd.read_file(
-        "inputs/counties/sierra/precincts/Sierra_County_2021_Voter_Jurisdiction_Data.zip",
-        layer="Sierra_County_Voter_Precincts_2021",
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/sierra/precincts/Sierra_County_2021_Voter_Jurisdiction_Data.zip"
+    _GIS_LAYER = "Sierra_County_Voter_Precincts_2021"
+    sierra = gpd.read_file(_GIS_FP, layer=_GIS_LAYER).to_crs(PROJECTED_CRS)
 
     sierra = alter_df(
-        sierra, "Sierra", {"PRECINCT": "precinct_id", "NAME": "precinct_name"}
+        df=sierra,
+        county="Sierra",
+        rename={"PRECINCT": "precinct_id", "NAME": "precinct_name"},
     )
 
     sierra.head()
@@ -1797,15 +1782,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    siskiyou = gpd.read_file(
-        "inputs/counties/siskiyou/precincts/Election_Precincts.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/siskiyou/precincts/Election_Precincts.zip"
+    siskiyou = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     siskiyou = alter_df(
-        siskiyou,
-        "Siskiyou",
-        {"PRCNCT_11": "precinct_id", "NAME_11": "precinct_name"},
-        ["OBJECTID", "DIST_11", "NAME_NUM", "Shape__Are", "Shape__Len"],
+        df=siskiyou,
+        county="Siskiyou",
+        rename={"PRCNCT_11": "precinct_id", "NAME_11": "precinct_name"},
+        drop=["OBJECTID", "DIST_11", "NAME_NUM", "Shape__Are", "Shape__Len"],
     )
 
     siskiyou.head()
@@ -1822,15 +1806,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    solano = gpd.read_file(
-        "inputs/counties/solano/precincts/Current_Precincts.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/solano/precincts/Current_Precincts.json"
+    solano = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     solano = alter_df(
-        solano,
-        "Solano",
-        {"precinct": "precinct_id", "pctname": "precinct_name"},
-        [
+        df=solano,
+        county="Solano",
+        rename={"precinct": "precinct_id", "pctname": "precinct_name"},
+        drop=[
             "objectid",
             "objectid_1",
             "consol",
@@ -1857,15 +1840,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    sonoma = gpd.read_file(
-        "inputs/counties/sonoma/precincts/ROVPublic_Precincts.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/sonoma/precincts/ROVPublic_Precincts.json"
+    sonoma = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     sonoma = alter_df(
-        sonoma,
-        "Sonoma",
-        {"OBJECTID": "precinct_id"},
-        ["SubPrecinct", "Shape__Area", "Shape__Length"],
+        df=sonoma,
+        county="Sonoma",
+        rename={"OBJECTID": "precinct_id"},
+        drop=["SubPrecinct", "Shape__Area", "Shape__Length"],
     )
     sonoma["precinct_name"] = None
 
@@ -1885,15 +1867,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    sutter = gpd.read_file(
-        "inputs/counties/sutter/precincts/Elections_Precincts.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/sutter/precincts/Elections_Precincts.zip"
+    sutter = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     sutter = alter_df(
-        sutter,
-        "Sutter",
-        {"NAME": "precinct_name", "PRECINCTID": "precinct_id"},
-        [
+        df=sutter,
+        county="Sutter",
+        rename={"NAME": "precinct_name", "PRECINCTID": "precinct_id"},
+        drop=[
             "OBJECTID",
             "GlobalID",
             "Precinct_1",
@@ -1929,15 +1910,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    tehama = gpd.read_file(
-        "inputs/counties/tehama/precincts/tehama-precincts.json"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/tehama/precincts/tehama-precincts.json"
+    tehama = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     tehama = alter_df(
-        tehama,
-        "Tehema",
-        {"PRECINCTID": "precinct_id", "NAME": "precinct_name"},
-        ["OBJECTID"],
+        df=tehama,
+        county="Tehama",
+        rename={"PRECINCTID": "precinct_id", "NAME": "precinct_name"},
+        drop=["OBJECTID"],
     )
 
     tehama.head()
@@ -2018,13 +1998,13 @@ def _(re):
 
 @app.cell
 def _(PROJECTED_CRS, extract_tulare_crosswalk_pdf_page, gpd, pd, pdfplumber):
-    TULARE_CROSSWALK_PDF_PATH = "inputs/counties/tulare/tularecounty_2025novspec_votabsregpctxrefdetail.pdf"
-    TULARE_PRECINCT_PATH = "inputs/counties/tulare/precincts/tulare-precincts.json"
+    _TULARE_CROSSWALK_PDF_PATH = "inputs/counties/tulare/tularecounty_2025novspec_votabsregpctxrefdetail.pdf"
+    _GIS_FP = "inputs/counties/tulare/precincts/tulare-precincts.json"
 
     # create a variable to store all of the extracted rows
     tulare_crosswalk = []
 
-    with pdfplumber.open(TULARE_CROSSWALK_PDF_PATH) as tulare_crosswalk_pdf:
+    with pdfplumber.open(_TULARE_CROSSWALK_PDF_PATH) as tulare_crosswalk_pdf:
         for page in tulare_crosswalk_pdf.pages:
             # extract the text from each page
             page_extracted = extract_tulare_crosswalk_pdf_page(page)
@@ -2035,7 +2015,7 @@ def _(PROJECTED_CRS, extract_tulare_crosswalk_pdf_page, gpd, pd, pdfplumber):
     # turn the resulting list into a dataframe
     tulare_crosswalk = pd.DataFrame(tulare_crosswalk)
 
-    tulare = gpd.read_file(TULARE_PRECINCT_PATH).to_crs(PROJECTED_CRS)
+    tulare = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     # make sure the column we'll join on is a string
     tulare["PrecNum1"] = tulare["PrecNum1"].astype(str)
@@ -2051,10 +2031,10 @@ def _(PROJECTED_CRS, extract_tulare_crosswalk_pdf_page, gpd, pd, pdfplumber):
 
     # and change the resulting dataframe to match our schema
     tulare = alter_df(
-        tulare,
-        "Tulare",
-        {"results_precinct": "precinct_id"},
-        [
+        df=tulare,
+        county="Tulare",
+        rename={"results_precinct": "precinct_id"},
+        drop=[
             "OBJECTID_12",
             "OBJECTID_1",
             "OBJECTID_2",
@@ -2102,15 +2082,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    tuolumne = gpd.read_file(
-        "inputs/counties/tuolumne/precincts/TC_VotingPrecincts_Sept2022/TuolumneCounty_VotingPrecincts_consolidationNov2022.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/tuolumne/precincts/TC_VotingPrecincts_Sept2022/TuolumneCounty_VotingPrecincts_consolidationNov2022.shp"
+    tuolumne = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     tuolumne = alter_df(
-        tuolumne,
-        "Tuolumne",
-        {"PREC_NO": "precinct_id", "PRECINCT": "precinct_name"},
-        ["HomePrecin", "PropConsol"],
+        df=tuolumne,
+        county="Tuolumne",
+        rename={"PREC_NO": "precinct_id", "PRECINCT": "precinct_name"},
+        drop=["HomePrecin", "PropConsol"],
     )
 
     tuolumne.head()
@@ -2127,15 +2106,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    ventura = gpd.read_file(
-        "inputs/counties/ventura/precincts/Election_Precinct.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/ventura/precincts/Election_Precinct.zip"
+    ventura = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     ventura = alter_df(
-        ventura,
-        "Ventura",
-        {"electid": "precinct_id", "number_": "precinct_name"},
-        [
+        df=ventura,
+        county="Ventura",
+        rename={"electid": "precinct_id", "number_": "precinct_name"},
+        drop=[
             "objectid",
             "gr_cr_date",
             "gr_co_date",
@@ -2163,15 +2141,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    yolo = gpd.read_file(
-        "inputs/counties/yolo/precincts/PrecinctsConsolidated_20250904.zip"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/yolo/precincts/PrecinctsConsolidated_20250904.zip"
+    yolo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     yolo = alter_df(
-        yolo,
-        "Yolo",
-        {"PRECINCTID": "precinct_id"},
-        [
+        df=yolo,
+        county="Yolo",
+        rename={"PRECINCTID": "precinct_id"},
+        drop=[
             "OBJECTID",
             "Precinct_N",
             "BOS_Dist",
@@ -2198,15 +2175,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    yuba = gpd.read_file(
-        "inputs/counties/yuba/precincts/YubaCountyCA_2024_03_21_001/VotingPrecincts.shp"
-    ).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/yuba/precincts/YubaCountyCA_2024_03_21_001/VotingPrecincts.shp"
+    yuba = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     yuba = alter_df(
-        yuba,
-        "Yuba",
-        {"precinctid": "precinct_id", "name": "precinct_name"},
-        [
+        df=yuba,
+        county="Yuba",
+        rename={"precinctid": "precinct_id", "name": "precinct_name"},
+        drop=[
             "facilityid",
             "pollingid",
             "GlobalID",
