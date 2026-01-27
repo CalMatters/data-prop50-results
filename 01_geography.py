@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.5"
 app = marimo.App(width="medium")
 
 
@@ -1363,7 +1363,10 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    riverside.head()
+    # change the precinct_id to match the format in the results file
+    riverside["precinct_id"] = riverside["precinct_id"].str.replace("-", "")
+
+    riverside
     return (riverside,)
 
 
@@ -1592,20 +1595,96 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
+def _(pd):
+    _CROSSWALK_FP = (
+        "inputs/counties/san_luis_obispo/precincts/EWMJ015_RegPctVotPctXref.txt"
+    )
+
+    # read in crosswalk from text file, make sure PRECINCTID column is a string
+    # and not a float
+    san_luis_obispo_crosswalk = pd.read_csv(
+        _CROSSWALK_FP, sep="\t", dtype={"PRECINCTID": str}
+    )
+
+    # the value that links to election results is part of the "VOTINGPRECINCT"
+    # column, extract it into its own column
+    san_luis_obispo_crosswalk["voting_precinct"] = san_luis_obispo_crosswalk[
+        "VOTINGPRECINCT"
+    ].str.split(" ", expand=True)[0]
+
+    # create a new value "registration_precinct" is that is the
+    # potential combination of two other values. When
+    # "PRECINCTPORTION" is nan then the value of the new column
+    # is simply "PRECINCTID"
+    # otherwise it is "%s.%s" % ("PRECINCTID", "PRECINCTPORTION")
+    san_luis_obispo_crosswalk["registration_precinct"] = san_luis_obispo_crosswalk[
+        "PRECINCTID"
+    ].where(
+        san_luis_obispo_crosswalk["PRECINCTPORTION"].isna(),
+        san_luis_obispo_crosswalk["PRECINCTID"]
+        + "."
+        + san_luis_obispo_crosswalk["PRECINCTPORTION"],
+    )
+
+    # and drop the crosswalk columns we don't need
+    san_luis_obispo_crosswalk = san_luis_obispo_crosswalk.drop(
+        columns=[
+            "ELECTIONABBR",
+            "PRECINCTID",
+            "PRECINCTPORTION",
+            "VOTINGPRECINCT",
+            "MAILBALLOT",
+            "ABSENTEEPRECINCT",
+            "BALLOTTYPE",
+        ]
+    )
+
+    san_luis_obispo_crosswalk
+    return (san_luis_obispo_crosswalk,)
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, san_luis_obispo_crosswalk):
     _GIS_FP = (
         "inputs/counties/san_luis_obispo/precincts/Voter_Precincts_-_2023.zip"
     )
     san_luis_obispo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
+    # merge the crosswalk with the geo dataframe
+    pre_merge_len = len(san_luis_obispo)
+    san_luis_obispo = san_luis_obispo.merge(
+        san_luis_obispo_crosswalk,
+        left_on="PrecinctFu",
+        right_on="registration_precinct",
+        how="outer",
+        validate="m:1",
+    )
+    post_merge_len = len(san_luis_obispo)
+    assert pre_merge_len == post_merge_len
+
+    # dissolve the features based on "voting_precinct_id"
+    san_luis_obispo = san_luis_obispo.dissolve("voting_precinct").reset_index()
+
+    # alter the geo data frame
     san_luis_obispo = alter_df(
         df=san_luis_obispo,
         county="San Luis Obispo",
-        rename={"PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
-        drop=["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"],
+        rename={"voting_precinct": "precinct_id"},
+        drop=[
+            "OBJECTID",
+            "ShapeSTAre",
+            "ShapeSTLen",
+            "PrecinctFu",
+            "PrecinctID",
+            "PrecinctPo",
+            "ShapeSTAre",
+            "ShapeSTLen",
+            "PRECINCTID",
+            "registration_precinct",
+        ],
     )
 
-    san_luis_obispo.head()
+    san_luis_obispo
     return (san_luis_obispo,)
 
 
@@ -1699,6 +1778,8 @@ def _(PROJECTED_CRS, gpd):
     )
 
     santa_barbara.head()
+
+    santa_barbara.plot()
     return (santa_barbara,)
 
 
