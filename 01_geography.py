@@ -1619,10 +1619,6 @@ def _(pd):
     # otherwise it is "%s.%s" % ("PRECINCTID", "PRECINCTPORTION")
     san_luis_obispo_crosswalk["registration_precinct"] = san_luis_obispo_crosswalk[
         "PRECINCTID"
-    ].where(san_luis_obispo_crosswalk["PRECINCTPORTION"].isna())
-
-    san_luis_obispo_crosswalk["registration_precinct"] = san_luis_obispo_crosswalk[
-        "PRECINCTID"
     ].where(
         san_luis_obispo_crosswalk["PRECINCTPORTION"].isna(),
         san_luis_obispo_crosswalk["PRECINCTID"]
@@ -1669,7 +1665,7 @@ def _(PROJECTED_CRS, gpd, san_luis_obispo_crosswalk):
     san_luis_obispo = alter_df(
         df=san_luis_obispo,
         county="San Luis Obispo",
-        rename={"voting_precinct_id": "precinct_id"},
+        rename={"voting_precinct": "precinct_id"},
         drop=[
             "OBJECTID",
             "ShapeSTAre",
@@ -1680,6 +1676,7 @@ def _(PROJECTED_CRS, gpd, san_luis_obispo_crosswalk):
             "ShapeSTAre",
             "ShapeSTLen",
             "PRECINCTID",
+            "registration_precinct",
         ],
     )
 
