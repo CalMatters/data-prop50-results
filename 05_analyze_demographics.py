@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.19.6"
-app = marimo.App(width="medium")
+app = marimo.App()
 
 
 @app.cell(hide_code=True)
@@ -288,32 +288,38 @@ def _(mo):
 
 
 @app.cell
-def _(
-    pd,
-    precinct_results_blocks,
-    precinct_results_tracts,
-    standardized_group_labels_pct,
-):
-    # Filter for majority group precincts and calculate yes vote split
+def _(pd, standardized_group_labels_pct):
+    # Helper function to filter for majority group precincts (DRY principle)
+    def _get_majority_precincts(
+        df, group_label, dataset_type="blocks", threshold=50
+    ):
+        cvap_pct_col = standardized_group_labels_pct[group_label][dataset_type]
+        return df[df[cvap_pct_col] > threshold].copy()
+
+
+    # Shared helper to calculate vote statistics from yes/no vote counts
+    def _calculate_vote_stats(yes_votes, no_votes):
+        total_votes = yes_votes + no_votes
+        yes_pct = caclulate_pct(yes_votes, total_votes)
+        return total_votes, yes_pct
+
+
+    # Original function preserved for downstream compatibility
     def analyze_majority_group_precincts(
         df, group_label, dataset_type="blocks", threshold=50
     ):
-        # Get the CVAP percentage column for the specified group
-        cvap_pct_col = standardized_group_labels_pct[group_label][dataset_type]
+        majority_precincts = _get_majority_precincts(
+            df, group_label, dataset_type, threshold
+        )
 
-        # Filter precincts where the group makes up more than the threshold percentage
-        majority_mask = df[cvap_pct_col] > threshold
-        majority_precincts = df[majority_mask].copy()
-
-        # Calculate total yes votes and total votes for majority precincts
         total_yes_votes = majority_precincts["yes_votes"].sum()
         total_no_votes = majority_precincts["no_votes"].sum()
-        total_votes = total_yes_votes + total_no_votes
 
-        # Calculate yes vote split percentage using existing helper function
-        yes_split_pct = caclulate_pct(total_yes_votes, total_votes)
+        total_votes, yes_split_pct = _calculate_vote_stats(
+            total_yes_votes, total_no_votes
+        )
 
-        results = {
+        return {
             "group": group_label,
             "dataset_type": dataset_type,
             "threshold": threshold,
@@ -324,9 +330,41 @@ def _(
             "yes_split_pct": yes_split_pct,
         }
 
-        return results
+
+    # New function for county-level analysis
+    def analyze_majority_group_by_county(
+        df, group_label, dataset_type="blocks", threshold=50
+    ):
+        majority_precincts = _get_majority_precincts(
+            df, group_label, dataset_type, threshold
+        )
+
+        grouped = majority_precincts.groupby("county")
+
+        precinct_counts = grouped.size()
+        yes_votes = grouped["yes_votes"].sum()
+        no_votes = grouped["no_votes"].sum()
+
+        total_votes, yes_pct = _calculate_vote_stats(yes_votes, no_votes)
+
+        return pd.DataFrame(
+            {
+                "county": precinct_counts.index,
+                f"{group_label}_{threshold}_precinct_count": precinct_counts.values,
+                f"{group_label}_{threshold}_yes_pct": yes_pct.values,
+            },
+        ).set_index("county")
+    return analyze_majority_group_by_county, analyze_majority_group_precincts
 
 
+@app.cell
+def _(
+    analyze_majority_group_precincts,
+    pd,
+    precinct_results_blocks,
+    precinct_results_tracts,
+    standardized_group_labels_pct,
+):
     # Apply the analysis for each demographic group using the blocks dataset
     majority_analysis_results_blocks = {
         group: analyze_majority_group_precincts(
@@ -348,6 +386,41 @@ def _(
     majority_analysis_tracts_df = pd.DataFrame(majority_analysis_results_tracts).T
     majority_analysis_blocks_df, majority_analysis_tracts_df
     return majority_analysis_blocks_df, majority_analysis_tracts_df
+
+
+@app.cell
+def _(
+    analyze_majority_group_by_county,
+    pd,
+    precinct_results_blocks,
+    precinct_results_tracts,
+    standardized_group_labels_pct,
+):
+    # Apply the analysis for each demographic group using the blocks dataset
+    county_level_demo_analysis_blocks = {
+        group: analyze_majority_group_by_county(
+            precinct_results_blocks, group, dataset_type="blocks", threshold=50
+        )
+        for group in standardized_group_labels_pct.keys()
+    }
+
+    # Apply the analysis for each demographic group using the tracts dataset
+    county_level_demo_analysis_tracts = {
+        group: analyze_majority_group_by_county(
+            precinct_results_tracts, group, dataset_type="tracts", threshold=50
+        )
+        for group in standardized_group_labels_pct
+    }
+
+    county_level_demo_analysis_blocks = pd.concat(
+        county_level_demo_analysis_blocks.values(), axis=1
+    )
+    county_level_demo_analysis_tracts = pd.concat(
+        county_level_demo_analysis_tracts.values(), axis=1
+    )
+
+    county_level_demo_analysis_blocks, county_level_demo_analysis_tracts
+    return
 
 
 @app.cell(hide_code=True)
