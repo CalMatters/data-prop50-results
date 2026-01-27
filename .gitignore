@@ -220,6 +220,7 @@ outputs/cvap_blocks.gpkg
 outputs/precinct_results.gpkg
 outputs/precincts_results_cvap_*
 outputs/precinct_results.gpkg
+outputs/*.mbtiles
 
 # Ignore debug outputs
 debug/*.csv
