@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.19.6"
-app = marimo.App()
+app = marimo.App(width="medium")
 
 
 @app.cell(hide_code=True)
@@ -417,6 +417,25 @@ def _(
     )
     county_level_demo_analysis_tracts = pd.concat(
         county_level_demo_analysis_tracts.values(), axis=1
+    )
+
+    # Replace null values with zero in columns matching the format f"{group_label}_{threshold}_precinct_count"
+    precinct_count_cols_blocks = [
+        col
+        for col in county_level_demo_analysis_blocks.columns
+        if col.endswith("_precinct_count")
+    ]
+    precinct_count_cols_tracts = [
+        col
+        for col in county_level_demo_analysis_tracts.columns
+        if col.endswith("_precinct_count")
+    ]
+
+    county_level_demo_analysis_blocks[precinct_count_cols_blocks] = (
+        county_level_demo_analysis_blocks[precinct_count_cols_blocks].fillna(0)
+    )
+    county_level_demo_analysis_tracts[precinct_count_cols_tracts] = (
+        county_level_demo_analysis_tracts[precinct_count_cols_tracts].fillna(0)
     )
 
     county_level_demo_analysis_blocks, county_level_demo_analysis_tracts
