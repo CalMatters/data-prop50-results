@@ -1651,12 +1651,16 @@ def _(PROJECTED_CRS, gpd, san_luis_obispo_crosswalk):
     san_luis_obispo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     # merge the crosswalk with the geo dataframe
+    pre_merge_len = len(san_luis_obispo)
     san_luis_obispo = san_luis_obispo.merge(
         san_luis_obispo_crosswalk,
         left_on="PrecinctFu",
         right_on="registration_precinct",
         how="outer",
+        validate="m:1",
     )
+    post_merge_len = len(san_luis_obispo)
+    assert pre_merge_len == post_merge_len
 
     # dissolve the features based on "voting_precinct_id"
     san_luis_obispo = san_luis_obispo.dissolve("voting_precinct").reset_index()
