@@ -1592,20 +1592,54 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
+def _(PROJECTED_CRS, gpd, pd):
     _GIS_FP = (
         "inputs/counties/san_luis_obispo/precincts/Voter_Precincts_-_2023.zip"
     )
+    _CROSSWALK_FP = (
+        "inputs/counties/san_luis_obispo/precincts/EWMJ015_RegPctVotPctXref.txt"
+    )
     san_luis_obispo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
+    # read in crosswalk from text file, make sure PRECINCTID column is a string
+    san_luis_obispo_crosswalk = pd.read_csv(
+        _CROSSWALK_FP, sep="\t", dtype={"PRECINCTID": str}
+    )
+
+    # in crosswalk, pull out the precinct ID from the "VOTINGPRECINCT" column
+    san_luis_obispo_crosswalk["voting_precinct_id"] = san_luis_obispo_crosswalk[
+        "VOTINGPRECINCT"
+    ].str.split(" ", expand=True)[0]
+
+    # and drop the crosswalk columns we don't need
+    san_luis_obispo_crosswalk = san_luis_obispo_crosswalk.drop(
+        columns=[
+            "ELECTIONABBR",
+            "PRECINCTPORTION",
+            "VOTINGPRECINCT",
+            "MAILBALLOT",
+            "ABSENTEEPRECINCT",
+            "BALLOTTYPE",
+        ]
+    )
+
+    # merge the crosswalk with the geo dataframe
+    san_luis_obispo = san_luis_obispo.merge(
+        san_luis_obispo_crosswalk, left_on="PrecinctID", right_on="PRECINCTID"
+    )
+
+    # dissolve the features based on "voting_precinct_id"
+    san_luis_obispo = san_luis_obispo.dissolve('voting_precinct_id').reset_index()
+
+    # alter the geo data frame
     san_luis_obispo = alter_df(
         df=san_luis_obispo,
         county="San Luis Obispo",
-        rename={"PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
-        drop=["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"],
+        rename={"voting_precinct_id": "precinct_id"},
+        drop=["OBJECTID", "PrecinctFu", "PrecinctID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen", "PRECINCTID"],
     )
 
-    san_luis_obispo.head()
+    san_luis_obispo
     return (san_luis_obispo,)
 
 
