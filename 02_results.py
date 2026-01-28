@@ -1529,6 +1529,7 @@ def _(calculate_total_votes, pd):
     _TAB_SEP = "\t"
     _DTYPE_MAP = {".Precinct": str, "Precinct ID": str}
     _COLUMN_NAMES = ["precinct_id", "no_votes", "yes_votes", "turnout", "to_drop"]
+    _AGGREGATE_PRECINCT_ID = "99999"
 
     orange = pd.read_csv(_DATA_FP, sep=_TAB_SEP, dtype=_DTYPE_MAP)
     orange = orange.pivot_table(
