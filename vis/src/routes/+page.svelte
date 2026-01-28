@@ -26,44 +26,6 @@
 	// if you want to change something about the map then we should use
 	// a component-level variable, in this case we'll call it map
 	let map = null;
-
-	// Dependencies
-	import { onMount } from 'svelte';
-
-	/** 
-    /* If calling an external API, store response here
-    /* @type {Array}  
-    */
-	let apiContents = $state.raw([]);
-
-	/** 
-    /* Tracks whether API call is finished and successful in order to mount components, if necessary
-    /* @type {boolean}  
-    */
-	let apiDataReady = $state(false);
-
-	/**
-	 * Fetch data from route and store in apiContents
-	 * @param {string} route url to fetch
-	 */
-	async function makeApiCall(route) {
-		try {
-			const response = await fetch(`${route}`);
-			if (response.ok) {
-				apiContents = await response.json();
-				apiDataReady = true;
-			} else {
-				console.log(`Failed to fetch ${route}.json.`);
-			}
-		} catch (error) {
-			console.log(`Network error loading ${route}.json.`);
-		}
-	}
-
-	onMount(async () => {
-		await makeApiCall('/api/data');
-		console.log(apiContents);
-	});
 </script>
 
 <main class="graphic">
@@ -74,12 +36,6 @@
 	/>
 
 	<section>
-		<!-- main contents of graphic here -->
-
-		{#if apiDataReady}
-			<!-- do something with the data from the api once it's loaded -->
-		{/if}
-
 		<MapLibreMap
 			load={(m) => {
 				map = m;
