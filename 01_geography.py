@@ -1292,7 +1292,7 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/orange/precincts/OC_Precinct_2024GE.zip"
+    _GIS_FP = "inputs/counties/orange/precincts/2025_Statewide_Special_Election_Precincts.zip"
     orange = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     orange = alter_df(
@@ -1302,7 +1302,7 @@ def _(PROJECTED_CRS, gpd):
         drop=["Shape_Leng", "Shape_Area"],
     )
 
-    orange.head()
+    orange
     return (orange,)
 
 
