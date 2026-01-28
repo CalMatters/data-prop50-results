@@ -57,6 +57,13 @@ def _():
     return (TRACT_FIPS_LEN,)
 
 
+@app.cell
+def _():
+    EST_CVAP_SUFFIX = "_est"
+    TOTAL_POP_KEYWORD = "total"
+    return EST_CVAP_SUFFIX, TOTAL_POP_KEYWORD
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -448,6 +455,93 @@ def _(OUTPUT_DRIVER, OUTPUT_FP, PROJECTED_CRS, gdf_ca_cvap_tracts):
         OUTPUT_FP, driver=OUTPUT_DRIVER
     )
     print(f"Exported CVAP data by tract to {OUTPUT_FP}")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Explore data
+    """)
+    return
+
+
+@app.cell
+def _(EST_CVAP_SUFFIX, TOTAL_POP_KEYWORD, gdf_ca_cvap_tracts):
+    subgroup_columns = [
+        column
+        for column in list(gdf_ca_cvap_tracts)
+        if column.endswith(EST_CVAP_SUFFIX) and TOTAL_POP_KEYWORD not in column
+    ]
+    return (subgroup_columns,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Since the estimated totals for demographic groups are rounded up or down according to census documentation, I expect the aggregation to not equal the reported total.
+    """)
+    return
+
+
+@app.function
+def calculate_comparison_counts(df, agg_col, est_col):
+    discrepancy_count = (df[agg_col] != df[est_col]).sum()
+    exceed_count = (df[agg_col] > df[est_col]).sum()
+    equal_count = (df[agg_col] == df[est_col]).sum()
+    return discrepancy_count, exceed_count, equal_count
+
+
+@app.cell
+def _(gdf_ca_cvap_tracts, subgroup_columns):
+    gdf_ca_cvap_tracts["subgroup_agg_total"] = gdf_ca_cvap_tracts[
+        subgroup_columns
+    ].sum(axis=1)
+
+    discrepancy_count, exceed_count, equal_count = calculate_comparison_counts(
+        gdf_ca_cvap_tracts, "subgroup_agg_total", "total_cvap_est"
+    )
+    total_tracts = len(gdf_ca_cvap_tracts)
+
+    print(
+        f"Subgroup aggregated total does not match the total CVAP estimate in {discrepancy_count} out of {total_tracts} tracts."
+    )
+    print(
+        f"Subgroup aggregated total exceeds the total CVAP estimate in {exceed_count} tracts."
+    )
+    print(
+        f"Subgroup aggregated total is equal to the total CVAP estimate in {equal_count} tracts."
+    )
+
+    exceeding_tracts = gdf_ca_cvap_tracts[
+        (
+            gdf_ca_cvap_tracts["subgroup_agg_total"]
+            > gdf_ca_cvap_tracts["total_cvap_est"]
+        )
+    ]
+
+    if not exceeding_tracts.empty:
+        max_excess_idx = (
+            exceeding_tracts["subgroup_agg_total"]
+            - exceeding_tracts["total_cvap_est"]
+        ).idxmax()
+        max_excess_row = exceeding_tracts.loc[max_excess_idx]
+        excess_value = (
+            max_excess_row["subgroup_agg_total"] - max_excess_row["total_cvap_est"]
+        )
+        print(
+            f"The largest excess is {excess_value:,} in tract {max_excess_row['geoid']}, "
+            f"with subgroup aggregate total {max_excess_row['subgroup_agg_total']:,} "
+            f"vs. estimated total {max_excess_row['total_cvap_est']:,}."
+        )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Not a single tract's aggregated total is an underestimated compared to the reported estimated total from the Census. I think this is an indication that there is more rounding up than rounding down of numbers in the dataset. For any analysis calculating proportions, I think we should calculate an aggregated total to ensure the proportions sum to one.
+    """)
     return
 
 
