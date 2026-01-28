@@ -3,15 +3,16 @@
 	import Credits from '$lib/components/ui/Credits.svelte';
 	import Header from '$lib/components/ui/Header.svelte';
 	import MapLibreMap from '$lib/components/maps/MapLibreMap.svelte';
- 	import RacialGroupLegend from '$lib/components/ui/RacialGroupLegend.svelte';
+	import ElectionResultsLegend from '$lib/components/ui/ElectionResultsLegend.svelte';
+	import RacialGroupRadioSelector from '$lib/components/ui/RacialGroupRadioSelector.svelte';
 
 	// this is a JS object that should form the basis of what you
 	// pass as the `style` prop to <MapLibreMap />
 	// it isn't loaded by default so that you can place your data
 	// layer where it makes the most sense
 	import mapLibreStyle from '$lib/components/maps/map-libre-style.js';
-	import { RACIAL_GROUP_COLORS } from '$lib/racial-group-colors.js';
 	import maplibregl from 'maplibre-gl';
+	import { normalizeRacialGroup } from '$lib/racial-group-colors.js';
 
 	// --- precinct layer config ---
 	// Put your PMTiles file here:
@@ -26,19 +27,92 @@
 
 	const ADDRESS_LABEL_LAYER_NAME = 'address_label';
 
+	// Black highlight color for increased visibility
+	const HIGHLIGHT_COLOR = '#000000';
+	const DEFAULT_OUTLINE_COLOR = '#ffffff';
+	const DEFAULT_OUTLINE_WIDTH = 0.75;
+	const HIGHLIGHT_OUTLINE_WIDTH = 2.5; // Thicker to dominate over white borders
+
 	// if you want to change something about the map then we should use
 	// a component-level variable, in this case we'll call it map
 	let map = null;
+	let selectedRacialGroup = $state(null);
+
+	// Function to update the highlight outline layer based on selected racial group
+	function updateOutlineLayer(selectedGroup) {
+		if (!map) {
+			console.warn('Map not available for updateOutlineLayer');
+			return;
+		}
+		
+		if (!map.getLayer('precincts-outline-highlight')) {
+			console.warn('precincts-outline-highlight layer not available');
+			return;
+		}
+
+		if (selectedGroup === null) {
+			// Hide the highlight layer when no group is selected
+			map.setLayoutProperty('precincts-outline-highlight', 'visibility', 'none');
+			// Restore white border opacity to normal
+			if (map.getLayer('precincts-outline')) {
+				map.setPaintProperty('precincts-outline', 'line-opacity', 0.6);
+			}
+		} else {
+			// Show the highlight layer and set filter to match selected group
+			map.setLayoutProperty('precincts-outline-highlight', 'visibility', 'visible');
+			
+			// Reduce white border opacity to make black borders stand out more
+			if (map.getLayer('precincts-outline')) {
+				map.setPaintProperty('precincts-outline', 'line-opacity', 0.3);
+			}
+			
+			// Create filter expression to only show matching precincts
+			let filterExpression;
+
+			if (selectedGroup === 'Multiracial') {
+				// For Multiracial, check if the group starts with "Multiracial"
+				filterExpression = [
+					'any',
+					['==', ['get', 'majority_racial_group'], 'Multiracial'],
+					['==', ['slice', ['get', 'majority_racial_group'], 0, 11], 'Multiracial']
+				];
+			} else {
+				// For other groups, simple equality check
+				filterExpression = ['==', ['get', 'majority_racial_group'], selectedGroup];
+			}
+
+			map.setFilter('precincts-outline-highlight', filterExpression);
+		}
+	}
+
+	// Function to handle racial group selection changes
+	function handleRacialGroupSelect(group) {
+		selectedRacialGroup = group;
+		// Update map immediately when selection changes
+		updateOutlineLayer(group);
+	}
+
+	// Reactive effect as backup to update map when selection or map changes
+	$effect(() => {
+		if (map && selectedRacialGroup !== undefined) {
+			updateOutlineLayer(selectedRacialGroup);
+		}
+	});
 </script>
 
 <main class="graphic">
 	<Header
 		title="Precinct Results and Demographics"
-		copy="Explore voting results and demographic data by precinct. Colors represent the majority racial group in each precinct based on Census American Community Survey Citizen Voting Age Population (CVAP) data."
+		copy="Explore voting results and demographic data by precinct. Colors represent the majority racial group in each precinct based on Census American Community Survey Citizen Voting Age Population (CVAP) data. Select a racial group below to highlight matching precincts with black borders."
 		size="inline"
 	/>
 
-	<RacialGroupLegend />
+	<ElectionResultsLegend />
+
+	<RacialGroupRadioSelector
+		selectedGroup={selectedRacialGroup}
+		onSelect={handleRacialGroupSelect}
+	/>
 
 	<section>
 		<MapLibreMap
@@ -59,87 +133,15 @@
 					const insertBeforeLayerId = map.getStyle()?.layers?.find((l) => l.id === ADDRESS_LABEL_LAYER_NAME)?.id;
 
 					if (!map.getLayer('precincts-fill')) {
-						// Build fill-color expression using colors from guide.scss CSS variables
-						// Colors are explicitly sourced from RACIAL_GROUP_COLORS which references guide.scss
-						// Saturation varies based on yes_pct (0-100): higher yes_pct = higher saturation
-						
-						// Normalize racial group first
-						const normalizedGroup = [
-							'coalesce',
-							[
-								'case',
-								['has', 'majority_racial_group'],
-								[
-									'case',
-									// Check if string starts with "Multiracial" by comparing first 11 characters
-									['==', ['slice', ['get', 'majority_racial_group'], 0, 11], 'Multiracial'],
-									'Multiracial',
-									['get', 'majority_racial_group']
-								],
-								'__null__'
-							],
-							'__null__'
-						];
-						
-						// Get yes_pct value (default to 0 if missing)
-						const yesPct = ['coalesce', ['get', 'yes_pct'], 0];
-						
-						// Create fill-color expression that interpolates saturation based on yes_pct
-						// Using exponential interpolation and very light colors at 0% for more dramatic contrast
+						// Linear diverging gradient based on yes_pct
+						// Red at 0% (no votes), light gray at 50% (neutral), blue at 100% (yes votes)
 						const fillColorExpression = [
-							'case',
-							// White: interpolate from very light blue to saturated blue
-							['==', normalizedGroup, 'White'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0, '#E8F2FA', // Very light blue (almost white)
-								50, '#9BC0E0', // Medium blue
-								100, RACIAL_GROUP_COLORS['White'] // Full saturation blue_500
-							],
-							// Multiracial: interpolate from very light violet to saturated violet
-							['==', normalizedGroup, 'Multiracial'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0, '#F0E8F7', // Very light violet (almost white)
-								50, '#C9A5E1', // Medium violet
-								100, RACIAL_GROUP_COLORS['Multiracial'] // Full saturation violet_500
-							],
-							// Hispanic Or Latino: interpolate from very light orange to saturated orange
-							['==', normalizedGroup, 'Hispanic Or Latino'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0, '#FBF0E5', // Very light orange (almost white)
-								50, '#F2B872', // Medium orange
-								100, RACIAL_GROUP_COLORS['Hispanic Or Latino'] // Full saturation orange_500
-							],
-							// Black Or African American: interpolate from very light green to saturated green
-							['==', normalizedGroup, 'Black Or African American'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0, '#E8F5E3', // Very light green (almost white)
-								50, '#8DCC6F', // Medium green
-								100, RACIAL_GROUP_COLORS['Black Or African American'] // Full saturation green_500
-							],
-							// Asian: interpolate from very light red to saturated red
-							['==', normalizedGroup, 'Asian'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0, '#FAE8E6', // Very light red (almost white)
-								50, '#E18A7F', // Medium red
-								100, RACIAL_GROUP_COLORS['Asian'] // Full saturation red_500
-							],
-							// Default: grey for null/unknown values
-							RACIAL_GROUP_COLORS[null]
+							'interpolate',
+							['linear'],
+							['coalesce', ['get', 'yes_pct'], 50], // Default to 50% (neutral) if missing
+							0, '#D35F4F',   // Red at 0% (no votes) --red_500
+							50, '#EEEEEE',  // Light gray at 50% (neutral) --gray_100
+							100, '#5B92CE'  // Blue at 100% (yes votes) --blue_500
 						];
 
 						map.addLayer(
@@ -149,7 +151,6 @@
 								source: PRECINCT_SOURCE_ID,
 								'source-layer': PRECINCT_SOURCE_LAYER,
 								paint: {
-									// Conditional coloring based on majority_racial_group
 									'fill-color': fillColorExpression,
 									'fill-opacity': 0.75
 								}
@@ -166,14 +167,68 @@
 								source: PRECINCT_SOURCE_ID,
 								'source-layer': PRECINCT_SOURCE_LAYER,
 								paint: {
-									'line-color': '#ffffff',
-									'line-width': 0.75,
+									'line-color': DEFAULT_OUTLINE_COLOR,
+									'line-width': DEFAULT_OUTLINE_WIDTH,
 									'line-opacity': 0.6
 								}
 							},
 							insertBeforeLayerId
 						);
 					}
+
+					// Add highlight layer on top of the white outline layer
+					// Insert it right after 'precincts-outline' so it renders on top
+					if (!map.getLayer('precincts-outline-highlight')) {
+						map.addLayer(
+							{
+								id: 'precincts-outline-highlight',
+								type: 'line',
+								source: PRECINCT_SOURCE_ID,
+								'source-layer': PRECINCT_SOURCE_LAYER,
+								filter: ['==', ['get', 'majority_racial_group'], ''],
+								paint: {
+									'line-color': HIGHLIGHT_COLOR,
+									'line-width': HIGHLIGHT_OUTLINE_WIDTH,
+									'line-opacity': 1
+								},
+								layout: {
+									visibility: 'none'
+								}
+							},
+							insertBeforeLayerId
+						);
+						
+						// Ensure highlight layer renders on top of white outline
+						// Move it to be right after 'precincts-outline' by removing and re-adding
+						if (map.getLayer('precincts-outline')) {
+							// Get the current layer configuration
+							const highlightLayer = map.getStyle().layers.find(l => l.id === 'precincts-outline-highlight');
+							if (highlightLayer) {
+								// Remove the layer
+								map.removeLayer('precincts-outline-highlight');
+								// Re-add it after 'precincts-outline' so it renders on top
+								// Using 'precincts-outline' as beforeId means it will be inserted right after it
+								map.addLayer({
+									id: 'precincts-outline-highlight',
+									type: 'line',
+									source: PRECINCT_SOURCE_ID,
+									'source-layer': PRECINCT_SOURCE_LAYER,
+									filter: ['==', ['get', 'majority_racial_group'], ''],
+									paint: {
+										'line-color': HIGHLIGHT_COLOR,
+										'line-width': HIGHLIGHT_OUTLINE_WIDTH,
+										'line-opacity': 1
+									},
+									layout: {
+										visibility: 'none'
+									}
+								}, 'precincts-outline');
+							}
+						}
+					}
+
+					// Initialize outline layer styling based on current selection
+					updateOutlineLayer(selectedRacialGroup);
 
 					// Add click handler for popup
 					const popup = new maplibregl.Popup({
