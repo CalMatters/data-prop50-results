@@ -1544,7 +1544,7 @@ def _(calculate_total_votes, pd):
 
     # remove precinct 99999 which is used to report votes for
     # all precincts that have fewer than 10 voters
-    orange = orange[orange["precinct_id"] != "99999"].copy()
+    orange = orange[orange["precinct_id"] != _AGGREGATE_PRECINCT_ID].copy()
 
     orange["total_votes"] = calculate_total_votes(orange)
     orange["county"] = "Orange"
