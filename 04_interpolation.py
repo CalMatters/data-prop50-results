@@ -29,8 +29,11 @@ def _():
     # counties where the audit found a mismatch of 2 or fewer precincts
     ADDTNL_COUNTIES_PASSING_AUIDIT = [
         "Los Angeles",
+        "Inyo",
+        "Marin",
         "Merced",
         "Shasta",
+        "Tulare",
     ]
     return (ADDTNL_COUNTIES_PASSING_AUIDIT,)
 
@@ -530,7 +533,7 @@ def _(block_subgroup_est_columns, mo, tracts_subgroup_est_columns):
 
     1. What is the difference between the interpolated source total and the sum of each subgroup's interpolated total
 
-    This exploration assumes that the subgroup column sum should be close to the interpolated sum: 
+    This exploration assumes that the subgroup column sum should be close to the interpolated sum:
 
     TRACTS: {f"SUM({list(tracts_subgroup_est_columns)} = interpolated sum)"}
 
