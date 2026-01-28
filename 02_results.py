@@ -1664,14 +1664,21 @@ def _(pd):
         }
     )
 
+    # only get the rows that have precincts
     san_benito = san_benito[
         san_benito["precinct_id"].str.match(_PRECINCT_PATTERN)
     ].reset_index(drop=True)
 
+    # standardize the case of the precinct_id column
+    san_benito['precinct_id'] = san_benito['precinct_id'].str.upper()
+
+    # remove duplicates
+    san_benito = san_benito.drop_duplicates()
+
     # finally add a county column
     san_benito["county"] = "San Benito"
 
-    san_benito.head(None)
+    san_benito
     return (san_benito,)
 
 

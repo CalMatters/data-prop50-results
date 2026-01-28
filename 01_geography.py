@@ -1395,8 +1395,6 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## San Benito
-
-    A dissolve operation is executed to join all the records with `precinct_id` `0`. These are associated with unpopulated areas such as water treatment plant, farmland, parks, open fields. [Read more issue #32](https://github.com/CalMatters/data-prop50-results/issues/32)
     """)
     return
 
@@ -1404,9 +1402,8 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     _GIS_FP = (
-        "inputs/counties/san_benito/precincts/San_Benito_Base_Precincts_2025.zip"
+        "inputs/counties/san_benito/precincts/Consolidated_Precincts_November_2025.zip"
     )
-    _UNPOPULATED_PRECINCT_ID = "0"
     san_benito = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_benito = alter_df(
@@ -1427,25 +1424,7 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    assert len(check_duplicates(san_benito)) > 0, (
-        "Expected duplicates but found none"
-    )
-    unpopulated_precinct_count = (
-        san_benito["precinct_id"] == _UNPOPULATED_PRECINCT_ID
-    ).sum()
-    _predissolve_precinct_count = len(san_benito)
-    san_benito = san_benito.dissolve("precinct_id", as_index=False)
-    expected_count = _predissolve_precinct_count - (unpopulated_precinct_count - 1)
-    actual_count = len(san_benito)
-    assert actual_count == expected_count, (
-        f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
-    )
-    assert check_duplicates(san_benito) is None, (
-        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
-    )
-    print("San Benito duplicate resolved using dissolve operation")
-
-    san_benito.head()
+    san_benito
     return (san_benito,)
 
 
