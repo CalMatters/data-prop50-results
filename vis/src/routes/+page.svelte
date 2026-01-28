@@ -2,9 +2,6 @@
 	// Svelte Components
 	import Credits from '$lib/components/ui/Credits.svelte';
 	import Header from '$lib/components/ui/Header.svelte';
-	import Callout from '$lib/components/Callout.svelte';
-	import CallToActionBox from '$lib/components/CallToActionBox.svelte';
-	import AlertBox from '$lib/components/ui/alert/AlertBox.svelte';
 	import MapLibreMap from '$lib/components/maps/MapLibreMap.svelte';
 
 	// this is a JS object that should form the basis of what you
@@ -32,18 +29,6 @@
 
 	// Dependencies
 	import { onMount } from 'svelte';
-
-	/** 
-    /* Show Call to Action component
-    /* @type {boolean}  
-    */
-	const activateCta = true;
-
-	/** 
-    /* Show Callout component
-    /* @type {boolean}  
-    */
-	const activateCallout = true;
 
 	/** 
     /* If calling an external API, store response here
@@ -83,12 +68,10 @@
 
 <main class="graphic">
 	<Header
-		title="This is the headline for the graphic"
-		copy="If there is any supporting context or other information that's important to know before digesting the graphic, this is where it goes."
+		title="Precinct Results and Demographics"
+		copy="Explore voting results and demographic data by precinct. Colors represent the percentage of 'yes' votes, with red indicating lower support and blue indicating higher support."
 		size="inline"
 	/>
-
-	<AlertBox type="info" text="Did you know I exist now? I feel so <strong>ALIVE</strong>!" />
 
 	<section>
 		<!-- main contents of graphic here -->
@@ -97,12 +80,6 @@
 			<!-- do something with the data from the api once it's loaded -->
 		{/if}
 
-		<button
-			onclick={() => {
-				map.setPaintProperty('water', 'fill-color', '#0a819f');
-			}}>Change water back to blue</button
-		>
-		<!--  -->
 		<MapLibreMap
 			load={(m) => {
 				map = m;
@@ -169,23 +146,6 @@
 			}}
 			style={mapLibreStyle}
 		/>
-
-		{#if activateCallout}
-			<Callout
-				header="Call Out box"
-				copy="Sometimes we may want to have a prominent call out to add context or other interesting information as supplement to the graphic. This box could also be collapsible, showing only the header and then require a click on the container to expand this text you are reading."
-				collapsible={false}
-			/>
-		{/if}
-
-		{#if activateCta}
-			<CallToActionBox
-				header="Do you have a news tip to share with us?"
-				copy="Share confidential news tips or sensitive information to us through a secure channel."
-				linkUrl="https://forms.gle/wXsJNXe1iqezmBEV9"
-				linkCopy="Send a tip"
-			/>
-		{/if}
 	</section>
 
 	<Credits
