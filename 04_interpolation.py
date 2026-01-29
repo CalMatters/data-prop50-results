@@ -27,11 +27,14 @@ def _(mo):
 @app.cell
 def _():
     # counties where the audit found a mismatch of 2 or fewer precincts
+    # an exception was made for OC due to many unpopulated precincts
+    # existing in the GIS file and not in the results
     ADDTNL_COUNTIES_PASSING_AUIDIT = [
         "Los Angeles",
         "Inyo",
         "Marin",
         "Merced",
+        "Orange",
         "Shasta",
         "Tulare",
     ]
