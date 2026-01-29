@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -135,7 +135,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .envrc
 .venv
 env/
@@ -221,3 +220,30 @@ outputs/precinct_results.gpkg
 
 # Ignore debug outputs
 debug/*.csv
+
+# Svelte template ignore 
+test-results
+node_modules
+
+# Output
+.output
+.vercel
+/.netlify
+/.svelte-kit
+/build
+/package
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
