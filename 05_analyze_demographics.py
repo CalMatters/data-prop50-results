@@ -719,6 +719,8 @@ def _():
 @app.cell
 def _(
     MAP_EXPORT_COLUMNS,
+    MAP_EXPORT_DRIVER,
+    MAP_EXPORT_PATH,
     np,
     pd,
     precinct_results_blocks,
