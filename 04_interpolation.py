@@ -903,30 +903,112 @@ def _(
     precincts_results_cvap_merged,
     tracts_subgroup_est_columns,
 ):
-    state_subgroup_tract_total = cvap_gdf[tracts_subgroup_est_columns].sum().sum()
-    precinct_interpolation_subgroup_tract_total = (
-        precincts_results_cvap_merged[tracts_subgroup_est_columns].sum().sum()
+    def _calculate_and_print_ratio(state_gdf, merged_gdf, columns, level_name):
+        """
+        Calculate and print the proportion of total CVAP interpolated to precincts.
+
+        Parameters
+        ----------
+        state_gdf : gpd.GeoDataFrame
+            Original state-level GeoDataFrame with source totals
+        merged_gdf : gpd.GeoDataFrame
+            Merged GeoDataFrame with interpolated precinct data
+        columns : list[str]
+            List of subgroup columns to aggregate
+        level_name : str
+            Description of the geographic level (e.g., "tract level", "block level")
+        """
+        state_total = state_gdf[columns].sum().sum()
+        interpolated_total = merged_gdf[columns].sum().sum()
+
+        ratio = interpolated_total / state_total
+
+        print(
+            f"Proportion of total CVAP interpolated to precincts ({level_name}): {ratio:.1%}"
+        )
+
+
+    _calculate_and_print_ratio(
+        cvap_gdf,
+        precincts_results_cvap_merged,
+        tracts_subgroup_est_columns,
+        "tract level",
     )
 
-    state_subgroup_block_total = (
-        cvap_block_gdf[block_subgroup_est_columns].sum().sum()
+    _calculate_and_print_ratio(
+        cvap_block_gdf,
+        precincts_results_cvap_block_merged,
+        block_subgroup_est_columns,
+        "block level",
     )
-    precinct_interpolation_subgroup_block_total = (
-        precincts_results_cvap_block_merged[block_subgroup_est_columns].sum().sum()
+    return
+
+
+@app.cell
+def _(
+    block_subgroup_est_columns,
+    cvap_block_gdf,
+    cvap_gdf,
+    pd,
+    precincts_results_cvap_block_merged,
+    precincts_results_cvap_merged,
+    tracts_subgroup_est_columns,
+):
+    def _create_interpolation_summary(state_gdf, merged_gdf, subgroup_columns):
+        """
+        Calculate summary statistics comparing state totals vs interpolated totals.
+
+        Parameters
+        ----------
+        state_gdf : GeoDataFrame
+            Original state-level GeoDataFrame with source data
+        merged_gdf : GeoDataFrame
+            Merged GeoDataFrame with interpolated data
+        subgroup_columns : list
+            List of column names to aggregate
+
+        Returns
+        -------
+        DataFrame
+            Summary with state_total, interpolated_total, and interpolated_pct
+        """
+        state_sums = state_gdf[subgroup_columns].sum()
+        interpolated_sums = merged_gdf[subgroup_columns].sum()
+
+        summary_df = pd.DataFrame(
+            {
+                "state_total": state_sums,
+                "interpolated_total": interpolated_sums,
+            }
+        )
+        summary_df["interpolated_pct"] = round(
+            (summary_df["interpolated_total"] / summary_df["state_total"]) * 100, 1
+        )
+        summary_df.index.name = "subgroup"
+
+        return summary_df
+
+
+    # Calculate totals for each subgroup column at the tract level
+    _tract_summary_df = _create_interpolation_summary(
+        cvap_gdf,
+        precincts_results_cvap_merged,
+        tracts_subgroup_est_columns,
     )
 
-    _tract_ratio = (
-        precinct_interpolation_subgroup_tract_total / state_subgroup_tract_total
+    # Calculate totals for each subgroup column at the block level
+    _block_summary_df = _create_interpolation_summary(
+        cvap_block_gdf,
+        precincts_results_cvap_block_merged,
+        block_subgroup_est_columns,
     )
-    _block_ratio = (
-        precinct_interpolation_subgroup_block_total / state_subgroup_block_total
-    )
-    print(
-        f"Proportion of total CVAP interpolated to precincts (tract level): {_tract_ratio:.1%}"
-    )
-    print(
-        f"Proportion of total CVAP interpolated to precincts (block level): {_block_ratio:.1%}"
-    )
+
+    _tract_summary_df, _block_summary_df
+    return
+
+
+@app.cell
+def _():
     return
 
 
