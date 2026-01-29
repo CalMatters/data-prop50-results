@@ -28,6 +28,7 @@ def _(
     DATA_EXPORT_FP,
     EXPORT_DRIVER,
     MERGE_COLUMNS,
+    PROJECTED_CRS,
     check_and_export_duplicates,
     pd,
     precincts_gdf,

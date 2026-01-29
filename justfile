@@ -1,6 +1,13 @@
 generate-precincts-file:
     uv run 01_geography.py
 
+generate-results-file:
+    uv run 02_results.py
+
+generate-cvap-file:
+    uv run 02_census.py
+    uv run 02b_census.py
+
 merge-precinct-results:
     uv run 03_precincts_merge.py
 
@@ -31,3 +38,4 @@ generate-congressional-pmtiles:
 
     tile-join --force -o outputs/congressional.pmtiles outputs/cd-2020.pmtiles outputs/cd-prop50.pmtiles
     rm outputs/cd-2020.pmtiles outputs/cd-prop50.pmtiles
+    cp outputs/precinct_results_plus_demographics.pmtiles vis/static/precinct_results_plus_demographics.pmtiles
