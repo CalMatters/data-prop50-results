@@ -38,6 +38,17 @@ def _(mo):
 @app.cell
 def _():
     CA_FIPS = "06"
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    return CA_FIPS, PROJECTED_CRS
+
+
+@app.cell
+def _():
+    # this estimate leads to double counts in aggregations
+    DROP_NH_EST = "not_hispanic_or_latino_cvap_est"
+    return (DROP_NH_EST,)
     return (CA_FIPS,)
 
 
@@ -339,6 +350,7 @@ def _(CVAP_ZIPPED_DATA_FP, list_files_in_zip):
 def _(
     CVAP_TRACT_DATA_FP,
     CVAP_ZIPPED_DATA_FP,
+    DROP_NH_EST,
     TRACT_FIPS_LEN,
     extract_tract_geoid,
     filter_california_data,
@@ -365,6 +377,10 @@ def _(
 
     # Remove margin of error columns, keeping only estimates
     df_ca_cvap_est_by_tract = filter_moe_from_wide_df(df_ca_cvap_by_tract)
+
+    df_ca_cvap_est_by_tract = df_ca_cvap_est_by_tract.drop(
+        DROP_NH_EST, axis=1
+    ).reset_index(drop=True)
     return (df_ca_cvap_est_by_tract,)
 
 
@@ -434,9 +450,12 @@ def _(df_ca_cvap_est_by_tract, gdf_ca_tracts):
 
 
 @app.cell
-def _(OUTPUT_DRIVER, OUTPUT_FP, gdf_ca_cvap_tracts):
+def _(OUTPUT_DRIVER, OUTPUT_FP, PROJECTED_CRS, gdf_ca_cvap_tracts):
     # Export merged data to GeoPackage format
-    gdf_ca_cvap_tracts.to_file(OUTPUT_FP, driver=OUTPUT_DRIVER)
+    gdf_ca_cvap_tracts.to_crs(PROJECTED_CRS).to_file(
+        OUTPUT_FP, driver=OUTPUT_DRIVER
+    )
+    print(f"Exported CVAP data by tract to {OUTPUT_FP}")
     return
 
 

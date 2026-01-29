@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.2"
 app = marimo.App(width="full")
 
 
@@ -26,6 +26,7 @@ def _(DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS, precincts_results_merge):
 @app.cell
 def _(
     MERGE_COLUMNS,
+    PROJECTED_CRS,
     check_and_export_duplicates,
     pd,
     precincts_gdf,
@@ -69,7 +70,7 @@ def _(
             "Merge completed with duplicates present. Inspect the result to resolve key conflicts."
         )
 
-    precincts_results_merge
+    precincts_results_merge = precincts_results_merge.to_crs(PROJECTED_CRS)
     return (precincts_results_merge,)
 
 
