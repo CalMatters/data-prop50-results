@@ -918,14 +918,14 @@ def _(
     _tract_ratio = (
         precinct_interpolation_subgroup_tract_total / state_subgroup_tract_total
     )
-    _tract_ratio = (
+    _block_ratio = (
         precinct_interpolation_subgroup_block_total / state_subgroup_block_total
     )
     print(
         f"Proportion of total CVAP interpolated to precincts (tract level): {_tract_ratio:.1%}"
     )
     print(
-        f"Proportion of total CVAP interpolated to precincts (block level): {_tract_ratio:.1%}"
+        f"Proportion of total CVAP interpolated to precincts (block level): {_block_ratio:.1%}"
     )
     return
 
