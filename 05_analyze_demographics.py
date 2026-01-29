@@ -708,8 +708,17 @@ def _():
 
 
 @app.cell
+def _():
+    MAP_EXPORT_PATH = "./outputs/precinct_results_plus_demographics.geojson"
+    MAP_EXPORT_DRIVER = "geojson"
+    return MAP_EXPORT_DRIVER, MAP_EXPORT_PATH
+
+
+@app.cell
 def _(
     MAP_EXPORT_COLUMNS,
+    MAP_EXPORT_DRIVER,
+    MAP_EXPORT_PATH,
     np,
     pd,
     precinct_results_blocks,
@@ -764,7 +773,7 @@ def _(
     )
 
     precinct_results_blocks[MAP_EXPORT_COLUMNS].to_file(
-        "./outputs/precinct_results_plus_demographics.mbtiles", driver="MBTiles"
+        MAP_EXPORT_PATH, driver=MAP_EXPORT_DRIVER
     )
     precinct_results_blocks[MAP_EXPORT_COLUMNS]
     return
