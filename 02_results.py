@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.5"
 app = marimo.App(width="medium")
 
 
@@ -30,7 +30,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return json, re, EsriDumper, mo, np, pd, pdfplumber
+    return EsriDumper, mo, np, pd, pdfplumber, re
 
 
 @app.cell
@@ -1284,7 +1284,7 @@ def _(np, pd):
     )  # Handle cases where Registered Voters is NaN or null
 
     # replace masked values with nan
-    marin = marin.replace('****', np.nan)
+    marin = marin.replace("****", np.nan)
 
 
     # drop the remaining columns we don't care about, including the index
@@ -1568,7 +1568,7 @@ def _(pd):
     SACRAMENTO_PROP50_RESULTS_SHEET = "Precinct Results"
     _READ_DTYPE = {"Precinct": str}
     sacramento = pd.read_excel(
-        "inputs/counties/sacramento/Results_bd6edf40-d97c-4b13-adc8-792cb842323e.xlsx",
+        "inputs/counties/sacramento/Results_a85ec50e-9aeb-434f-83dd-2822382c6d09.xlsx",
         sheet_name=SACRAMENTO_PROP50_RESULTS_SHEET,
         dtype=_READ_DTYPE,
     )
@@ -1686,7 +1686,9 @@ def _(np, pd):
     SAN_BERNARDINO_PROP50_RESULTS_SHEET = "Sheet2"
     SAN_BERNARDINO_HEADER_N = 3
     SAN_BERNARDINO_CUMULATIVE_FOOTER_N = 8
-    _PRECINT_ID_START_INDEX = -7 # trailing N digits represent matching ID in results
+    _PRECINT_ID_START_INDEX = (
+        -7
+    )  # trailing N digits represent matching ID in results
     san_bernardino = pd.read_excel(
         "inputs/counties/san_bernardino/Report_SOVbyPrecinct.xlsx",
         sheet_name=SAN_BERNARDINO_PROP50_RESULTS_SHEET,
@@ -1817,7 +1819,9 @@ def _(np, pd):
     )
 
     # alter the precinct ID format to match with the geography
-    san_diego['precinct_id'] = san_diego['precinct_id'].str.split('-', expand=True)[1]
+    san_diego["precinct_id"] = san_diego["precinct_id"].str.split(
+        "-", expand=True
+    )[1]
 
     san_diego_vote_by_mail_precinct_regex = r"^999"
 
@@ -2791,7 +2795,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, re, np):
+def _(np, pd, re):
     REDACTED_PLACEHOLDER_REGEX = re.compile(r"\*+")
 
 
@@ -2971,8 +2975,8 @@ def _(EsriDumper, pd):
         d = {
             "county": "Yolo",
             "precinct_id": feature["properties"]["PRECINCTID"],
-            "no_votes": feature["properties"]["TOTALVOTES_1"],
-            "yes_votes": feature["properties"]["TOTALVOTES_2"],
+            "yes_votes": feature["properties"]["TOTALVOTES_1"],
+            "no_votes": feature["properties"]["TOTALVOTES_2"],
         }
 
         d["total_votes"] = d["no_votes"] + d["yes_votes"]
