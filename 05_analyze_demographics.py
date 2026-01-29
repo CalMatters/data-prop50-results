@@ -14,13 +14,15 @@ def _(mo):
 
 @app.cell
 def _():
+    import pathlib
+
     import geopandas as gpd
     import marimo as mo
     import matplotlib.pyplot as plt
     import numpy as np
     from sklearn.linear_model import LinearRegression
     import pandas as pd
-    return LinearRegression, gpd, mo, np, pd, plt
+    return LinearRegression, gpd, mo, np, pathlib, pd, plt
 
 
 @app.cell(hide_code=True)
@@ -680,6 +682,116 @@ def _(mo):
     mo.md(r"""
     # Appendix
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Export GIS file
+    """)
+    return
+
+
+@app.cell
+def _():
+    MAP_EXPORT_COLUMNS = [
+        "county",
+        "precinct_id",
+        "yes_votes",
+        "no_votes",
+        "total_votes",
+        "yes_pct",
+        "majority_racial_group",
+        "majority_racial_group_pct",
+        "geometry",
+    ]
+    return (MAP_EXPORT_COLUMNS,)
+
+
+@app.cell
+def _():
+    MAP_EXPORT_PATH = "./outputs/precinct_results_plus_demographics.geojson"
+    MAP_EXPORT_DRIVER = "geojson"
+    return MAP_EXPORT_DRIVER, MAP_EXPORT_PATH
+
+
+@app.cell
+def _(
+    MAP_EXPORT_COLUMNS,
+    np,
+    pd,
+    precinct_results_blocks,
+    precinct_results_tracts,
+    standardized_group_labels_pct,
+):
+    def get_majority_racial_group(
+        row, group_labels_pct, dataset_type, threshold=50
+    ):
+        """Determine the majority racial group for a single precinct and return both group and percentage.
+        If no group exceeds the threshold, return 'Multiracial' with the plurality group and its percentage."""
+        # Extract percentages for each racial group, using .get() to handle missing keys gracefully
+        group_percentages = {
+            group: row.get(group_labels_pct[group][dataset_type])
+            for group in group_labels_pct
+        }
+
+        valid_percentages = {
+            k: v for k, v in group_percentages.items() if pd.notna(v)
+        }
+        if not valid_percentages:
+            return np.nan, np.nan
+
+        plurality_group = max(valid_percentages, key=valid_percentages.get)
+        max_percentage = valid_percentages[plurality_group]
+        plurality_group_label = plurality_group.replace("_", " ").title()
+
+        # Return majority group if it exceeds threshold, else multiracial label
+        if max_percentage > threshold:
+            return plurality_group_label, max_percentage
+        return f"Multiracial ({plurality_group_label} plurality)", max_percentage
+
+
+    # Apply to create majority_racial_group and majority_racial_group_pct columns for blocks data
+    precinct_results_blocks[
+        ["majority_racial_group", "majority_racial_group_pct"]
+    ] = precinct_results_blocks.apply(
+        lambda row: pd.Series(
+            get_majority_racial_group(row, standardized_group_labels_pct, "blocks")
+        ),
+        axis=1,
+    )
+
+    # Apply to create majority_racial_group and majority_racial_group_pct columns for tracts data
+    precinct_results_tracts[
+        ["majority_racial_group", "majority_racial_group_pct"]
+    ] = precinct_results_tracts.apply(
+        lambda row: pd.Series(
+            get_majority_racial_group(row, standardized_group_labels_pct, "tracts")
+        ),
+        axis=1,
+    )
+
+    precinct_results_blocks[MAP_EXPORT_COLUMNS]
+    return
+
+
+@app.cell
+def _(
+    MAP_EXPORT_COLUMNS,
+    MAP_EXPORT_DRIVER,
+    MAP_EXPORT_PATH,
+    pathlib,
+    precinct_results_blocks,
+):
+    # Check if the file exists and delete it before writing
+    path = pathlib.Path(MAP_EXPORT_PATH)
+    if path.exists():
+        path.unlink()
+
+    precinct_results_blocks[MAP_EXPORT_COLUMNS].to_file(
+        MAP_EXPORT_PATH, driver=MAP_EXPORT_DRIVER
+    )
     return
 
 
