@@ -70,6 +70,7 @@ This will:
 There are three notebooks:
 
 * `01_geography.py` - Precinct geographic data cleaning
+* `02_census.py` - CVAP by Tract
 * `02_results.py` - Precinct result data cleaning
 * `03_precincts_merge.py` - Merge precinct geography with results data
 
@@ -88,6 +89,10 @@ Reproject the voting precincts from each county into NAD83/California Albers and
  * `county` - The county containing the precinct
  * `precinct_id` - The precinct ID from the county
  * `precinct_name` - The human-readable name included by the county, otherwise `None`
+
+#### `02_census.py` - CVAP by Tract
+
+Produces a GIS file containing [Citizen Voting Age Population](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) (CVAP) data by census tract for California.
 
 #### `02_results.py` - Precinct result data cleaning
 
