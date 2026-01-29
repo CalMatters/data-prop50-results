@@ -49,7 +49,6 @@ def _():
     # this estimate leads to double counts in aggregations
     DROP_NH_EST = "not_hispanic_or_latino_cvap_est"
     return (DROP_NH_EST,)
-    return (CA_FIPS,)
 
 
 @app.cell
