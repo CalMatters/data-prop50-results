@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -864,7 +864,7 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Merge using the validated geometries
+    ## Merge using the validated geometries
     """)
     return
 
@@ -883,6 +883,50 @@ def _(
         validate="1:1",
     )
     precincts_results_cvap_block_merged_ai.plot()
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Calculate proportion of CVAP population in interpolation
+    """)
+    return
+
+
+@app.cell
+def _(
+    block_subgroup_est_columns,
+    cvap_block_gdf,
+    cvap_gdf,
+    precincts_results_cvap_block_merged,
+    precincts_results_cvap_merged,
+    tracts_subgroup_est_columns,
+):
+    state_subgroup_tract_total = cvap_gdf[tracts_subgroup_est_columns].sum().sum()
+    precinct_interpolation_subgroup_tract_total = (
+        precincts_results_cvap_merged[tracts_subgroup_est_columns].sum().sum()
+    )
+
+    state_subgroup_block_total = (
+        cvap_block_gdf[block_subgroup_est_columns].sum().sum()
+    )
+    precinct_interpolation_subgroup_block_total = (
+        precincts_results_cvap_block_merged[block_subgroup_est_columns].sum().sum()
+    )
+
+    _tract_ratio = (
+        precinct_interpolation_subgroup_tract_total / state_subgroup_tract_total
+    )
+    _tract_ratio = (
+        precinct_interpolation_subgroup_block_total / state_subgroup_block_total
+    )
+    print(
+        f"Proportion of total CVAP interpolated to precincts (tract level): {_tract_ratio:.1%}"
+    )
+    print(
+        f"Proportion of total CVAP interpolated to precincts (block level): {_tract_ratio:.1%}"
+    )
     return
 
 

@@ -34,6 +34,34 @@ def _(mo):
 
 
 @app.cell
+def _(precinct_results_blocks):
+    TOTAL_YES_VOTES = 7453339
+    TOTAL_NO_VOTES = 4116998
+    total_votes = TOTAL_YES_VOTES + TOTAL_NO_VOTES
+
+    print(
+        f"Out of a total of {total_votes:,} votes cast, there were {TOTAL_YES_VOTES:,} 'Yes' votes and {TOTAL_NO_VOTES:,} 'No' votes on Prop 50.\n"
+    )
+
+    analysis_total_votes = precinct_results_blocks["total_votes"].sum()
+    analysis_total_votes_pct = analysis_total_votes / total_votes
+
+    print(
+        f"Our analysis has processed data representing {analysis_total_votes_pct:.1%} of votes cast"
+    )
+
+    analysis_yes_votes = precinct_results_blocks["yes_votes"].sum()
+    analysis_no_votes = precinct_results_blocks["no_votes"].sum()
+
+    analysis_yes_proportion = analysis_yes_votes / TOTAL_YES_VOTES
+    analysis_no_proportion = analysis_no_votes / TOTAL_NO_VOTES
+
+    print(f"YES VOTES: {analysis_yes_proportion:.1%}")
+    print(f"NO VOTES: {analysis_no_proportion:.1%}")
+    return
+
+
+@app.cell
 def _():
     VOTE_COUNT_COLUMNS = ["yes_votes", "no_votes", "total_votes"]
     return (VOTE_COUNT_COLUMNS,)
@@ -719,8 +747,6 @@ def _():
 @app.cell
 def _(
     MAP_EXPORT_COLUMNS,
-    MAP_EXPORT_DRIVER,
-    MAP_EXPORT_PATH,
     np,
     pd,
     precinct_results_blocks,
