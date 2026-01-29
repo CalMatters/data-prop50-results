@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.5"
 app = marimo.App(width="medium")
 
 
@@ -30,7 +30,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return json, re, EsriDumper, mo, np, pd, pdfplumber
+    return EsriDumper, mo, np, pd, pdfplumber, re
 
 
 @app.cell
@@ -56,6 +56,7 @@ def _(
     napa,
     orange,
     pd,
+    riverside,
     sacramento,
     san_benito,
     san_bernardino,
@@ -102,6 +103,7 @@ def _(
             monterey,
             napa,
             orange,
+            riverside,
             sacramento,
             san_benito,
             san_bernardino,
@@ -1284,7 +1286,7 @@ def _(np, pd):
     )  # Handle cases where Registered Voters is NaN or null
 
     # replace masked values with nan
-    marin = marin.replace('****', np.nan)
+    marin = marin.replace("****", np.nan)
 
 
     # drop the remaining columns we don't care about, including the index
@@ -1516,7 +1518,7 @@ def _(mo):
     mo.md(r"""
     ## Orange
 
-    Orange has a precinct with ID `99999`. The precinct's record says it has 976 registered voters with 430 votes cast. It has null value for turnout. It may be worth it to reach out to county to ask which voters are registered to this precinct. My guess is these are Americans voting from abroad.
+    Orange has a precinct with ID `99999` which is used to report results in precincts that have fewer than 10 voters. The precinct's record says it has 976 registered voters with 430 votes cast but it doesn't have a corresponding geographic feature so we drop it.
 
     Orange results data has two different precinct identifiers. I determined which one to use by cross referencing with the counties precinct GIS file.
     """)
@@ -1529,6 +1531,7 @@ def _(calculate_total_votes, pd):
     _TAB_SEP = "\t"
     _DTYPE_MAP = {".Precinct": str, "Precinct ID": str}
     _COLUMN_NAMES = ["precinct_id", "no_votes", "yes_votes", "turnout", "to_drop"]
+    _AGGREGATE_PRECINCT_ID = "99999"
 
     orange = pd.read_csv(_DATA_FP, sep=_TAB_SEP, dtype=_DTYPE_MAP)
     orange = orange.pivot_table(
@@ -1538,23 +1541,68 @@ def _(calculate_total_votes, pd):
         dropna=False,
     ).reset_index()
 
-    # Precinct 99999 should be the only precinct without turnout set
-    # this precinct does not exist in geography file, so it will likely be dropped
-    # assertion included b/c we pivot on the turnout records from the source data
-    assert (
-        orange[("Turnout Percentage", "No")]
-        != orange[("Turnout Percentage", "Yes")]
-    ).sum() == 1
-
     orange.columns = _COLUMN_NAMES
     orange = orange[orange.columns[:-1]].copy()
+
+    # remove precinct 99999 which is used to report votes for
+    # all precincts that have fewer than 10 voters
+    orange = orange[orange["precinct_id"] != _AGGREGATE_PRECINCT_ID].copy()
 
     orange["total_votes"] = calculate_total_votes(orange)
     orange["county"] = "Orange"
 
+    orange = orange.reset_index(drop=True)
 
     orange
     return (orange,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Riverside
+    """)
+    return
+
+
+@app.cell
+def _(np, pd):
+    _RIVERSIDE_RESULTS_FP = "inputs/counties/riverside/SOV_County_District Canvass_20251202134500057.xlsx"
+    _RIVERSIDE_PROP50_RESULTS_SHEET = "District Canvass"
+    _RIVERSIDE_HEADER_N = 7
+    _RIVERSIDE_TRUNCATE_N = 920
+
+    riverside = pd.read_excel(
+        _RIVERSIDE_RESULTS_FP,
+        sheet_name=_RIVERSIDE_PROP50_RESULTS_SHEET,
+        skiprows=_RIVERSIDE_HEADER_N,
+    ).truncate(after=_RIVERSIDE_TRUNCATE_N)
+
+    riverside = riverside.rename(
+        columns={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",
+            "YES": "yes_votes",
+            "NO": "no_votes",
+        }
+    ).drop(
+        columns=[
+            "Unnamed: 1",
+            "Registered Voters",
+            "Voters Cast",
+            "Unnamed: 5",
+            "Unnamed: 8",
+        ]
+    )
+
+    riverside['county'] = 'Riverside'
+    riverside['turnout'] = riverside['turnout'].str.replace(' %', '')
+    riverside['yes_votes'] = pd.to_numeric(riverside['yes_votes'].replace('***', np.nan))
+    riverside['no_votes'] = pd.to_numeric(riverside['no_votes'].replace('***', np.nan))
+    riverside['total_votes'] = riverside['yes_votes'] + riverside['no_votes']
+
+    riverside
+    return (riverside,)
 
 
 @app.cell(hide_code=True)
@@ -1570,7 +1618,7 @@ def _(pd):
     SACRAMENTO_PROP50_RESULTS_SHEET = "Precinct Results"
     _READ_DTYPE = {"Precinct": str}
     sacramento = pd.read_excel(
-        "inputs/counties/sacramento/Results_bd6edf40-d97c-4b13-adc8-792cb842323e.xlsx",
+        "inputs/counties/sacramento/Results_a85ec50e-9aeb-434f-83dd-2822382c6d09.xlsx",
         sheet_name=SACRAMENTO_PROP50_RESULTS_SHEET,
         dtype=_READ_DTYPE,
     )
@@ -1688,7 +1736,9 @@ def _(np, pd):
     SAN_BERNARDINO_PROP50_RESULTS_SHEET = "Sheet2"
     SAN_BERNARDINO_HEADER_N = 3
     SAN_BERNARDINO_CUMULATIVE_FOOTER_N = 8
-    _PRECINT_ID_START_INDEX = -7 # trailing N digits represent matching ID in results
+    _PRECINT_ID_START_INDEX = (
+        -7
+    )  # trailing N digits represent matching ID in results
     san_bernardino = pd.read_excel(
         "inputs/counties/san_bernardino/Report_SOVbyPrecinct.xlsx",
         sheet_name=SAN_BERNARDINO_PROP50_RESULTS_SHEET,
@@ -1819,7 +1869,9 @@ def _(np, pd):
     )
 
     # alter the precinct ID format to match with the geography
-    san_diego['precinct_id'] = san_diego['precinct_id'].str.split('-', expand=True)[1]
+    san_diego["precinct_id"] = san_diego["precinct_id"].str.split(
+        "-", expand=True
+    )[1]
 
     san_diego_vote_by_mail_precinct_regex = r"^999"
 
@@ -2793,7 +2845,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, re, np):
+def _(np, pd, re):
     REDACTED_PLACEHOLDER_REGEX = re.compile(r"\*+")
 
 
@@ -2973,8 +3025,8 @@ def _(EsriDumper, pd):
         d = {
             "county": "Yolo",
             "precinct_id": feature["properties"]["PRECINCTID"],
-            "no_votes": feature["properties"]["TOTALVOTES_1"],
-            "yes_votes": feature["properties"]["TOTALVOTES_2"],
+            "yes_votes": feature["properties"]["TOTALVOTES_1"],
+            "no_votes": feature["properties"]["TOTALVOTES_2"],
         }
 
         d["total_votes"] = d["no_votes"] + d["yes_votes"]
