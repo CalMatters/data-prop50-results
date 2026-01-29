@@ -1340,18 +1340,18 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/riverside/precincts/Final Voting Precincts.zip"
-    riverside = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/riverside/precincts/riversidecaenr_9.json"
+    riverside = gpd.read_file(_GIS_FP,  dtype = {'sVotingPre': str }).to_crs(PROJECTED_CRS)
 
     riverside = alter_df(
         df=riverside,
         county="Riverside",
-        rename={"PRIMARY_NE": "precinct_id"},
+        rename={"sVotingPre": "precinct_id"},
         drop=[
             "SUM_lTotal",
-            "sVotingPre",
             "SUM_lTot_1",
             "VPMapping",
+            "PRIMARY_NE",
             "sVotingP_1",
             "iMailBallo",
             "Shape_Leng",
@@ -1364,7 +1364,7 @@ def _(PROJECTED_CRS, gpd):
     )
 
     # change the precinct_id to match the format in the results file
-    riverside["precinct_id"] = riverside["precinct_id"].str.replace("-", "")
+    riverside["precinct_id"] = riverside["precinct_id"].astype(str).str.replace(".0", "")
 
     riverside
     return (riverside,)
