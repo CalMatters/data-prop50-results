@@ -24,3 +24,4 @@ generate-all-data:
 generate-demographics-pmtiles:
     npx mapshaper outputs/precinct_results_plus_demographics.geojson -proj wgs84 init=EPSG:3310 -o format=geojson ndjson outputs/precinct_results_plus_demographics_nd.json
     tippecanoe -f -l precincts -o outputs/precinct_results_plus_demographics.pmtiles --maximum-zoom=14 --minimum-zoom=4 --read-parallel outputs/precinct_results_plus_demographics_nd.json
+    cp outputs/precinct_results_plus_demographics.pmtiles vis/static/precinct_results_plus_demographics.pmtiles
