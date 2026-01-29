@@ -2975,8 +2975,8 @@ def _(EsriDumper, pd):
         d = {
             "county": "Yolo",
             "precinct_id": feature["properties"]["PRECINCTID"],
-            "no_votes": feature["properties"]["TOTALVOTES_1"],
-            "yes_votes": feature["properties"]["TOTALVOTES_2"],
+            "yes_votes": feature["properties"]["TOTALVOTES_1"],
+            "no_votes": feature["properties"]["TOTALVOTES_2"],
         }
 
         d["total_votes"] = d["no_votes"] + d["yes_votes"]
