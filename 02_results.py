@@ -2311,10 +2311,18 @@ def _(pd):
         ]
     )
 
+    # remove an extra row of data
+    santa_clara = santa_clara[santa_clara["precinct_id"] != "Total:"].copy()
+
+    # remove leading zeros in precinct_id
+    santa_clara['precinct_id'] = santa_clara['precinct_id'].str.lstrip("0")
+
     # and add a county column
     santa_clara["county"] = "Santa Clara"
 
-    santa_clara.head(None)
+    santa_clara = santa_clara.reset_index(drop=True)
+
+    santa_clara
     return (santa_clara,)
 
 
