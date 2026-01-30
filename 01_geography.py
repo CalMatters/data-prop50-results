@@ -1702,9 +1702,8 @@ def extract_san_mateo_crosswalk_pdf_page(page):
 
     page_rows = []
     for table_row in tables[0]:
-        if table_row is None:
-            continue
-        if table_row[0] == voting_precinct_header:
+        is_voting_precinct_header = table_row[0] == voting_precinct_header
+        if table_row is None or is_voting_precinct_header:
             continue
         results_precinct = table_row[0]
         for cell in table_row[1:]:
