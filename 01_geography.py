@@ -102,6 +102,7 @@ def _(
     san_luis_obispo,
     san_mateo,
     santa_barbara,
+    santa_clara,
     santa_cruz,
     shasta,
     sierra,
@@ -154,6 +155,7 @@ def _(
             san_luis_obispo,
             san_mateo,
             santa_barbara,
+            santa_clara,
             santa_cruz,
             shasta,
             sierra,
@@ -1341,7 +1343,9 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     _GIS_FP = "inputs/counties/riverside/precincts/riversidecaenr_9.json"
-    riverside = gpd.read_file(_GIS_FP,  dtype = {'sVotingPre': str }).to_crs(PROJECTED_CRS)
+    riverside = gpd.read_file(_GIS_FP, dtype={"sVotingPre": str}).to_crs(
+        PROJECTED_CRS
+    )
 
     riverside = alter_df(
         df=riverside,
@@ -1364,7 +1368,9 @@ def _(PROJECTED_CRS, gpd):
     )
 
     # change the precinct_id to match the format in the results file
-    riverside["precinct_id"] = riverside["precinct_id"].astype(str).str.replace(".0", "")
+    riverside["precinct_id"] = (
+        riverside["precinct_id"].astype(str).str.replace(".0", "")
+    )
 
     riverside
     return (riverside,)
@@ -1401,9 +1407,7 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = (
-        "inputs/counties/san_benito/precincts/Consolidated_Precincts_November_2025.zip"
-    )
+    _GIS_FP = "inputs/counties/san_benito/precincts/Consolidated_Precincts_November_2025.zip"
     san_benito = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_benito = alter_df(
@@ -1760,6 +1764,31 @@ def _(PROJECTED_CRS, gpd):
 
     santa_barbara.plot()
     return (santa_barbara,)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## Santa Clara
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    _GIS_FP = "inputs/counties/santa_clara/Precinct Data Nov 2025 Election - Kimelman (CalMatters) 01292026.zip"
+
+    santa_clara = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+
+    santa_clara = alter_df(
+        df=santa_clara,
+        county="Santa Clara",
+        rename={"VPCT": "precinct_id"},
+        drop=["Shape_Leng", "Shape_Area"],
+    )
+
+    santa_clara
+    return (santa_clara,)
 
 
 @app.cell(hide_code=True)
