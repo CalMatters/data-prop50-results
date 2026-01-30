@@ -1694,7 +1694,6 @@ def extract_san_mateo_crosswalk_pdf_page(page):
         list: A list of dicts, each with "registration_precinct" and
             "results_precinct".
     """
-    first_table_index = 0
     voting_precinct_header = "Voting\nPrecinct"
 
     tables = page.extract_tables()
@@ -1702,12 +1701,12 @@ def extract_san_mateo_crosswalk_pdf_page(page):
         return []
 
     page_rows = []
-    for table_row in tables[first_table_index]:
+    for table_row in tables[0]:
         if table_row is None:
             continue
-        if table_row[first_table_index] == voting_precinct_header:
+        if table_row[0] == voting_precinct_header:
             continue
-        results_precinct = table_row[first_table_index]
+        results_precinct = table_row[0]
         for cell in table_row[1:]:
             registration_precinct = cell if cell else results_precinct
             page_rows.append(
