@@ -14,13 +14,15 @@ def _(mo):
 
 @app.cell
 def _():
+    import pathlib
+
     import geopandas as gpd
     import marimo as mo
     import matplotlib.pyplot as plt
     import numpy as np
     from sklearn.linear_model import LinearRegression
     import pandas as pd
-    return LinearRegression, gpd, mo, np, pd, plt
+    return LinearRegression, gpd, mo, np, pathlib, pd, plt
 
 
 @app.cell(hide_code=True)
@@ -708,8 +710,17 @@ def _():
 
 
 @app.cell
+def _():
+    MAP_EXPORT_PATH = "./outputs/precinct_results_plus_demographics.geojson"
+    MAP_EXPORT_DRIVER = "geojson"
+    return MAP_EXPORT_DRIVER, MAP_EXPORT_PATH
+
+
+@app.cell
 def _(
     MAP_EXPORT_COLUMNS,
+    MAP_EXPORT_DRIVER,
+    MAP_EXPORT_PATH,
     np,
     pd,
     precinct_results_blocks,
@@ -763,15 +774,26 @@ def _(
         axis=1,
     )
 
-    precinct_results_blocks[MAP_EXPORT_COLUMNS].to_file(
-        "./outputs/precinct_results_plus_demographics.mbtiles", driver="MBTiles"
-    )
     precinct_results_blocks[MAP_EXPORT_COLUMNS]
     return
 
 
 @app.cell
-def _():
+def _(
+    MAP_EXPORT_COLUMNS,
+    MAP_EXPORT_DRIVER,
+    MAP_EXPORT_PATH,
+    pathlib,
+    precinct_results_blocks,
+):
+    # Check if the file exists and delete it before writing
+    path = pathlib.Path(MAP_EXPORT_PATH)
+    if path.exists():
+        path.unlink()
+
+    precinct_results_blocks[MAP_EXPORT_COLUMNS].to_file(
+        MAP_EXPORT_PATH, driver=MAP_EXPORT_DRIVER
+    )
     return
 
 

@@ -102,6 +102,7 @@ def _(
     san_luis_obispo,
     san_mateo,
     santa_barbara,
+    santa_clara,
     santa_cruz,
     shasta,
     sierra,
@@ -154,6 +155,7 @@ def _(
             san_luis_obispo,
             san_mateo,
             santa_barbara,
+            santa_clara,
             santa_cruz,
             shasta,
             sierra,
@@ -1292,7 +1294,7 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/orange/precincts/OC_Precinct_2024GE.zip"
+    _GIS_FP = "inputs/counties/orange/precincts/2025_Statewide_Special_Election_Precincts.zip"
     orange = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     orange = alter_df(
@@ -1302,7 +1304,7 @@ def _(PROJECTED_CRS, gpd):
         drop=["Shape_Leng", "Shape_Area"],
     )
 
-    orange.head()
+    orange
     return (orange,)
 
 
@@ -1340,18 +1342,20 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/riverside/precincts/Final Voting Precincts.zip"
-    riverside = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+    _GIS_FP = "inputs/counties/riverside/precincts/riversidecaenr_9.json"
+    riverside = gpd.read_file(_GIS_FP, dtype={"sVotingPre": str}).to_crs(
+        PROJECTED_CRS
+    )
 
     riverside = alter_df(
         df=riverside,
         county="Riverside",
-        rename={"PRIMARY_NE": "precinct_id"},
+        rename={"sVotingPre": "precinct_id"},
         drop=[
             "SUM_lTotal",
-            "sVotingPre",
             "SUM_lTot_1",
             "VPMapping",
+            "PRIMARY_NE",
             "sVotingP_1",
             "iMailBallo",
             "Shape_Leng",
@@ -1364,7 +1368,9 @@ def _(PROJECTED_CRS, gpd):
     )
 
     # change the precinct_id to match the format in the results file
-    riverside["precinct_id"] = riverside["precinct_id"].str.replace("-", "")
+    riverside["precinct_id"] = (
+        riverside["precinct_id"].astype(str).str.replace(".0", "")
+    )
 
     riverside
     return (riverside,)
@@ -1395,18 +1401,13 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## San Benito
-
-    A dissolve operation is executed to join all the records with `precinct_id` `0`. These are associated with unpopulated areas such as water treatment plant, farmland, parks, open fields. [Read more issue #32](https://github.com/CalMatters/data-prop50-results/issues/32)
     """)
     return
 
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = (
-        "inputs/counties/san_benito/precincts/San_Benito_Base_Precincts_2025.zip"
-    )
-    _UNPOPULATED_PRECINCT_ID = "0"
+    _GIS_FP = "inputs/counties/san_benito/precincts/Consolidated_Precincts_November_2025.zip"
     san_benito = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_benito = alter_df(
@@ -1427,25 +1428,7 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    assert len(check_duplicates(san_benito)) > 0, (
-        "Expected duplicates but found none"
-    )
-    unpopulated_precinct_count = (
-        san_benito["precinct_id"] == _UNPOPULATED_PRECINCT_ID
-    ).sum()
-    _predissolve_precinct_count = len(san_benito)
-    san_benito = san_benito.dissolve("precinct_id", as_index=False)
-    expected_count = _predissolve_precinct_count - (unpopulated_precinct_count - 1)
-    actual_count = len(san_benito)
-    assert actual_count == expected_count, (
-        f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
-    )
-    assert check_duplicates(san_benito) is None, (
-        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
-    )
-    print("San Benito duplicate resolved using dissolve operation")
-
-    san_benito.head()
+    san_benito
     return (san_benito,)
 
 
@@ -1781,6 +1764,31 @@ def _(PROJECTED_CRS, gpd):
 
     santa_barbara.plot()
     return (santa_barbara,)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## Santa Clara
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    _GIS_FP = "inputs/counties/santa_clara/Precinct Data Nov 2025 Election - Kimelman (CalMatters) 01292026.zip"
+
+    santa_clara = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+
+    santa_clara = alter_df(
+        df=santa_clara,
+        county="Santa Clara",
+        rename={"VPCT": "precinct_id"},
+        drop=["Shape_Leng", "Shape_Area"],
+    )
+
+    santa_clara
+    return (santa_clara,)
 
 
 @app.cell(hide_code=True)
