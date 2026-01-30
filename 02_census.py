@@ -57,8 +57,6 @@ def _():
     return (TRACT_FIPS_LEN,)
 
 
-<<<<<<< HEAD
-=======
 @app.cell
 def _():
     EST_CVAP_SUFFIX = "_est"
@@ -66,7 +64,6 @@ def _():
     return EST_CVAP_SUFFIX, TOTAL_POP_KEYWORD
 
 
->>>>>>> main
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -461,8 +458,6 @@ def _(OUTPUT_DRIVER, OUTPUT_FP, PROJECTED_CRS, gdf_ca_cvap_tracts):
     return
 
 
-<<<<<<< HEAD
-=======
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -550,6 +545,5 @@ def _(mo):
     return
 
 
->>>>>>> main
 if __name__ == "__main__":
     app.run()
