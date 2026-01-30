@@ -32,6 +32,9 @@
 	const DEFAULT_OUTLINE_COLOR = '#ffffff';
 	const DEFAULT_OUTLINE_WIDTH = 0.75;
 	const HIGHLIGHT_OUTLINE_WIDTH = 2.5; // Thicker to dominate over white borders
+	// County bounds for subtle border stroke (vis/static/county_bounds.geojson)
+	const COUNTY_BOUNDS_SOURCE_ID = 'county-bounds';
+	const COUNTY_BOUNDS_URL = '/county_bounds.geojson';
 
 	// if you want to change something about the map then we should use
 	// a component-level variable, in this case we'll call it map
@@ -197,17 +200,13 @@
 							},
 							insertBeforeLayerId
 						);
-						
+
 						// Ensure highlight layer renders on top of white outline
 						// Move it to be right after 'precincts-outline' by removing and re-adding
 						if (map.getLayer('precincts-outline')) {
-							// Get the current layer configuration
 							const highlightLayer = map.getStyle().layers.find(l => l.id === 'precincts-outline-highlight');
 							if (highlightLayer) {
-								// Remove the layer
 								map.removeLayer('precincts-outline-highlight');
-								// Re-add it after 'precincts-outline' so it renders on top
-								// Using 'precincts-outline' as beforeId means it will be inserted right after it
 								map.addLayer({
 									id: 'precincts-outline-highlight',
 									type: 'line',
@@ -227,9 +226,31 @@
 						}
 					}
 
+					// County borders (subtle stroke on top of precincts)
+					if (!map.getSource(COUNTY_BOUNDS_SOURCE_ID)) {
+						map.addSource(COUNTY_BOUNDS_SOURCE_ID, {
+							type: 'geojson',
+							data: COUNTY_BOUNDS_URL
+						});
+					}
+					if (!map.getLayer('county-bounds-line')) {
+						map.addLayer(
+							{
+								id: 'county-bounds-line',
+								type: 'line',
+								source: COUNTY_BOUNDS_SOURCE_ID,
+								paint: {
+									'line-color': 'rgba(120, 120, 120, 0.5)',
+									'line-width': 0.75,
+									'line-opacity': 0.7
+								}
+							},
+							insertBeforeLayerId
+						);
+					}
+
 					// Initialize outline layer styling based on current selection
 					updateOutlineLayer(selectedRacialGroup);
-
 					// Add click handler for popup
 					const popup = new maplibregl.Popup({
 						closeButton: true,
