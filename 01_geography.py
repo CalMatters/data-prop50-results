@@ -1343,9 +1343,7 @@ def _(mo):
 @app.cell
 def _(PROJECTED_CRS, gpd):
     _GIS_FP = "inputs/counties/riverside/precincts/riversidecaenr_9.json"
-    riverside = gpd.read_file(_GIS_FP, dtype={"sVotingPre": str}).to_crs(
-        PROJECTED_CRS
-    )
+    riverside = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     riverside = alter_df(
         df=riverside,
