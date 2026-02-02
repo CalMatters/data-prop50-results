@@ -42,9 +42,15 @@ def _():
     PROJECTED_CRS = (
         "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
     )
+    return (PROJECTED_CRS,)
+
+
+@app.cell
+def _():
+    OUTPUT_COLUMNS = ["county", "precinct_id", "precinct_name", "geometry"]
     COMBINED_OUTPUT_PATH = "outputs/precincts.gpkg"
     COMBINED_OUTPUT_DRIVER = "GPKG"
-    return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, PROJECTED_CRS
+    return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, OUTPUT_COLUMNS
 
 
 @app.cell(hide_code=True)
@@ -64,8 +70,6 @@ def _(combined_reordered):
 
 @app.cell
 def _(
-    COMBINED_OUTPUT_DRIVER,
-    COMBINED_OUTPUT_PATH,
     alameda,
     amador,
     butte,
@@ -90,7 +94,6 @@ def _(
     napa,
     nevada,
     orange,
-    pd,
     placer,
     riverside,
     sacramento,
@@ -117,68 +120,76 @@ def _(
     yolo,
     yuba,
 ):
-    # create a new data frame from the data frames for each county
-    combined = pd.concat(
-        [
-            alameda,
-            amador,
-            butte,
-            colusa,
-            contra_costa,
-            fresno,
-            glenn,
-            humboldt,
-            imperial,
-            inyo,
-            kern,
-            lake,
-            los_angeles,
-            madera,
-            marin,
-            mariposa,
-            mendocino,
-            merced,
-            modoc,
-            mono,
-            monterey,
-            napa,
-            nevada,
-            orange,
-            placer,
-            riverside,
-            sacramento,
-            san_benito,
-            san_bernardino,
-            san_diego,
-            san_francisco,
-            san_joaquin,
-            san_luis_obispo,
-            san_mateo,
-            santa_barbara,
-            santa_clara,
-            santa_cruz,
-            shasta,
-            sierra,
-            siskiyou,
-            solano,
-            sonoma,
-            sutter,
-            tehama,
-            tulare,
-            tuolumne,
-            ventura,
-            yolo,
-            yuba,
-        ]
-    )
+    COUNTIES_GDFS = [
+        alameda,
+        amador,
+        butte,
+        colusa,
+        contra_costa,
+        fresno,
+        glenn,
+        humboldt,
+        imperial,
+        inyo,
+        kern,
+        lake,
+        los_angeles,
+        madera,
+        marin,
+        mariposa,
+        mendocino,
+        merced,
+        modoc,
+        mono,
+        monterey,
+        napa,
+        nevada,
+        orange,
+        placer,
+        riverside,
+        sacramento,
+        san_benito,
+        san_bernardino,
+        san_diego,
+        san_francisco,
+        san_joaquin,
+        san_luis_obispo,
+        san_mateo,
+        santa_barbara,
+        santa_clara,
+        santa_cruz,
+        shasta,
+        sierra,
+        siskiyou,
+        solano,
+        sonoma,
+        sutter,
+        tehama,
+        tulare,
+        tuolumne,
+        ventura,
+        yolo,
+        yuba,
+    ]
+    return (COUNTIES_GDFS,)
 
-    # make sure any mising "precinct_name" values are empty strings
-    combined.fillna(value={"precinct_name": ""}, inplace=True)
+
+@app.cell
+def _(
+    COMBINED_OUTPUT_DRIVER,
+    COMBINED_OUTPUT_PATH,
+    COUNTIES_GDFS,
+    OUTPUT_COLUMNS,
+    pd,
+):
+    # create a new data frame from the data frames for each county
+    combined = pd.concat(COUNTIES_GDFS)
+
+    # make sure any missing "precinct_name" values are empty strings
+    combined = combined.fillna(value={"precinct_name": ""})
 
     # reorder the columns to make it more readable
-    combined_reordered = combined[
-        ["county", "precinct_id", "precinct_name", "geometry"]
-    ]
+    combined_reordered = combined[OUTPUT_COLUMNS]
 
     dupes = check_duplicates(combined_reordered)
 
@@ -197,18 +208,21 @@ def _(mo):
 
 
 @app.function
-def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
+def check_duplicates(df, columns_to_check=None):
     """
     Check for duplicate entries in the DataFrame based on specified columns.
     If duplicates are found, print a descriptive message listing the counties with duplicate IDs.
     Returns the duplicate rows sorted by the specified columns if possible; otherwise, returns unsorted duplicates.
+
     Parameters:
         df (pd.DataFrame): The input DataFrame to check for duplicates.
         columns_to_check (list): List of column names to identify duplicates. Defaults to ["county", "precinct_id"].
 
     Returns:
-        pd.DataFrame or bool: DataFrame of duplicate rows if found (sorted if possible), otherwise None.
+        pd.DataFrame | None: DataFrame of duplicate rows if found (sorted if possible), otherwise None.
     """
+    if columns_to_check is None:
+        columns_to_check = ["county", "precinct_id"]
     # Identify duplicate rows based on "county" and "precinct_id"
     duplicates = df[df.duplicated(subset=columns_to_check, keep=False)]
 
@@ -233,7 +247,7 @@ def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
 @app.function
 def alter_df(df, county, rename=None, drop=None):
     """
-    Alter the dataframe, in place, by renaming and dropping columns
+    Add county column, optionally rename and drop columns. Returns the modified DataFrame.
     """
     df["county"] = county
     if rename:
@@ -254,7 +268,7 @@ def _(mo):
     mo.md(r"""
     # Extract and transform by county
 
-    Each county's indepedent election adminstrator produces an election precincts map that needs to read in and transformed into our standardized format
+    Each county's independent election administrator produces an election precincts map that needs to be read in and transformed into our standardized format
     """)
     return
 
@@ -528,7 +542,7 @@ def _():
             # if the data has 7 elements after the split that means it has
             # the results precinct id
             elif line_split_count == LINE_WITH_RESULTS_ID_SPLIT_COUNT:
-                new_last_seen_id = "%s" % line_split[RESULTS_PRECINCT_ID_INDEX]
+                new_last_seen_id = str(line_split[RESULTS_PRECINCT_ID_INDEX])
                 row = {
                     "registration_precinct": _strip_lang_signifier_from_registration_precinct_id(
                         line_split[REGISTRATION_PRECINCT_INDEX_WITH_RESULTS]
@@ -595,7 +609,7 @@ def _(extract_fresno_crosswalk_pdf_page, pd, pdfplumber):
 
 @app.cell
 def _(PROJECTED_CRS, fresno_page_rows, gpd):
-    # use fresno registration precicnts
+    # use fresno registration precincts
     _GIS_FP = "inputs/counties/fresno/precincts/ELECTIONS_PRECINCT_VW.zip"
     fresno = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
@@ -698,7 +712,7 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Humbodlt
+    ## Humboldt
     """)
     return
 
@@ -959,8 +973,8 @@ def _(PROJECTED_CRS, gpd):
     lake = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     lake = alter_df(
-        lake,
-        "Lake",
+        df=lake,
+        county="Lake",
         rename={"PRECINCT": "precinct_id"},
         drop=["NUMBER", "Shape_Leng", "Shape_Area"],
     )
@@ -1133,7 +1147,7 @@ def _(PROJECTED_CRS, gpd):
         drop=["Ballot_Lin", "Shape_Leng", "Shape_Area"],
     )
 
-    merced.head(None)
+    merced.head()
     return (merced,)
 
 
@@ -1597,7 +1611,7 @@ def _(pd):
     # potential combination of two other values. When
     # "PRECINCTPORTION" is nan then the value of the new column
     # is simply "PRECINCTID"
-    # otherwise it is "%s.%s" % ("PRECINCTID", "PRECINCTPORTION")
+    # otherwise it is f"{PRECINCTID}.{PRECINCTPORTION}"
     san_luis_obispo_crosswalk["registration_precinct"] = san_luis_obispo_crosswalk[
         "PRECINCTID"
     ].where(
@@ -1658,8 +1672,6 @@ def _(PROJECTED_CRS, gpd, san_luis_obispo_crosswalk):
             "PrecinctFu",
             "PrecinctID",
             "PrecinctPo",
-            "ShapeSTAre",
-            "ShapeSTLen",
             "PRECINCTID",
             "registration_precinct",
         ],
@@ -2173,7 +2185,10 @@ def _(re):
                 ):
                     row["registration_precinct"] = regular_precinct
                 else:
-                    breakpoint()
+                    print(
+                        f"Warning: Tulare crosswalk line has unexpected precinct format: {line!r}"
+                    )
+                    return None, last_seen_id
             else:
                 return None, last_seen_id
 
