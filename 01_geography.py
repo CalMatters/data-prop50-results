@@ -1706,7 +1706,7 @@ def extract_san_mateo_crosswalk_pdf_page(page):
         if table_row is None or is_voting_precinct_header:
             continue
         results_precinct = table_row[0]
-        for cell in table_row[1:]:
+        for cell in table_row[0:]:
             registration_precinct = cell if cell else results_precinct
             page_rows.append(
                 {
