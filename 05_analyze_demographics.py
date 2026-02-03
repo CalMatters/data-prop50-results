@@ -439,8 +439,28 @@ def _(
     county_level_demo_analysis_tracts[precinct_count_cols_tracts] = (
         county_level_demo_analysis_tracts[precinct_count_cols_tracts].fillna(0)
     )
+    return county_level_demo_analysis_blocks, county_level_demo_analysis_tracts
 
-    county_level_demo_analysis_blocks, county_level_demo_analysis_tracts
+
+@app.cell
+def _(county_level_demo_analysis_blocks, mo):
+    counties = list(county_level_demo_analysis_blocks.index)
+    county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
+    county_dropdown
+    return (county_dropdown,)
+
+
+@app.cell
+def _(
+    county_dropdown,
+    county_level_demo_analysis_blocks,
+    county_level_demo_analysis_tracts,
+):
+    (
+        county_dropdown.value,
+        county_level_demo_analysis_blocks.loc[county_dropdown.value],
+        county_level_demo_analysis_tracts.loc[county_dropdown.value],
+    )
     return
 
 
@@ -719,8 +739,6 @@ def _():
 @app.cell
 def _(
     MAP_EXPORT_COLUMNS,
-    MAP_EXPORT_DRIVER,
-    MAP_EXPORT_PATH,
     np,
     pd,
     precinct_results_blocks,
