@@ -1968,6 +1968,9 @@ def _(pd):
     # add a county column
     san_francisco["county"] = "San Francisco"
 
+    # remove "PCT" and "MB" from precinct_id to match geographies
+    san_francisco['precinct_id'] = san_francisco['precinct_id'].str.split(' ', expand=True)[1]
+
     # get rid of the index
     san_francisco = san_francisco.reset_index(drop=True)
 
