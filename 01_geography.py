@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.5"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -1512,27 +1512,18 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/san_francisco/precincts/Election Precincts - Current, Defined 2022_20251120.zip"
+    _GIS_FP = "inputs/counties/san_francisco/precincts/110425_ElectionPcts090525_pg/110425_ElectionPcts_108_pg.shp"
     san_francisco = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_francisco = alter_df(
         df=san_francisco,
         county="San Francisco",
-        rename={"neigh22": "precinct_name", "prec_2022": "precinct_id"},
-        drop=[
-            "supe22",
-            "assemb22",
-            "cong22",
-            "bart22",
-            "boe22",
-            "sen22",
-            "histnhood",
-            "shape_leng",
-            "shape_area",
-        ],
+        rename={"Consolidat": "precinct_name", "ElecPct": "precinct_id"}
     )
 
-    san_francisco.head()
+    san_francisco['precinct_id'] = san_francisco['precinct_id'].astype(str)
+
+    san_francisco
     return (san_francisco,)
 
 
