@@ -1568,6 +1568,45 @@ def _(pd, standardize_results_df):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ## Riverside
+    """)
+    return
+
+
+@app.cell
+def _(pd, standardize_results_df):
+    _COUNTY = "Riverside"
+    _DATA_FP = "inputs/counties/riverside/SOV_County_District Canvass_20251202134500057.xlsx"
+    _PROP50_RESULTS_SHEET = "District Canvass"
+    _SKIP_HEADER_ROWS = 7
+    _TRUNCATE_AFTER = 920
+
+    riverside = pd.read_excel(
+        _DATA_FP,
+        sheet_name=_PROP50_RESULTS_SHEET,
+        skiprows=_SKIP_HEADER_ROWS,
+    ).truncate(after=_TRUNCATE_AFTER)
+
+    riverside = standardize_results_df(
+        results_df=riverside,
+        county=_COUNTY,
+        rename_column_map={
+            "Unnamed: 0": "precinct_id",
+            "Turnout (%)": "turnout",
+            "YES": "yes_votes",
+            "NO": "no_votes",
+            "Registered Voters": "registered_voters",
+            # "Voters Cast": "total_votes", # vote cast may exceed exceed total votes
+        },
+    )
+
+    riverside.head()
+    return (riverside,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Sacramento
     """)
     return
@@ -1834,6 +1873,9 @@ def _(pd, standardize_results_df):
             "Registered \nVoters": "registered_voters",
         },
     )
+
+    # remove "PCT" and "MB" from precinct_id to match geographies
+    san_francisco['precinct_id'] = san_francisco['precinct_id'].str.split(' ', expand=True)[1]
 
     san_francisco = san_francisco.reset_index(drop=True)
     san_francisco.head()
