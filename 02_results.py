@@ -327,6 +327,7 @@ def _(
         monterey,
         napa,
         orange,
+        riverside,
         sacramento,
         san_benito,
         san_bernardino,
