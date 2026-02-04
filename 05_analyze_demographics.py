@@ -446,7 +446,6 @@ def _(
 def _(county_level_demo_analysis_blocks, mo):
     counties = list(county_level_demo_analysis_blocks.index)
     county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
-    county_dropdown
     return (county_dropdown,)
 
 
@@ -455,12 +454,43 @@ def _(
     county_dropdown,
     county_level_demo_analysis_blocks,
     county_level_demo_analysis_tracts,
+    pd,
 ):
-    (
-        county_dropdown.value,
-        county_level_demo_analysis_blocks.loc[county_dropdown.value],
-        county_level_demo_analysis_tracts.loc[county_dropdown.value],
-    )
+    def _transform_county_series_to_dataframe(series):
+        # Extract columns that end with "_yes_pct" to identify demographic groups
+        yes_pct_cols = [col for col in series.index if col.endswith("_yes_pct")]
+
+        data = []
+        for pct_col in yes_pct_cols:
+            # Extract demographic group from column name
+            # Format: {group}_{threshold}_yes_pct
+            parts = pct_col.split("_")
+            group = "_".join(parts[:-2])
+
+            precinct_col = pct_col.replace("_yes_pct", "_precinct_count")
+
+            data.append(
+                {
+                    "precinct_count": series[precinct_col],
+                    "yes_pct": series[pct_col],
+                }
+            )
+
+        df = pd.DataFrame(
+            data, index=[col.split("_50_yes_pct")[0] for col in yes_pct_cols]
+        )
+        return df
+
+
+    {
+        "County": county_dropdown,
+        "BLOCKS": _transform_county_series_to_dataframe(
+            county_level_demo_analysis_blocks.loc[county_dropdown.value]
+        ),
+        "TRACTS": _transform_county_series_to_dataframe(
+            county_level_demo_analysis_tracts.loc[county_dropdown.value]
+        ),
+    }
     return
 
 
