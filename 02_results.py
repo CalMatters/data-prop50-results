@@ -674,6 +674,8 @@ def _(pd, pdfplumber, standardize_results_df):
         "Vote Center",
         "Election Day",
         "Provisional",
+        "Electionwide - Total",
+        "Cumulative",
     ]
 
 
@@ -695,9 +697,6 @@ def _(pd, pdfplumber, standardize_results_df):
 
         # rename columns
         el_dorado.columns = _COLUMN_NAMES
-
-        # drop some empty columns that were part of the spreadsheet structure
-        el_dorado.drop(columns=["Yes_Blank", "No_Blank"], inplace=True)
 
         # get rid of total count rows
         for _exclude_val in _PRECINCT_ID_EXCLUDE_VALUES:
@@ -1522,6 +1521,7 @@ def _(pd, standardize_results_df):
         "turnout",
         "turnout_dupe",
     ]
+    _AGGREGATE_PRECINCT_ID = "99999"
 
     orange = pd.read_csv(_DATA_FP, sep=_TAB_SEP, dtype=_DTYPE_MAP)
     orange_pivot = orange.pivot_table(
@@ -1536,14 +1536,6 @@ def _(pd, standardize_results_df):
         dropna=False,
     ).reset_index()
 
-    # Precinct 99999 should be the only precinct without turnout set
-    # this precinct does not exist in geography file, so it will likely be dropped
-    # assertion included b/c we pivot on the turnout records from the source data
-    assert (
-        orange_pivot[("Turnout Percentage", "No")]
-        != orange_pivot[("Turnout Percentage", "Yes")]
-    ).sum() == 1
-
     # verify these values are equal before dropping one
     assert (
         orange_pivot[("Registered Voters", "No")]
@@ -1557,13 +1549,17 @@ def _(pd, standardize_results_df):
     # set instead of renaming b/c of multi-level columns
     orange_pivot.columns = _COLUMN_NAMES
 
+    # remove precinct 99999 which is used to report votes for
+    # all precincts that have fewer than 10 voters
+    orange_pivot = orange_pivot[orange_pivot["precinct_id"] != _AGGREGATE_PRECINCT_ID].copy() 
+
     orange_pivot = standardize_results_df(
         results_df=orange_pivot,
         county=_COUNTY,
     )
 
     orange = orange_pivot.copy()
-    orange
+    orange.head()
     return (orange,)
 
 
@@ -1669,7 +1665,14 @@ def _(pd, standardize_results_df):
     san_benito = san_benito[
         san_benito["precinct_id"].str.match(_PRECINCT_ID_PATTERN)
     ].reset_index(drop=True)
-    san_benito
+
+    # standardize the case of the precinct_id column
+    san_benito['precinct_id'] = san_benito['precinct_id'].str.upper()
+
+    # remove duplicates
+    san_benito = san_benito.drop_duplicates()
+
+    san_benito.head()
     return (san_benito,)
 
 
@@ -2083,15 +2086,6 @@ def _(pd, standardize_results_df):
         skiprows=_SKIP_HEADER_ROWS,
     )
 
-    santa_clara = santa_clara.drop(
-        columns=[
-            "Election Day",
-            "Vote By Mail",
-            "Election Day.1",
-            "Vote By Mail.1",
-        ]
-    )
-
     santa_clara = standardize_results_df(
         results_df=santa_clara,
         county=_COUNTY,
@@ -2103,6 +2097,9 @@ def _(pd, standardize_results_df):
             "Registered Voters": "registered_voters",
         },
     )
+
+    # remove an extra aggregate row of data
+    santa_clara = santa_clara[santa_clara["precinct_id"] != "Total:"].copy()
 
     # remove leading zeros in precinct_id
     santa_clara["precinct_id"] = santa_clara["precinct_id"].str.lstrip("0")
