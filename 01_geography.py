@@ -245,6 +245,51 @@ def check_duplicates(df, columns_to_check=None):
 
 
 @app.function
+def validate_crosswalk_merge(
+    merged, debug_prefix="", left_only_cols=None, right_only_cols=None
+):
+    """
+    Validate outer merge of GIS and crosswalk. Export unmatched rows to debug
+    CSVs. Returns only rows with _merge == "both", with _merge dropped.
+
+    Parameters:
+        merged (pd.DataFrame): The merged DataFrame containing GIS and crosswalk data with a "_merge" column
+            indicating the source of each row ("left_only", "right_only", or "both"). Can be applied by
+            setting the indicator parameter in pd.merge. Merge also requires left to be GIS precincts and
+            right to be the crosswalk data precincts
+        debug_prefix (str): A string prefix used to name the debug output files for unmatched precincts.
+        left_only_cols (list of str, optional): List of column names to include in the debug CSV for records
+            present only in the GIS data (default is all columns).
+        right_only_cols (list of str, optional): List of column names to include in the debug CSV for records
+            present only in the crosswalk data (default is all columns).
+
+    Returns:
+        pd.DataFrame: A filtered DataFrame containing only rows that matched in both datasets
+            (i.e., where _merge == "both"), with the "_merge" column dropped.
+    """
+    checks = {
+        "left_only": {
+            "message": "GIS precincts did not match in the crosswalk data.",
+            "cols": left_only_cols if left_only_cols else merged.columns,
+            "suffix": "unmatched_precincts",
+        },
+        "right_only": {
+            "message": "crosswalk component precincts have no match in the geographic data.",
+            "cols": right_only_cols if right_only_cols else merged.columns,
+            "suffix": "crosswalk_only_precincts",
+        },
+    }
+    for merge_val, config in checks.items():
+        subset = merged[merged["_merge"] == merge_val]
+        if len(subset) != 0:
+            print(f"Warning: {len(subset)} {config['message']}")
+            fp = f"debug/{debug_prefix}_{config['suffix']}.csv"
+            subset[config["cols"]].to_csv(fp, index=False)
+            print(f"Exported to {fp}")
+    return merged[merged["_merge"] == "both"].drop(columns=["_merge"])
+
+
+@app.function
 def alter_df(df, county, rename=None, drop=None):
     """
     Add county column, optionally rename and drop columns. Returns the modified DataFrame.
@@ -1524,27 +1569,18 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/san_francisco/precincts/Election Precincts - Current, Defined 2022_20251120.zip"
+    _GIS_FP = "inputs/counties/san_francisco/precincts/110425_ElectionPcts090525_pg/110425_ElectionPcts_108_pg.shp"
     san_francisco = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_francisco = alter_df(
         df=san_francisco,
         county="San Francisco",
-        rename={"neigh22": "precinct_name", "prec_2022": "precinct_id"},
-        drop=[
-            "supe22",
-            "assemb22",
-            "cong22",
-            "bart22",
-            "boe22",
-            "sen22",
-            "histnhood",
-            "shape_leng",
-            "shape_area",
-        ],
+        rename={"Consolidat": "precinct_name", "ElecPct": "precinct_id"}
     )
 
-    san_francisco.head()
+    san_francisco['precinct_id'] = san_francisco['precinct_id'].astype(str)
+
+    san_francisco
     return (san_francisco,)
 
 
@@ -1716,7 +1752,7 @@ def extract_san_mateo_crosswalk_pdf_page(page):
         if table_row is None or is_voting_precinct_header:
             continue
         results_precinct = table_row[0]
-        for cell in table_row[1:]:
+        for cell in table_row[0:]:
             registration_precinct = cell if cell else results_precinct
             page_rows.append(
                 {
@@ -1725,36 +1761,6 @@ def extract_san_mateo_crosswalk_pdf_page(page):
                 }
             )
     return page_rows
-
-
-@app.function
-def validate_crosswalk_merge(
-    merged, debug_prefix, left_only_cols, right_only_cols
-):
-    """
-    Validate outer merge of GIS and crosswalk. Export unmatched rows to debug
-    CSVs. Returns only rows with _merge == "both", with _merge dropped.
-    """
-    checks = {
-        "left_only": {
-            "message": "GIS precincts did not match in the crosswalk data.",
-            "cols": left_only_cols,
-            "suffix": "unmatched_precincts",
-        },
-        "right_only": {
-            "message": "crosswalk component precincts have no match in the geographic data.",
-            "cols": right_only_cols,
-            "suffix": "crosswalk_only_precincts",
-        },
-    }
-    for merge_val, config in checks.items():
-        subset = merged[merged["_merge"] == merge_val]
-        if len(subset) != 0:
-            print(f"Warning: {len(subset)} {config['message']}")
-            fp = f"debug/{debug_prefix}_{config['suffix']}.csv"
-            subset[config["cols"]].to_csv(fp, index=False)
-            print(f"Exported to {fp}")
-    return merged[merged["_merge"] == "both"].drop(columns=["_merge"])
 
 
 @app.cell
