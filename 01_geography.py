@@ -231,6 +231,51 @@ def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
 
 
 @app.function
+def validate_crosswalk_merge(
+    merged, debug_prefix="", left_only_cols=None, right_only_cols=None
+):
+    """
+    Validate outer merge of GIS and crosswalk. Export unmatched rows to debug
+    CSVs. Returns only rows with _merge == "both", with _merge dropped.
+
+    Parameters:
+        merged (pd.DataFrame): The merged DataFrame containing GIS and crosswalk data with a "_merge" column
+            indicating the source of each row ("left_only", "right_only", or "both"). Can be applied by
+            setting the indicator parameter in pd.merge. Merge also requires left to be GIS precincts and
+            right to be the crosswalk data precincts
+        debug_prefix (str): A string prefix used to name the debug output files for unmatched precincts.
+        left_only_cols (list of str, optional): List of column names to include in the debug CSV for records
+            present only in the GIS data (default is all columns).
+        right_only_cols (list of str, optional): List of column names to include in the debug CSV for records
+            present only in the crosswalk data (default is all columns).
+
+    Returns:
+        pd.DataFrame: A filtered DataFrame containing only rows that matched in both datasets
+            (i.e., where _merge == "both"), with the "_merge" column dropped.
+    """
+    checks = {
+        "left_only": {
+            "message": "GIS precincts did not match in the crosswalk data.",
+            "cols": left_only_cols if left_only_cols else merged.columns,
+            "suffix": "unmatched_precincts",
+        },
+        "right_only": {
+            "message": "crosswalk component precincts have no match in the geographic data.",
+            "cols": right_only_cols if right_only_cols else merged.columns,
+            "suffix": "crosswalk_only_precincts",
+        },
+    }
+    for merge_val, config in checks.items():
+        subset = merged[merged["_merge"] == merge_val]
+        if len(subset) != 0:
+            print(f"Warning: {len(subset)} {config['message']}")
+            fp = f"debug/{debug_prefix}_{config['suffix']}.csv"
+            subset[config["cols"]].to_csv(fp, index=False)
+            print(f"Exported to {fp}")
+    return merged[merged["_merge"] == "both"].drop(columns=["_merge"])
+
+
+@app.function
 def alter_df(df, county, rename=None, drop=None):
     """
     Alter the dataframe, in place, by renaming and dropping columns
@@ -1670,55 +1715,90 @@ def _(mo):
     return
 
 
+@app.function
+def extract_san_mateo_crosswalk_pdf_page(page):
+    """
+    Extracts the crosswalk from PDF pages. The crosswalk connects "Regular
+    Precincts" which are used for voter registration (and therefore called
+    registration_precinct in this code) to "Voting Precincts" which are used
+    for results (and therefore called results_precinct in this code).
+
+    Parameters:
+        page (pdfplumber.Page): The PDF page to extract.
+
+    Returns:
+        list: A list of dicts, each with "registration_precinct" and
+            "results_precinct".
+    """
+    voting_precinct_header = "Voting\nPrecinct"
+
+    tables = page.extract_tables()
+    if not tables:
+        return []
+
+    page_rows = []
+    for table_row in tables[0]:
+        is_voting_precinct_header = table_row[0] == voting_precinct_header
+        if table_row is None or is_voting_precinct_header:
+            continue
+        results_precinct = table_row[0]
+        for cell in table_row[0:]:
+            registration_precinct = cell if cell else results_precinct
+            page_rows.append(
+                {
+                    "registration_precinct": registration_precinct,
+                    "results_precinct": results_precinct,
+                }
+            )
+    return page_rows
+
+
+@app.cell
+def _():
+    return
+
+
 @app.cell
 def _(PROJECTED_CRS, gpd, pd, pdfplumber):
-    san_mateo_crosswalk_rows = []
-
     _SM_CROSSWALK_PDF_PATH = (
         "inputs/counties/san_mateo/50_PrecinctConsolidations Nov2025.pdf"
     )
-    _FIRST_TABLE_INDEX = 0
-    _VOTING_PRECINCT_HEADER = "Voting\nPrecinct"
 
-    with pdfplumber.open(_SM_CROSSWALK_PDF_PATH) as _sm_pdf:
-        for _sm_page in _sm_pdf.pages:
-            _sm_table = _sm_page.extract_tables()
-            for _sm_table_row in _sm_table[_FIRST_TABLE_INDEX]:
-                if _sm_table_row[_FIRST_TABLE_INDEX] != _VOTING_PRECINCT_HEADER:
-                    _sm_precinct_id = _sm_table_row[_FIRST_TABLE_INDEX]
-                    for _sm_cell in _sm_table_row[1:]:
-                        san_mateo_crosswalk_rows.append(
-                            {
-                                "consolidated_precinct": _sm_precinct_id,
-                                "regular_precinct": _sm_cell
-                                if _sm_cell != ""
-                                else _sm_precinct_id,
-                            }
-                        )
-
-    san_mateo_crosswalk_rows = pd.DataFrame(
-        san_mateo_crosswalk_rows
-    ).drop_duplicates()
+    with pdfplumber.open(_SM_CROSSWALK_PDF_PATH) as san_mateo_crosswalk_pdf:
+        san_mateo_crosswalk = [
+            row
+            for page in san_mateo_crosswalk_pdf.pages
+            for row in extract_san_mateo_crosswalk_pdf_page(page)
+        ]
+    san_mateo_crosswalk = pd.DataFrame(san_mateo_crosswalk).drop_duplicates()
 
     _GIS_FP = "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
     san_mateo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_mateo_with_crosswalk = pd.merge(
         san_mateo,
-        san_mateo_crosswalk_rows,
+        san_mateo_crosswalk,
         left_on="PrecinctID",
-        right_on="regular_precinct",
+        right_on="registration_precinct",
+        how="outer",
+        indicator=True,
+        validate="m:1",
     )
 
-    san_mateo = san_mateo_with_crosswalk.dissolve(
-        "consolidated_precinct"
-    ).reset_index()
+    san_mateo_matched = validate_crosswalk_merge(
+        san_mateo_with_crosswalk,
+        debug_prefix="san_mateo",
+        left_only_cols=["PrecinctID", "_merge"],
+        right_only_cols=["registration_precinct", "results_precinct", "_merge"],
+    )
+
+    san_mateo = san_mateo_matched.dissolve("results_precinct").reset_index()
 
     san_mateo = alter_df(
         df=san_mateo,
         county="San Mateo",
-        rename={"consolidated_precinct": "precinct_id"},
-        drop=["OBJECTID", "PrecinctID", "regular_precinct"],
+        rename={"results_precinct": "precinct_id"},
+        drop=["OBJECTID", "PrecinctID", "registration_precinct"],
     )
 
     san_mateo
