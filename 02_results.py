@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.5"
 app = marimo.App(width="medium")
 
 
@@ -1497,7 +1497,7 @@ def _(mo):
     mo.md(r"""
     ## Orange
 
-    Orange has a precinct with ID `99999`. The precinct's record says it has 976 registered voters with 430 votes cast. It has null value for turnout. It may be worth it to reach out to county to ask which voters are registered to this precinct. My guess is these are Americans voting from abroad.
+    Orange has a precinct with ID `99999` which is used to report results in precincts that have fewer than 10 voters. The precinct's record says it has 976 registered voters with 430 votes cast but it doesn't have a corresponding geographic feature so we drop it.
 
     Orange results data has two different precinct identifiers. I determined which one to use by cross referencing with the counties precinct GIS file.
     """)
