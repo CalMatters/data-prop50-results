@@ -1290,7 +1290,7 @@ def _(pd, standardize_results_df):
     )
 
     madera = madera[
-        madera["precinct_id"].str.strip().str.match(_PRECINCT_ID_PATTERN, na=True)
+        madera["precinct_id"].str.strip().str.match(_PRECINCT_ID_PATTERN, na=False)
     ]
 
     # reset and drop index column
@@ -1551,7 +1551,9 @@ def _(pd, standardize_results_df):
 
     # remove precinct 99999 which is used to report votes for
     # all precincts that have fewer than 10 voters
-    orange_pivot = orange_pivot[orange_pivot["precinct_id"] != _AGGREGATE_PRECINCT_ID].copy() 
+    orange_pivot = orange_pivot[
+        orange_pivot["precinct_id"] != _AGGREGATE_PRECINCT_ID
+    ].copy()
 
     orange_pivot = standardize_results_df(
         results_df=orange_pivot,
@@ -1667,7 +1669,7 @@ def _(pd, standardize_results_df):
     ].reset_index(drop=True)
 
     # standardize the case of the precinct_id column
-    san_benito['precinct_id'] = san_benito['precinct_id'].str.upper()
+    san_benito["precinct_id"] = san_benito["precinct_id"].str.upper()
 
     # remove duplicates
     san_benito = san_benito.drop_duplicates()
@@ -1992,7 +1994,6 @@ def _(pd, standardize_results_df):
     # data from the source file csv such as turnout
     san_mateo = san_mateo.join(san_mateo_csv.set_index("Precinct"), on="Precinct")
     san_mateo = san_mateo.reset_index()
-    san_mateo = san_mateo.drop_duplicates()
 
     san_mateo = standardize_results_df(
         results_df=san_mateo,
@@ -2004,6 +2005,9 @@ def _(pd, standardize_results_df):
             "Voter Turnout": "turnout",
         },
     )
+
+    # drop dupes produced in the join operations
+    san_mateo = san_mateo.drop_duplicates()
 
     san_mateo = san_mateo.reset_index(drop=True)
     san_mateo.head()
