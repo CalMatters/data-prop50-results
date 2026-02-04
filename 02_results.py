@@ -384,7 +384,10 @@ def _(
 def _(COUNTIES_TO_COMBINE, OUTPUT_FP, pd):
     combined = pd.concat(COUNTIES_TO_COMBINE).reset_index(drop=True)
     combined.to_csv(OUTPUT_FP, index=False)
-    combined
+    unique_counties = combined['county'].unique() if 'county' in combined.columns else []
+    print(f"Exported results for {len(COUNTIES_TO_COMBINE)} counties.")
+    print("Counties in exported results:")
+    print(list(unique_counties))
     return
 
 
