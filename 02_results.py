@@ -281,6 +281,7 @@ def _(
     monterey,
     napa,
     orange,
+    riverside,
     sacramento,
     san_benito,
     san_bernardino,
@@ -1615,7 +1616,7 @@ def _(mo):
 @app.cell
 def _(pd, standardize_results_df):
     _COUNTY = "Sacramento"
-    _DATA_FP = "inputs/counties/sacramento/Results_bd6edf40-d97c-4b13-adc8-792cb842323e.xlsx"
+    _DATA_FP = "inputs/counties/sacramento/Results_a85ec50e-9aeb-434f-83dd-2822382c6d09.xlsx"
     _PROP50_RESULTS_SHEET = "Precinct Results"
     _DTYPE = {"Precinct": str}
     _BALLOT_NAME_EXCLUDE_VALUES = ["Ballots Cast", "Over Votes", "Under Votes"]
