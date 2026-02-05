@@ -32,7 +32,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return EsriDumper, Path, json, mo, pd, pdfplumber, re, warnings
+    return EsriDumper, Path, json, mo, np, pd, pdfplumber, re, warnings
 
 
 @app.cell
