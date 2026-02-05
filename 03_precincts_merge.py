@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.2"
+__generated_with = "0.19.6"
 app = marimo.App(width="full")
 
 
@@ -18,7 +18,9 @@ def _():
 
 @app.cell
 def _(DATA_EXPORT_FP, EXPORT_DRIVER, PROJECTED_CRS, precincts_results_merge):
-    precincts_results_merge.to_crs(PROJECTED_CRS).to_file(DATA_EXPORT_FP, driver=EXPORT_DRIVER)
+    precincts_results_merge.to_crs(PROJECTED_CRS).to_file(
+        DATA_EXPORT_FP, driver=EXPORT_DRIVER
+    )
     print(f"Exported merged precincts and results data to {DATA_EXPORT_FP}")
     return
 
@@ -346,6 +348,61 @@ def _(DEBUG_DIR, get_current_timestamp):
             return filepath
         return None
     return (export_if_not_empty,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Appendix
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Diego 2024 Results
+    """)
+    return
+
+
+@app.cell
+def _(EXPORT_DRIVER, gpd, pd):
+    _SD_2024_GIS_FP = "./outputs/counties/san_diego/precincts_2024.gpkg"
+    _SD_2024_RESULTS_FP = "./outputs/counties/san_diego/results_2024.csv"
+    _DTYPE = {"precinct_id": str}
+    _EXPORT_FP = "./outputs/counties/san_diego/precinct_results_2024.gpkg"
+
+
+    geography = gpd.read_file(_SD_2024_GIS_FP)
+    results = pd.read_csv(_SD_2024_RESULTS_FP, dtype=_DTYPE)
+
+    merged = geography.merge(results, validate="1:1", how="outer", indicator=True)
+    votes_without_gis_match = sum(
+        merged[merged["_merge"] == "right_only"]["total_votes"]
+    )
+    prptn_without_gis_match = round(
+        votes_without_gis_match / merged["total_votes"].sum(),
+        3,
+    )
+
+    assert prptn_without_gis_match == 0
+    assert (
+        merged[merged["_merge"] == "left_only"]["precinct_id"].unique() == None
+    ).all()
+
+    merged = merged[merged["_merge"] == "both"].copy()
+    merged = merged.drop("_merge", axis=1)
+    merged.to_file(
+        _EXPORT_FP,
+        driver=EXPORT_DRIVER,
+    )
+    return
+
+
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":
