@@ -77,6 +77,12 @@ def _(REGISTERED_VOTERS_COLUMN_NAME, TURNOUT_COLUMN_NAME, VOTE_COUNT_COLUMNS):
 
 
 @app.cell
+def _(re):
+    REDACTED_PLACEHOLDER_REGEX = re.compile(r"\*+")
+    return (REDACTED_PLACEHOLDER_REGEX,)
+
+
+@app.cell
 def _():
     STANDARDIZED_COLUMNS = [
         "precinct_id",
@@ -105,7 +111,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
+def _(REDACTED_PLACEHOLDER_REGEX, pd):
     def _clean_numeric_string(series_pd: pd.Series) -> pd.Series:
         # Remove comma separators and percent signs
         return (
@@ -118,7 +124,8 @@ def _(pd):
 
     def to_numeric_with_warning(series: pd.Series, **kwargs) -> pd.Series:
         """
-        Convert a pandas Series to numeric, with warning for values coerced to NaN.
+        Convert a pandas Series to numeric, issuing a warning for values coerced to NaN,
+        except for cases where redacted data placeholders (e.g., sequences of asterisks) are encountered.
 
         Parameters
         ----------
@@ -135,7 +142,11 @@ def _(pd):
         Notes
         -----
         This function wraps pd.to_numeric and warns about values that couldn't be
-        converted to numeric format. Preprocessing removes comma separators to avoid mistaken coercions.
+        converted to numeric format after removing comma separators and percent signs.
+        If a value is coerced to NaN and does not match the expected redacted data placeholder
+        (e.g., a string of asterisks), a warning will be printed listing those problematic values.
+        Values matching the redacted placeholder regex are expected to be non-numeric and will
+        not trigger a warning.
         """
         # Get original non-null values
         original_values = series.copy()
@@ -153,9 +164,16 @@ def _(pd):
         # If any values were coerced, print a warning with the list
         if null_mask.any():
             bad_values = original_values[null_mask].unique()
-            print(
-                f"Warning: {len(bad_values)} values in {series.name} could not be converted to numeric and were set to NaN: {bad_values}"
-            )
+            # Filter out bad values that match the redacted regex b/c this is expected behavior
+            filtered_bad_values = [
+                v
+                for v in bad_values
+                if not REDACTED_PLACEHOLDER_REGEX.fullmatch(str(v))
+            ]
+            if filtered_bad_values:
+                print(
+                    f"Warning: {len(filtered_bad_values)} values in {series.name} could not be converted to numeric and were set to NaN: {filtered_bad_values}"
+                )
 
         return numeric_series
     return (to_numeric_with_warning,)
@@ -230,20 +248,6 @@ def _(
 
         return results_df[keep_columns].copy()
     return (standardize_results_df,)
-
-
-@app.cell
-def _(np, pd, re):
-    REDACTED_PLACEHOLDER_REGEX = re.compile(r"\*+")
-
-
-    def clean_redacted_precincts(
-        _series: pd.Series,
-        placeholder_regex=REDACTED_PLACEHOLDER_REGEX,
-    ) -> pd.Series:
-        _series = _series.replace(placeholder_regex, np.nan)
-        return _series.astype("Int64")
-    return (clean_redacted_precincts,)
 
 
 @app.cell
@@ -384,12 +388,7 @@ def _(mo):
 
 
 @app.cell
-def _(
-    VOTE_COUNT_COLUMNS,
-    clean_redacted_precincts,
-    pd,
-    standardize_results_df,
-):
+def _(pd, standardize_results_df):
     _COUNTY = "Alameda"
     _DATA_FP = "inputs/counties/alameda/Statement of Vote - Statewide Special Election.xlsx"
     ALAMEDA_PRECINCT_ID_PATTERN = r"\d{6}"
@@ -422,10 +421,6 @@ def _(
     alameda = alameda[
         alameda["precinct_id"].str.match(ALAMEDA_PRECINCT_ID_PATTERN, na=False)
     ].copy()
-
-    alameda[VOTE_COUNT_COLUMNS] = alameda[VOTE_COUNT_COLUMNS].apply(
-        clean_redacted_precincts
-    )
 
     # get rid of the index column
     alameda = alameda.reset_index(drop=True)
