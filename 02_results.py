@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.5"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -25,13 +25,25 @@ def _():
     import json
     from pathlib import Path
     import re
+    import warnings
 
     from esridump.dumper import EsriDumper
     import marimo as mo
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return EsriDumper, Path, json, mo, np, pd, pdfplumber, re
+    return EsriDumper, Path, json, mo, np, pd, pdfplumber, re, warnings
+
+
+@app.cell
+def _(warnings):
+    # Suppress openpyxl warning when reading Excel files without a default stylesheet
+    warnings.filterwarnings(
+        "ignore",
+        message="Workbook contains no default style",
+        module="openpyxl.styles.stylesheet",
+    )
+    return
 
 
 @app.cell(hide_code=True)
@@ -1877,7 +1889,9 @@ def _(pd, standardize_results_df):
     )
 
     # remove "PCT" and "MB" from precinct_id to match geographies
-    san_francisco['precinct_id'] = san_francisco['precinct_id'].str.split(' ', expand=True)[1]
+    san_francisco["precinct_id"] = san_francisco["precinct_id"].str.split(
+        " ", expand=True
+    )[1]
 
     san_francisco = san_francisco.reset_index(drop=True)
     san_francisco.head()
