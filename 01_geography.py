@@ -1559,6 +1559,20 @@ def _(PROJECTED_CRS, gpd):
     return (san_diego,)
 
 
+@app.cell
+def _(gpd):
+    _GIS_FP = "./inputs/counties/san_diego/precincts/srprec_073_g24_v01.gpkg.zip"
+    san_diego_2024 = gpd.read_file(_GIS_FP)
+    san_diego_2024 = alter_df(
+        df=san_diego_2024,
+        county="San Diego",
+        rename={"sprec": "precinct_id"},
+        drop=["COUNTY"],
+    )
+    san_diego_2024.head()
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -1575,10 +1589,10 @@ def _(PROJECTED_CRS, gpd):
     san_francisco = alter_df(
         df=san_francisco,
         county="San Francisco",
-        rename={"Consolidat": "precinct_name", "ElecPct": "precinct_id"}
+        rename={"Consolidat": "precinct_name", "ElecPct": "precinct_id"},
     )
 
-    san_francisco['precinct_id'] = san_francisco['precinct_id'].astype(str)
+    san_francisco["precinct_id"] = san_francisco["precinct_id"].astype(str)
 
     san_francisco
     return (san_francisco,)
