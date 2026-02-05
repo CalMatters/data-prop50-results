@@ -62,6 +62,12 @@ def _():
 
 @app.cell
 def _():
+    INDEX_COLUMNS = ["county", "precinct_id"]
+    return (INDEX_COLUMNS,)
+
+
+@app.cell
+def _():
     REGISTERED_VOTERS_COLUMN_NAME = "registered_voters"
     TURNOUT_COLUMN_NAME = "turnout"
     return REGISTERED_VOTERS_COLUMN_NAME, TURNOUT_COLUMN_NAME
@@ -381,10 +387,15 @@ def _(
 
 
 @app.cell
-def _(COUNTIES_TO_COMBINE, OUTPUT_FP, pd):
+def _(COUNTIES_TO_COMBINE, INDEX_COLUMNS, OUTPUT_FP, pd):
     combined = pd.concat(COUNTIES_TO_COMBINE).reset_index(drop=True)
+    assert ~combined[INDEX_COLUMNS].duplicated().any(), (
+        f"Export failed becasue duplicate {INDEX_COLUMNS} pair found in combined data"
+    )
     combined.to_csv(OUTPUT_FP, index=False)
-    unique_counties = combined['county'].unique() if 'county' in combined.columns else []
+    unique_counties = (
+        combined["county"].unique() if "county" in combined.columns else []
+    )
     print(f"Exported results for {len(COUNTIES_TO_COMBINE)} counties.")
     print("Counties in exported results:")
     print(list(unique_counties))
