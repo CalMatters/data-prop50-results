@@ -267,6 +267,15 @@ def _(pd):
     return (calculate_turnout,)
 
 
+@app.cell
+def _(pd):
+    def bfill_without_downcast_warning(df: pd.DataFrame) -> pd.DataFrame:
+        """Backfill NaN values without triggering FutureWarning on object dtype downcasting."""
+        with pd.option_context("future.no_silent_downcasting", True):
+            return df.bfill().infer_objects(copy=False)
+    return (bfill_without_downcast_warning,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -742,7 +751,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, standardize_results_df):
+def _(bfill_without_downcast_warning, pd, standardize_results_df):
     _COUNTY = "Fresno"
     _DATA_FP = "inputs/counties/fresno/statementofvotescastrpt-with-privacy.xlsx"
     _PROP50_RESULTS_SHEET = "Sheet3"
@@ -767,7 +776,7 @@ def _(pd, standardize_results_df):
     fresno = fresno[~is_extra_row].copy()
     # and then backfill so that the total values are associated
     # with the rows with valid precinct ids
-    fresno = fresno.bfill()
+    fresno = bfill_without_downcast_warning(fresno)
 
     # and then get rid of the "Total" rows
     fresno = fresno[fresno["Electionwide"] != "Total"].copy()
@@ -1672,7 +1681,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, standardize_results_df):
+def _(bfill_without_downcast_warning, pd, standardize_results_df):
     _COUNTY = "San Benito"
     _DATA_FP = "inputs/counties/san_benito/November 4, 2025 Special Election Statement of Vote - By Precinct.xlsx"
     _PROP50_RESULTS_SHEET = "Proposition 50"
@@ -1698,7 +1707,7 @@ def _(pd, standardize_results_df):
         san_benito = san_benito[san_benito["Precinct"] != _exclude_val].copy()
 
     # backfill the data so that the vote counts are in the same rows as the precinct IDs
-    san_benito = san_benito.bfill()
+    san_benito = bfill_without_downcast_warning(san_benito)
     san_benito = san_benito[san_benito["Precinct"] != "Total"].copy()
 
     san_benito = standardize_results_df(
@@ -1735,7 +1744,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, standardize_results_df):
+def _(bfill_without_downcast_warning, pd, standardize_results_df):
     _COUNTY = "San Bernardino"
     _DATA_FP = "inputs/counties/san_bernardino/Report_SOVbyPrecinct.xlsx"
     _PROP50_RESULTS_SHEET = "Sheet2"
@@ -1765,7 +1774,7 @@ def _(pd, standardize_results_df):
         ].copy()
 
     # backfill the data so that precincts and vote counts are on the same row
-    san_bernardino = san_bernardino.bfill()
+    san_bernardino = bfill_without_downcast_warning(san_bernardino)
 
     san_bernardino = standardize_results_df(
         results_df=san_bernardino,
@@ -1845,7 +1854,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, standardize_results_df):
+def _(bfill_without_downcast_warning, pd, standardize_results_df):
     _COUNTY = "San Francisco"
     _DATA_FP = "inputs/counties/san_francisco/sov.xlsx"
     _PROP50_RESULTS_SHEET = "Sheet2"
@@ -1868,7 +1877,7 @@ def _(pd, standardize_results_df):
 
     # backfill the data so that the vote totals are on the same
     # rows as the precinct ids
-    san_francisco = san_francisco.bfill()
+    san_francisco = bfill_without_downcast_warning(san_francisco)
     san_francisco = san_francisco[san_francisco["Precinct"] != "Total"].copy()
 
     san_francisco = standardize_results_df(
@@ -1963,7 +1972,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, standardize_results_df):
+def _(bfill_without_downcast_warning, pd, standardize_results_df):
     _COUNTY = "San Luis Obispo"
     _DATA_FP = "inputs/counties/san_luis_obispo/2025-special-official-sovc-split-by-precinct-excel.xlsx"
     _SKIP_HEADER_ROWS = 3
@@ -1992,7 +2001,7 @@ def _(pd, standardize_results_df):
 
     # then backfill each precinct results so that the "Total" values are on the same
     # row as the precinct ID
-    san_luis_obispo = san_luis_obispo.bfill()
+    san_luis_obispo = bfill_without_downcast_warning(san_luis_obispo)
 
     san_luis_obispo = san_luis_obispo[
         san_luis_obispo["Precinct"] != "Total"
@@ -2076,7 +2085,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, standardize_results_df):
+def _(bfill_without_downcast_warning, pd, standardize_results_df):
     _COUNTY = "Santa Barbara"
     _DATA_FP = "inputs/counties/santa_barbara/sov-pct.xlsx"
     _PROP50_RESULTS_SHEET = "Sheet2"
@@ -2103,7 +2112,7 @@ def _(pd, standardize_results_df):
         ].copy()
 
     # use the total row to backfill the data
-    santa_barbara = santa_barbara.bfill()
+    santa_barbara = bfill_without_downcast_warning(santa_barbara)
     santa_barbara = santa_barbara[santa_barbara["Precinct"] != "Total"].copy()
 
     santa_barbara = standardize_results_df(
@@ -2442,7 +2451,7 @@ def _(mo):
 
 
 @app.cell
-def _(pd, standardize_results_df):
+def _(bfill_without_downcast_warning, pd, standardize_results_df):
     _COUNTY = "Sutter"
     _DATA_FP = "inputs/counties/sutter/Statement Of Votes Cast - Countywide.xlsx"
     _PROP50_RESULTS_SHEET = "Sheet2"
@@ -2469,7 +2478,7 @@ def _(pd, standardize_results_df):
     for _exclude_val in _PRECINCT_EXCLUDE_VALUES:
         sutter = sutter[sutter["Precinct"] != _exclude_val].copy()
 
-    sutter = sutter.bfill()
+    sutter = bfill_without_downcast_warning(sutter)
     sutter = sutter[sutter["Precinct"] != "Total"].copy()
 
     sutter = standardize_results_df(
