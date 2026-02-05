@@ -1570,9 +1570,9 @@ def _(PROJECTED_CRS, gpd):
 
 
 @app.cell
-def _(gpd):
+def _(PROJECTED_CRS, gpd):
     _GIS_FP = "./inputs/counties/san_diego/precincts/srprec_073_g24_v01.gpkg.zip"
-    san_diego_2024 = gpd.read_file(_GIS_FP)
+    san_diego_2024 = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
     san_diego_2024 = alter_df(
         df=san_diego_2024,
         county="San Diego",
