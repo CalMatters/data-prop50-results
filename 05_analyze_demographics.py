@@ -395,6 +395,7 @@ def _(pd):
                     "county": precinct_counts.index,
                     f"{group_key}_{threshold}_precinct_count": precinct_counts.values,
                     f"{group_key}_{threshold}_yes_pct": yes_pct.values,
+                    f"{group_key}_{threshold}_total_votes": total_votes.values,
                 },
             ).set_index("county")
         else:
@@ -520,6 +521,7 @@ def _(
             data.append(
                 {
                     "precinct_count": series[precinct_col],
+                    "total_votes": series[f"{group_key}_50_total_votes"],
                     "yes_pct": series[pct_col],
                 }
             )
@@ -529,6 +531,9 @@ def _(
             for col in yes_pct_cols
         ]
         df = pd.DataFrame(data, index=display_labels)
+        df["total_votes_pct"] = caclulate_pct(
+            df["total_votes"], df["total_votes"].sum()
+        )
         return df
 
 
