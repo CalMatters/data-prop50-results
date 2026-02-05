@@ -32,7 +32,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return EsriDumper, Path, json, mo, np, pd, pdfplumber, re, warnings
+    return EsriDumper, Path, json, mo, pd, pdfplumber, re, warnings
 
 
 @app.cell
@@ -1857,6 +1857,62 @@ def _(pd, standardize_results_df):
     ].copy()
     san_diego.head()
     return (san_diego,)
+
+
+@app.cell
+def _(pd, standardize_results_df):
+    _COUNTY = "San Diego"
+    _DATA_FP = "inputs/counties/san_diego/Statement of Votes Cast 202511.xls"
+    _PRES_CONTEST = "PRESIDENT AND VICE PRESIDENT"
+    _SKIP_HEADER_ROWS = 2
+    # since we are running a prop 50 analysis, we map D / R to
+    # yes / no rough equivalent for the pres race
+    _STANDARDIZE_COLUMN_RENAMES = {
+        "DONALD J. TRUMP / JD VANCE": "no_votes",
+        "KAMALA D. HARRIS / TIM WALZ": "yes_votes",
+        "Votes": "total_votes",
+        "Voter Turnout": "turnout",
+    }
+    # after standardizing rename to genereic DEM / GOP labels
+    _COLUMN_RENAMES = {"yes_votes": "dem_votes", "no_votes": "gop_votes"}
+
+    san_diego_2024 = pd.read_csv(
+        "./inputs/counties/san_diego/Precincts_Results_2024.csv",
+        skiprows=_SKIP_HEADER_ROWS,
+    )
+
+    san_diego_pres_2024 = san_diego_2024[
+        san_diego_2024["Contest Name"] == _PRES_CONTEST
+    ].copy()
+
+    _has_single_unique_turnout_value = (
+        san_diego_pres_2024.groupby("Precinct")["Voter Turnout"].nunique() == 1
+    )
+    assert _has_single_unique_turnout_value.all()
+    _turnout_by_precinct = san_diego_pres_2024.groupby("Precinct")[
+        "Voter Turnout"
+    ].max()
+
+    _total_votes_by_precinct = san_diego_pres_2024.groupby("Precinct")[
+        "Votes"
+    ].sum()
+
+    san_diego_pres_2024_pivot = san_diego_pres_2024.pivot_table(
+        index="Precinct", columns="Candidate Name", values="Votes"
+    )
+    san_diego_pres_2024_pivot = san_diego_pres_2024_pivot.join(
+        [_turnout_by_precinct, _total_votes_by_precinct]
+    )
+
+    san_diego_pres_2024 = standardize_results_df(
+        results_df=san_diego_pres_2024_pivot,
+        county=_COUNTY,
+        rename_column_map=_STANDARDIZE_COLUMN_RENAMES,
+    )
+
+    san_diego_pres_2024 = san_diego_pres_2024.rename(columns=_COLUMN_RENAMES)
+    san_diego_pres_2024.head()
+    return
 
 
 @app.cell(hide_code=True)
