@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -517,7 +517,11 @@ def _(
         merge_keys=MERGE_KEYS,
         join_pct_columns_func=join_pct_columns,
     )
-    return block_subgroup_est_columns, cvap_block_precinct_estimates
+    return (
+        block_extensive_vars,
+        block_subgroup_est_columns,
+        cvap_block_precinct_estimates,
+    )
 
 
 @app.cell
@@ -859,6 +863,61 @@ def _(
         "_interpolated_total_est",
     )
     return (cvap_block_precinct_estimates_ai,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## San Diego 2024 Election
+    """)
+    return
+
+
+@app.cell
+def _(
+    MERGE_KEYS,
+    PROJECTED_CRS,
+    block_extensive_vars,
+    block_subgroup_est_columns,
+    cvap_block_gdf,
+    gpd,
+    interpolate_and_calculate_percentages,
+    join_pct_columns,
+):
+    _DATA_FP = "./outputs/counties/san_diego/precinct_results_2024.gpkg"
+
+    _gdf = gpd.read_file(_DATA_FP)
+
+    # Validate geometries and reproject to target CRS
+    _temp_cvap_block_proj, _temp_precincts_proj = (
+        validate_and_reproject_geometries(cvap_block_gdf, _gdf, PROJECTED_CRS)
+    )
+
+    # Set index for target GeoDataFrame
+    _temp_target_gdf = _temp_precincts_proj.set_index(MERGE_KEYS)
+
+    # Perform interpolation and calculate percentages
+    sd_2024_cvap_precinct_estimates = interpolate_and_calculate_percentages(
+        source_gdf=_temp_cvap_block_proj,
+        target_gdf=_temp_target_gdf,
+        extensive_variables=block_extensive_vars,
+        subgroup_columns=block_subgroup_est_columns,
+        merge_keys=MERGE_KEYS,
+        join_pct_columns_func=join_pct_columns,
+    )
+
+
+    merged = _temp_target_gdf.merge(
+        sd_2024_cvap_precinct_estimates,
+        left_on=MERGE_KEYS,
+        right_index=True,
+        validate="1:1",
+    )
+    merged.to_file(
+        "./outputs/counties/san_diego/precinct_cvap_results_2024.gpkg",
+        driver="GPKG",
+    )
+    return
 
 
 @app.cell(hide_code=True)
