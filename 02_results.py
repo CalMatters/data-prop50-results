@@ -1868,6 +1868,7 @@ def _(pd, standardize_results_df):
     # since we are running a prop 50 analysis, we map D / R to
     # yes / no rough equivalent for the pres race
     _STANDARDIZE_COLUMN_RENAMES = {
+        "Precinct": "precinct_id",
         "DONALD J. TRUMP / JD VANCE": "no_votes",
         "KAMALA D. HARRIS / TIM WALZ": "yes_votes",
         "Votes": "total_votes",
@@ -1902,7 +1903,7 @@ def _(pd, standardize_results_df):
     )
     san_diego_pres_2024_pivot = san_diego_pres_2024_pivot.join(
         [_turnout_by_precinct, _total_votes_by_precinct]
-    )
+    ).reset_index()
 
     san_diego_pres_2024 = standardize_results_df(
         results_df=san_diego_pres_2024_pivot,
@@ -1911,7 +1912,10 @@ def _(pd, standardize_results_df):
     )
 
     san_diego_pres_2024 = san_diego_pres_2024.rename(columns=_COLUMN_RENAMES)
-    san_diego_pres_2024.head()
+    san_diego_pres_2024["precinct_id"] = san_diego_pres_2024[
+        "precinct_id"
+    ].str.split("-", expand=True)[1]
+    san_diego_pres_2024
     return
 
 
