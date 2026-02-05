@@ -108,6 +108,12 @@ def _():
     return (OUTPUT_FP,)
 
 
+@app.cell
+def _():
+    SD_2024_OUTPUT_FP = "./outputs/counties/san_diego/results_2024.csv"
+    return (SD_2024_OUTPUT_FP,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -399,6 +405,12 @@ def _(COUNTIES_TO_COMBINE, INDEX_COLUMNS, OUTPUT_FP, pd):
     print(f"Exported results for {len(COUNTIES_TO_COMBINE)} counties.")
     print("Counties in exported results:")
     print(list(unique_counties))
+    return
+
+
+@app.cell
+def _(SD_2024_OUTPUT_FP, san_diego_pres_2024):
+    san_diego_pres_2024.to_csv(SD_2024_OUTPUT_FP, index=False)
     return
 
 
@@ -1916,7 +1928,7 @@ def _(pd, standardize_results_df):
         "precinct_id"
     ].str.split("-", expand=True)[1]
     san_diego_pres_2024
-    return
+    return (san_diego_pres_2024,)
 
 
 @app.cell(hide_code=True)
