@@ -148,10 +148,14 @@ def _(np):
         both_null = yes_null & no_null
         df["yes_pct"] = np.nan
 
-        # Calculate yes_pct only where total votes are > 0
+        # Calculate yes_pct and no_pct only where total votes are > 0
         valid_total_mask = total_votes > 0
         df.loc[valid_total_mask, "yes_pct"] = caclulate_pct(
             df.loc[valid_total_mask, "yes_votes"], total_votes[valid_total_mask]
+        )
+        df["no_pct"] = np.nan
+        df.loc[valid_total_mask, "no_pct"] = caclulate_pct(
+            df.loc[valid_total_mask, "no_votes"], total_votes[valid_total_mask]
         )
 
         return df
@@ -310,7 +314,7 @@ def _(
     )
     has_zero_total_votes = total_votes == 0
     expected_null_yes_pct_count = (null_votes | has_zero_total_votes).sum()
-    observed_null_yes_pct_count = precinct_results_blocks["yes_pct"].isna().sum()
+    observed_null_yes_pct_count = precinct_results_tracts["yes_pct"].isna().sum()
 
     assert expected_null_yes_pct_count == observed_null_yes_pct_count, (
         f"Expected {expected_null_yes_pct_count} null values in 'yes_pct' for blocks, "
@@ -357,7 +361,8 @@ def _(pd):
     def _calculate_vote_stats(yes_votes, no_votes):
         total_votes = yes_votes + no_votes
         yes_pct = caclulate_pct(yes_votes, total_votes)
-        return total_votes, yes_pct
+        no_pct = caclulate_pct(no_votes, total_votes)
+        return total_votes, yes_pct, no_pct
 
 
     def analyze_by_group(
@@ -381,6 +386,7 @@ def _(pd):
                         "county": [],
                         f"{group_key}_{threshold}_precinct_count": [],
                         f"{group_key}_{threshold}_yes_pct": [],
+                        f"{group_key}_{threshold}_no_pct": [],
                     },
                 ).set_index("county")
 
@@ -388,20 +394,21 @@ def _(pd):
             precinct_counts = grouped.size()
             yes_votes = grouped["yes_votes"].sum()
             no_votes = grouped["no_votes"].sum()
-            total_votes, yes_pct = _calculate_vote_stats(yes_votes, no_votes)
+            total_votes, yes_pct, no_pct = _calculate_vote_stats(yes_votes, no_votes)
 
             return pd.DataFrame(
                 {
                     "county": precinct_counts.index,
                     f"{group_key}_{threshold}_precinct_count": precinct_counts.values,
                     f"{group_key}_{threshold}_yes_pct": yes_pct.values,
+                    f"{group_key}_{threshold}_no_pct": no_pct.values,
                     f"{group_key}_{threshold}_total_votes": total_votes.values,
                 },
             ).set_index("county")
         else:
             total_yes_votes = majority_precincts["yes_votes"].sum()
             total_no_votes = majority_precincts["no_votes"].sum()
-            total_votes, yes_split_pct = _calculate_vote_stats(
+            total_votes, yes_split_pct, no_split_pct = _calculate_vote_stats(
                 total_yes_votes, total_no_votes
             )
             return {
@@ -413,6 +420,7 @@ def _(pd):
                 "yes_votes": total_yes_votes,
                 "no_votes": total_no_votes,
                 "yes_split_pct": yes_split_pct,
+                "no_split_pct": no_split_pct,
             }
     return (analyze_by_group,)
 
@@ -517,12 +525,14 @@ def _(
         for pct_col in yes_pct_cols:
             group_key = pct_col.split("_50_yes_pct")[0]
             precinct_col = pct_col.replace("_yes_pct", "_precinct_count")
+            no_pct_col = pct_col.replace("_yes_pct", "_no_pct")
 
             data.append(
                 {
                     "precinct_count": series[precinct_col],
                     "total_votes": series[f"{group_key}_50_total_votes"],
                     "yes_pct": series[pct_col],
+                    "no_pct": series[no_pct_col],
                 }
             )
 
@@ -807,6 +817,7 @@ def _():
         "no_votes",
         "total_votes",
         "yes_pct",
+        "no_pct",
         "majority_racial_group",
         "majority_racial_group_pct",
         "geometry",
