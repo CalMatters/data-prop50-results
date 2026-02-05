@@ -199,6 +199,15 @@ def _(
     return (combined_reordered,)
 
 
+@app.cell
+def _(COMBINED_OUTPUT_DRIVER, san_diego_2024):
+    _SD_2024_OUTPUT = "./outputs/counties/san_diego/precincts_2024.gpkg"
+
+    check_duplicates(san_diego_2024)
+    san_diego_2024.to_file(_SD_2024_OUTPUT, COMBINED_OUTPUT_DRIVER)
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -1566,11 +1575,11 @@ def _(gpd):
     san_diego_2024 = alter_df(
         df=san_diego_2024,
         county="San Diego",
-        rename={"sprec": "precinct_id"},
+        rename={"srprec": "precinct_id"},
         drop=["COUNTY"],
     )
-    san_diego_2024.head()
-    return
+    san_diego_2024
+    return (san_diego_2024,)
 
 
 @app.cell(hide_code=True)
