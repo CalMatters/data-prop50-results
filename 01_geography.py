@@ -409,7 +409,8 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         df=butte,
         county="Butte",
-        rename={"Name": "precinct_name", "id": "precinct_id"},
+        # note: the id and name columns in the source data unintuitively have the expected precinct name and id swapped
+        rename={"Name": "precinct_id", "id": "precinct_name"},
         drop=[
             "id",
             "Name",
