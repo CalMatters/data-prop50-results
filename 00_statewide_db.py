@@ -317,7 +317,7 @@ def _(mo):
 @app.cell
 def _(mo, perfect_match_pct):
     mo.md(rf"""
-    Our analysis relies an interpolation block demographics to precincts. I am taking a peek at the Statewide Database mapping of these geographies to get a sense of how often a block's population needs to be split on interpolation vs 100% allocated as a subset of a precicnt.
+    Our analysis relies on the interpolation of block demographics to precincts. I am taking a peek at the Statewide Database mapping of these geographies to get a sense of how often a block's population needs to be split on interpolation vs 100% allocated as a subset of a precinct.
 
     {perfect_match_pct:.1%} of blocks are wholly allocated to a single precinct.
     """)
