@@ -28,7 +28,8 @@ def _():
     import geopandas as gpd
     import marimo as mo
     import pandas as pd
-    return Path, gpd, mo, pd, urllib
+    import requests
+    return Path, gpd, mo, pd, requests
 
 
 @app.cell(hide_code=True)
@@ -106,7 +107,13 @@ def _():
 
     PRECINCTS_2024_FP = "./inputs/statewide_db/srprec_state_g24_v01_shp.zip"
     PRECINCTS_2024_URL_PATH = "https://statewidedatabase.org/pub/data/G24/state/srprec_state_g24_v01_shp.zip"
-    return PRECINCTS_2024_FP, PRECINCTS_2024_URL_PATH, RESULTS_DATA_SRPREC_FP
+    USER_AGENT = {"User-Agent": "Mozilla/5.0"}
+    return (
+        PRECINCTS_2024_FP,
+        PRECINCTS_2024_URL_PATH,
+        RESULTS_DATA_SRPREC_FP,
+        USER_AGENT,
+    )
 
 
 @app.cell(hide_code=True)
@@ -180,14 +187,21 @@ def _(mo):
 
 
 @app.cell
-def _(PRECINCTS_2024_FP, PRECINCTS_2024_URL_PATH, Path, urllib):
+def download_geography(
+    PRECINCTS_2024_FP,
+    PRECINCTS_2024_URL_PATH,
+    Path,
+    USER_AGENT,
+    requests,
+):
     # Create directory if it doesn't exist
     precincts_path = Path(PRECINCTS_2024_FP)
     precincts_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Download file if it doesn't exist
     if not precincts_path.exists():
-        urllib.request.urlretrieve(PRECINCTS_2024_URL_PATH, precincts_path)
+        response = requests.get(PRECINCTS_2024_URL_PATH, headers=USER_AGENT)
+        response.raise_for_status()
+        precincts_path.write_bytes(response.content)
     return (precincts_path,)
 
 
