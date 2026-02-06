@@ -10,6 +10,7 @@ def _(mo):
     # Statewide Precinct Results for 2024 Presidential Election
 
     Data source: [Statewide Database](https://statewidedatabase.org/d20/g24.html) (official redistricting database for the state of California)
+<<<<<<< ma/peek-blk-prec
     - [Election results data page](https://statewidedatabase.org/d20/g24.html)
         - California Statewide `By SR Precinct` file pulled from under `SOV State` column
     - [Precinct geographies page](https://statewidedatabase.org/d20/g24_geo_conv.html)
@@ -19,6 +20,14 @@ def _(mo):
     Data uses the SR Consolidated Precincts geographic unit for the results and mapping. We ran into issues trying to use SV such as the aggregation of votes for presidential candidates exceeding the total votes cast statewide according to the Secretary of State SOV results. We expect there was double counting due across consolidated precinct subunits.
 
     The vote aggregation for the SR data was closer to the SOS total. SR's aggregation was lower than the reported SOS total. This is likely explained by precincts with few voters that require redaction for privacy.
+=======
+
+    Data uses the Consolidated Precinct (geographic unit constructed for statistical merging purposes by SWDB) or SR Precincts geographic unit for the results and mapping. We ran into issues trying to use the Original Voting Precincts (designated by County Registrar) or SV Precincts such as the aggregation of votes for presidential candidates exceeding the total votes cast statewide according to the Secretary of State SOV results. We expect there was double counting due across consolidated precinct subunits.
+
+    The vote aggregation for the SR data was closer to the SOS total. SR's aggregation was lower than the reported SOS total. This is likely explained by precincts with few voters that require redaction for privacy.
+
+    [Read more about Precinct Types at Statewide Database](https://statewidedatabase.org/diagrams.html)
+>>>>>>> main
     """)
     return
 
@@ -31,7 +40,12 @@ def _():
     import geopandas as gpd
     import marimo as mo
     import pandas as pd
+<<<<<<< ma/peek-blk-prec
     return Path, gpd, mo, pd, urllib
+=======
+    import requests
+    return Path, gpd, mo, pd, requests
+>>>>>>> main
 
 
 @app.cell(hide_code=True)
@@ -109,7 +123,17 @@ def _():
 
     PRECINCTS_2024_FP = "./inputs/statewide_db/srprec_state_g24_v01_shp.zip"
     PRECINCTS_2024_URL_PATH = "https://statewidedatabase.org/pub/data/G24/state/srprec_state_g24_v01_shp.zip"
+<<<<<<< ma/peek-blk-prec
     return PRECINCTS_2024_FP, PRECINCTS_2024_URL_PATH, RESULTS_DATA_SRPREC_FP
+=======
+    USER_AGENT = {"User-Agent": "Mozilla/5.0"}
+    return (
+        PRECINCTS_2024_FP,
+        PRECINCTS_2024_URL_PATH,
+        RESULTS_DATA_SRPREC_FP,
+        USER_AGENT,
+    )
+>>>>>>> main
 
 
 @app.cell(hide_code=True)
@@ -183,14 +207,31 @@ def _(mo):
 
 
 @app.cell
+<<<<<<< ma/peek-blk-prec
 def _(PRECINCTS_2024_FP, PRECINCTS_2024_URL_PATH, Path, urllib):
+=======
+def download_geography(
+    PRECINCTS_2024_FP,
+    PRECINCTS_2024_URL_PATH,
+    Path,
+    USER_AGENT,
+    requests,
+):
+>>>>>>> main
     # Create directory if it doesn't exist
     precincts_path = Path(PRECINCTS_2024_FP)
     precincts_path.parent.mkdir(parents=True, exist_ok=True)
 
+<<<<<<< ma/peek-blk-prec
     # Download file if it doesn't exist
     if not precincts_path.exists():
         urllib.request.urlretrieve(PRECINCTS_2024_URL_PATH, precincts_path)
+=======
+    if not precincts_path.exists():
+        response = requests.get(PRECINCTS_2024_URL_PATH, headers=USER_AGENT)
+        response.raise_for_status()
+        precincts_path.write_bytes(response.content)
+>>>>>>> main
     return (precincts_path,)
 
 
@@ -274,7 +315,11 @@ def _(df_results_no_match, mo):
     mo.md(rf"""
     # Merge and export
 
+<<<<<<< ma/peek-blk-prec
     All of the precincts in the GIS data are retained on the merge. There are {len(df_results_no_match):,} precincts in the results dataset without a match in the GIS data. These precincts represent {df_results_no_match["TOTREG"].sum():,} registered voters and {df_results_no_match["total_votes"].sum():,} total votes across {list(df_results_no_match["county"].unique())} counties. 
+=======
+    All of the precincts in the GIS data are retained on the merge. There are {len(df_results_no_match):,} precincts in the results dataset without a match in the GIS data. These precincts represent {df_results_no_match["TOTREG"].sum():,} registered voters and {df_results_no_match["total_votes"].sum():,} total votes across {list(df_results_no_match["county"].unique())} counties.
+>>>>>>> main
 
     This represents a marginal number of votes. {df_results_no_match["TOTREG"].value_counts().loc[0] / len(df_results_no_match):.0%} of these precincts record zero registered voters.
     """)
@@ -311,6 +356,7 @@ def _(
     return (df_results_no_match,)
 
 
+<<<<<<< ma/peek-blk-prec
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -349,5 +395,7 @@ def _():
     return
 
 
+=======
+>>>>>>> main
 if __name__ == "__main__":
     app.run()
