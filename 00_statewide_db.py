@@ -306,5 +306,43 @@ def _(
     return (df_results_no_match,)
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Appendix
+    """)
+    return
+
+
+@app.cell
+def _(mo, perfect_match_pct):
+    mo.md(rf"""
+    Our analysis relies an interpolation block demographics to precincts. I am taking a peek at the Statewide Database mapping of these geographies to get a sense of how often a block's population needs to be split on interpolation vs 100% allocated as a subset of a precicnt.
+
+    {perfect_match_pct:.1%} of blocks are wholly allocated to a single precinct.
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    df_prec_blk_mapping = pd.read_csv(
+        "./inputs/statewide_db/state_g24_sr_blk_map.csv"
+    )
+    prec_blk_mapping_summary_stats = df_prec_blk_mapping["PCTBLK"].describe()
+
+    perfect_match_pct = (df_prec_blk_mapping["PCTBLK"] == 100).sum() / len(
+        df_prec_blk_mapping
+    )
+
+    prec_blk_mapping_summary_stats
+    return (perfect_match_pct,)
+
+
+@app.cell
+def _():
+    return
+
+
 if __name__ == "__main__":
     app.run()
