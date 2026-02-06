@@ -10,6 +10,11 @@ def _(mo):
     # Statewide Precinct Results for 2024 Presidential Election
 
     Data source: [Statewide Database](https://statewidedatabase.org/d20/g24.html) (official redistricting database for the state of California)
+    - [Election results data page](https://statewidedatabase.org/d20/g24.html)
+        - California Statewide `By SR Precinct` file pulled from under `SOV State` column
+    - [Precinct geographies page](https://statewidedatabase.org/d20/g24_geo_conv.html)
+        - California Statewide `SRPREC_SHP` file pulled from under `SR PRECINCTS` column
+        - California Statewide `SRPREC to 2020 BLK` file pulled from under `DATA CONVERSION` column for the appendix peek
 
     Data uses the SR Consolidated Precincts geographic unit for the results and mapping. We ran into issues trying to use SV such as the aggregation of votes for presidential candidates exceeding the total votes cast statewide according to the Secretary of State SOV results. We expect there was double counting due across consolidated precinct subunits.
 
