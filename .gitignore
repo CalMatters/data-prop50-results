@@ -210,6 +210,7 @@ __marimo__/
 
 # Large input file
 inputs/census/tl_2020_06_tabblock20.zip
+inputs/statewide_db/srprec_state_g24_v01_shp.zip
 
 # Generated output files
 outputs/results.csv
@@ -223,6 +224,8 @@ outputs/*pmtiles
 outputs/*json
 outputs/*.mbtiles
 outputs/*.geojson
+outputs/precinct_results_2024.gpkg
+outputs/precincts_2024_results_cvap_blocks.gpkg
 
 # Ignore debug outputs
 debug/*.csv
