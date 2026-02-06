@@ -10,12 +10,24 @@ def _(mo):
     # Statewide Precinct Results for 2024 Presidential Election
 
     Data source: [Statewide Database](https://statewidedatabase.org/d20/g24.html) (official redistricting database for the state of California)
+<<<<<<< ma/peek-blk-prec
+    - [Election results data page](https://statewidedatabase.org/d20/g24.html)
+        - California Statewide `By SR Precinct` file pulled from under `SOV State` column
+    - [Precinct geographies page](https://statewidedatabase.org/d20/g24_geo_conv.html)
+        - California Statewide `SRPREC_SHP` file pulled from under `SR PRECINCTS` column
+        - California Statewide `SRPREC to 2020 BLK` file pulled from under `DATA CONVERSION` column for the appendix peek
+
+    Data uses the SR Consolidated Precincts geographic unit for the results and mapping. We ran into issues trying to use SV such as the aggregation of votes for presidential candidates exceeding the total votes cast statewide according to the Secretary of State SOV results. We expect there was double counting due across consolidated precinct subunits.
+
+    The vote aggregation for the SR data was closer to the SOS total. SR's aggregation was lower than the reported SOS total. This is likely explained by precincts with few voters that require redaction for privacy.
+=======
 
     Data uses the Consolidated Precinct (geographic unit constructed for statistical merging purposes by SWDB) or SR Precincts geographic unit for the results and mapping. We ran into issues trying to use the Original Voting Precincts (designated by County Registrar) or SV Precincts such as the aggregation of votes for presidential candidates exceeding the total votes cast statewide according to the Secretary of State SOV results. We expect there was double counting due across consolidated precinct subunits.
 
     The vote aggregation for the SR data was closer to the SOS total. SR's aggregation was lower than the reported SOS total. This is likely explained by precincts with few voters that require redaction for privacy.
 
     [Read more about Precinct Types at Statewide Database](https://statewidedatabase.org/diagrams.html)
+>>>>>>> main
     """)
     return
 
@@ -28,8 +40,12 @@ def _():
     import geopandas as gpd
     import marimo as mo
     import pandas as pd
+<<<<<<< ma/peek-blk-prec
+    return Path, gpd, mo, pd, urllib
+=======
     import requests
     return Path, gpd, mo, pd, requests
+>>>>>>> main
 
 
 @app.cell(hide_code=True)
@@ -107,6 +123,9 @@ def _():
 
     PRECINCTS_2024_FP = "./inputs/statewide_db/srprec_state_g24_v01_shp.zip"
     PRECINCTS_2024_URL_PATH = "https://statewidedatabase.org/pub/data/G24/state/srprec_state_g24_v01_shp.zip"
+<<<<<<< ma/peek-blk-prec
+    return PRECINCTS_2024_FP, PRECINCTS_2024_URL_PATH, RESULTS_DATA_SRPREC_FP
+=======
     USER_AGENT = {"User-Agent": "Mozilla/5.0"}
     return (
         PRECINCTS_2024_FP,
@@ -114,6 +133,7 @@ def _():
         RESULTS_DATA_SRPREC_FP,
         USER_AGENT,
     )
+>>>>>>> main
 
 
 @app.cell(hide_code=True)
@@ -187,6 +207,9 @@ def _(mo):
 
 
 @app.cell
+<<<<<<< ma/peek-blk-prec
+def _(PRECINCTS_2024_FP, PRECINCTS_2024_URL_PATH, Path, urllib):
+=======
 def download_geography(
     PRECINCTS_2024_FP,
     PRECINCTS_2024_URL_PATH,
@@ -194,14 +217,21 @@ def download_geography(
     USER_AGENT,
     requests,
 ):
+>>>>>>> main
     # Create directory if it doesn't exist
     precincts_path = Path(PRECINCTS_2024_FP)
     precincts_path.parent.mkdir(parents=True, exist_ok=True)
 
+<<<<<<< ma/peek-blk-prec
+    # Download file if it doesn't exist
+    if not precincts_path.exists():
+        urllib.request.urlretrieve(PRECINCTS_2024_URL_PATH, precincts_path)
+=======
     if not precincts_path.exists():
         response = requests.get(PRECINCTS_2024_URL_PATH, headers=USER_AGENT)
         response.raise_for_status()
         precincts_path.write_bytes(response.content)
+>>>>>>> main
     return (precincts_path,)
 
 
@@ -285,7 +315,11 @@ def _(df_results_no_match, mo):
     mo.md(rf"""
     # Merge and export
 
+<<<<<<< ma/peek-blk-prec
+    All of the precincts in the GIS data are retained on the merge. There are {len(df_results_no_match):,} precincts in the results dataset without a match in the GIS data. These precincts represent {df_results_no_match["TOTREG"].sum():,} registered voters and {df_results_no_match["total_votes"].sum():,} total votes across {list(df_results_no_match["county"].unique())} counties. 
+=======
     All of the precincts in the GIS data are retained on the merge. There are {len(df_results_no_match):,} precincts in the results dataset without a match in the GIS data. These precincts represent {df_results_no_match["TOTREG"].sum():,} registered voters and {df_results_no_match["total_votes"].sum():,} total votes across {list(df_results_no_match["county"].unique())} counties.
+>>>>>>> main
 
     This represents a marginal number of votes. {df_results_no_match["TOTREG"].value_counts().loc[0] / len(df_results_no_match):.0%} of these precincts record zero registered voters.
     """)
@@ -322,5 +356,46 @@ def _(
     return (df_results_no_match,)
 
 
+<<<<<<< ma/peek-blk-prec
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Appendix
+    """)
+    return
+
+
+@app.cell
+def _(mo, perfect_match_pct):
+    mo.md(rf"""
+    Our analysis relies on the interpolation of block demographics to precincts. I am taking a peek at the Statewide Database mapping of these geographies to get a sense of how often a block's population needs to be split on interpolation vs 100% allocated as a subset of a precinct.
+
+    {perfect_match_pct:.1%} of blocks are wholly allocated to a single precinct.
+    """)
+    return
+
+
+@app.cell
+def _(pd):
+    df_prec_blk_mapping = pd.read_csv(
+        "./inputs/statewide_db/state_g24_sr_blk_map.csv"
+    )
+    prec_blk_mapping_summary_stats = df_prec_blk_mapping["PCTBLK"].describe()
+
+    perfect_match_pct = (df_prec_blk_mapping["PCTBLK"] == 100).sum() / len(
+        df_prec_blk_mapping
+    )
+
+    prec_blk_mapping_summary_stats
+    return (perfect_match_pct,)
+
+
+@app.cell
+def _():
+    return
+
+
+=======
+>>>>>>> main
 if __name__ == "__main__":
     app.run()
