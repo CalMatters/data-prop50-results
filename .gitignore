@@ -224,6 +224,8 @@ outputs/*pmtiles
 outputs/*json
 outputs/*.mbtiles
 outputs/*.geojson
+outputs/precinct_results_2024.gpkg
+outputs/precincts_2024_results_cvap_blocks.gpkg
 
 # Ignore debug outputs
 debug/*.csv
