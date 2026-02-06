@@ -119,7 +119,40 @@ def _():
             "vote_display_labels": VOTE_DISPLAY_PROP50,
         },
     ]
-    return (DATASET_CONFIG,)
+
+    display_options = [
+        config_option["display_name"] for config_option in DATASET_CONFIG
+    ]
+    return DATASET_CONFIG, display_options
+
+
+@app.cell
+def _(DATASET_CONFIG, config_data_options_multiselect):
+    dataset_config = [
+        config_entry
+        for config_entry in DATASET_CONFIG
+        if config_entry["display_name"] in config_data_options_multiselect.value
+    ]
+    return (dataset_config,)
+
+
+@app.cell
+def _(display_options, mo):
+    config_data_options_multiselect = mo.ui.multiselect(
+        options=display_options, value=display_options
+    )
+    return (config_data_options_multiselect,)
+
+
+@app.cell
+def _(config_data_options_multiselect, mo):
+    mo.hstack(
+        [
+            config_data_options_multiselect,
+            mo.md(f"Selected datasets: {config_data_options_multiselect.value}"),
+        ]
+    )
+    return
 
 
 @app.cell(hide_code=True)
@@ -269,17 +302,17 @@ def _(mo):
 
 @app.cell
 def _(
-    DATASET_CONFIG,
     VOTE_COUNT_COLUMNS,
     add_majority_racial_group,
     calculate_yes_pct,
+    dataset_config,
     prepare_precinct_results_df,
     read_gis_data,
     standardize_demographic_columns,
     standardize_vote_columns,
 ):
     precinct_results = {}
-    for _cfg in DATASET_CONFIG:
+    for _cfg in dataset_config:
         df = read_gis_data(_cfg["filepath"], _cfg["id"])
         df = standardize_vote_columns(df, _cfg["vote_column_mapping"])
         df = standardize_demographic_columns(df, _cfg["group_labels_key"])
@@ -416,14 +449,14 @@ def _(pd):
 @app.cell
 def _(
     ANALYSIS_GROUPS,
-    DATASET_CONFIG,
     GROUP_DISPLAY_LABELS,
     analyze_by_group,
+    dataset_config,
     pd,
     precinct_results,
 ):
     majority_analysis = {}
-    for _cfg in DATASET_CONFIG:
+    for _cfg in dataset_config:
         _df = pd.DataFrame(
             {
                 g: analyze_by_group(
@@ -444,7 +477,7 @@ def _(
 
 
 @app.cell
-def _(DATASET_CONFIG, majority_analysis, mo):
+def _(dataset_config, majority_analysis, mo):
     mo.vstack(
         [
             mo.vstack(
@@ -453,16 +486,16 @@ def _(DATASET_CONFIG, majority_analysis, mo):
                     majority_analysis[_cfg["id"]],
                 ]
             )
-            for _cfg in DATASET_CONFIG
+            for _cfg in dataset_config
         ]
     )
     return
 
 
 @app.cell
-def _(ANALYSIS_GROUPS, DATASET_CONFIG, analyze_by_group, pd, precinct_results):
+def _(ANALYSIS_GROUPS, analyze_by_group, dataset_config, pd, precinct_results):
     county_level_demo_analysis = {}
-    for _cfg in DATASET_CONFIG:
+    for _cfg in dataset_config:
         _df = pd.concat(
             [
                 analyze_by_group(precinct_results[_cfg["id"]], g, by_county=True)
@@ -487,10 +520,10 @@ def _(county_level_demo_analysis, mo):
 
 @app.cell
 def _(
-    DATASET_CONFIG,
     GROUP_DISPLAY_LABELS,
     county_dropdown,
     county_level_demo_analysis,
+    dataset_config,
     pd,
 ):
     def _transform_county_series_to_dataframe(series, vote_display_labels):
@@ -530,7 +563,7 @@ def _(
                 county_level_demo_analysis[_cfg["id"]].loc[_county],
                 _cfg["vote_display_labels"],
             )
-            for _cfg in DATASET_CONFIG
+            for _cfg in dataset_config
             if _county in county_level_demo_analysis[_cfg["id"]].index
         },
     }
@@ -611,7 +644,7 @@ def _(ANALYSIS_GROUPS, mo):
 
 @app.cell
 def _(
-    DATASET_CONFIG,
+    dataset_config,
     demo_group_dropdown,
     plot_lnr_yes_pct_vs_cvap,
     precinct_results,
@@ -630,7 +663,7 @@ def _(
                 f"({_cfg['display_name']})",
                 y_label=f"{_cfg['vote_display_labels']['yes'].replace(' %', '')} Vote Percentage",
             )
-            for _cfg in DATASET_CONFIG
+            for _cfg in dataset_config
         ],
     )
     return
@@ -649,7 +682,7 @@ def _(mo):
 
 
 @app.cell
-def _(DATASET_CONFIG, demo_group_dropdown, precinct_results):
+def _(dataset_config, demo_group_dropdown, precinct_results):
     _group = demo_group_dropdown.value
     _cvap_col = f"{_group}_pct"
     (
@@ -660,7 +693,7 @@ def _(DATASET_CONFIG, demo_group_dropdown, precinct_results):
             ]
             .dropna()
             .corr(method="pearson")
-            for _cfg in DATASET_CONFIG
+            for _cfg in dataset_config
         },
     )
     return
@@ -761,13 +794,13 @@ def _():
 
 @app.cell
 def _(
-    DATASET_CONFIG,
     MAP_EXPORT_COLUMNS,
     MAP_EXPORT_DRIVER,
+    dataset_config,
     pathlib,
     precinct_results,
 ):
-    for _cfg in DATASET_CONFIG:
+    for _cfg in dataset_config:
         _path = pathlib.Path(
             f"./outputs/precinct_results_plus_demographics_{_cfg['id']}.geojson"
         )
