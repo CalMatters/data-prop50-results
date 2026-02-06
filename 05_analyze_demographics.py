@@ -88,7 +88,7 @@ def _():
         {
             "id": "blocks",
             "filepath": "./outputs/precincts_results_cvap_blocks.gpkg",
-            "display_name": "Blocks (2020 Prop 50)",
+            "display_name": "Blocks (Prop 50)",
             "group_labels_key": "blocks",
             "vote_column_mapping": {
                 "yes_votes": "yes_votes",
@@ -110,7 +110,7 @@ def _():
         {
             "id": "tracts",
             "filepath": "./outputs/precincts_results_cvap_tracts.gpkg",
-            "display_name": "Tracts (2020 Prop 50)",
+            "display_name": "Tracts (Prop 50)",
             "group_labels_key": "tracts",
             "vote_column_mapping": {
                 "yes_votes": "yes_votes",
