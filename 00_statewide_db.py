@@ -301,7 +301,7 @@ def _(
     ].copy()
 
     _gdf_export = gdf_precinct_results[EXPORT_COLUMNS].copy()
-    _gdf_export.rename(columns=EXPORT_COLUMN_RENAMES)
+    _gdf_export = _gdf_export.rename(columns=EXPORT_COLUMN_RENAMES)
     _gdf_export.to_file(EXPORT_FP, EXPORT_DRIVER)
     return (df_results_no_match,)
 
