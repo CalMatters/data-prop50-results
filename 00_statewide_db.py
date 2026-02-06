@@ -11,9 +11,11 @@ def _(mo):
 
     Data source: [Statewide Database](https://statewidedatabase.org/d20/g24.html) (official redistricting database for the state of California)
 
-    Data uses the SR Consolidated Precincts geographic unit for the results and mapping. We ran into issues trying to use SV such as the aggregation of votes for presidential candidates exceeding the total votes cast statewide according to the Secretary of State SOV results. We expect there was double counting due across consolidated precinct subunits.
+    Data uses the Consolidated Precinct (geographic unit constructed for statistical merging purposes by SWDB) or SR Precincts geographic unit for the results and mapping. We ran into issues trying to use the Original Voting Precincts (designated by County Registrar) or SV Precincts such as the aggregation of votes for presidential candidates exceeding the total votes cast statewide according to the Secretary of State SOV results. We expect there was double counting due across consolidated precinct subunits.
 
     The vote aggregation for the SR data was closer to the SOS total. SR's aggregation was lower than the reported SOS total. This is likely explained by precincts with few voters that require redaction for privacy.
+
+    [Read more about Precinct Types at Statewide Database](https://statewidedatabase.org/diagrams.html)
     """)
     return
 
@@ -269,7 +271,7 @@ def _(df_results_no_match, mo):
     mo.md(rf"""
     # Merge and export
 
-    All of the precincts in the GIS data are retained on the merge. There are {len(df_results_no_match):,} precincts in the results dataset without a match in the GIS data. These precincts represent {df_results_no_match["TOTREG"].sum():,} registered voters and {df_results_no_match["total_votes"].sum():,} total votes across {list(df_results_no_match["county"].unique())} counties. 
+    All of the precincts in the GIS data are retained on the merge. There are {len(df_results_no_match):,} precincts in the results dataset without a match in the GIS data. These precincts represent {df_results_no_match["TOTREG"].sum():,} registered voters and {df_results_no_match["total_votes"].sum():,} total votes across {list(df_results_no_match["county"].unique())} counties.
 
     This represents a marginal number of votes. {df_results_no_match["TOTREG"].value_counts().loc[0] / len(df_results_no_match):.0%} of these precincts record zero registered voters.
     """)
