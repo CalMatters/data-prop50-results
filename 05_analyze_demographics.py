@@ -142,7 +142,12 @@ def _(np):
             yes_no_null_xor_mask, ["yes_votes", "no_votes"]
         ].fillna(0)
 
-        total_votes = df["yes_votes"] + df["no_votes"]
+        # Only recalculate total_votes for entries that match the xor mask, otherwise use the original total_votes column
+        total_votes = df["total_votes"].copy()
+        total_votes.loc[yes_no_null_xor_mask] = (
+            df.loc[yes_no_null_xor_mask, "yes_votes"]
+            + df.loc[yes_no_null_xor_mask, "no_votes"]
+        )
 
         # Initialize yes_pct as null (NaN) where both yes_votes and no_votes are null
         both_null = yes_null & no_null
