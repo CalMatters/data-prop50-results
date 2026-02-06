@@ -214,64 +214,6 @@ def _(get_majority_racial_group, np, pd):
     return add_majority_racial_group, prepare_precinct_results_df
 
 
-@app.cell
-def _(LinearRegression, np, plt):
-    def plot_lnr_yes_pct_vs_cvap(
-        df, cvap_column, yes_pct_column, group_label="White", title_suffix=""
-    ):
-        # Handle NaN values by dropping them for plotting
-        plot_data = df.dropna(subset=[cvap_column, yes_pct_column])
-
-        fig, ax = plt.subplots(figsize=(8, 6))
-
-        # Reshape data for sklearn
-        X = plot_data[cvap_column].values.reshape(-1, 1)
-        y = plot_data[yes_pct_column].values
-
-        # Fit linear regression
-        model = LinearRegression()
-        model.fit(X, y)
-
-        # Predict for line plot
-        X_range = np.linspace(0, 100, 100).reshape(-1, 1)
-        y_pred = model.predict(X_range)
-
-        # Scatter plot
-        ax.scatter(
-            plot_data[cvap_column],
-            plot_data[yes_pct_column],
-            alpha=0.6,
-            s=5,
-            edgecolor="none",
-            label="Precincts",
-        )
-
-        # Regression line
-        ax.plot(
-            X_range[:, 0],
-            y_pred,
-            color="red",
-            linewidth=1,
-            label=f"Linear fit: y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
-        )
-
-        ax.set_xlabel(f"Percent {group_label} Voters")
-        ax.set_ylabel("Yes Vote Percentage")
-        ax.set_title(
-            f"Yes Vote Percentage vs. Percent {group_label} Voters {title_suffix}"
-        )
-        ax.grid(True, alpha=0.3)
-        ax.legend()
-
-        # Set axis limits to ensure full visibility
-        ax.set_xlim(0, 100)
-        ax.set_ylim(0, 100)
-
-        # Use plt.gca() as the last expression
-        return plt.gca()
-    return (plot_lnr_yes_pct_vs_cvap,)
-
-
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -394,7 +336,9 @@ def _(pd):
             precinct_counts = grouped.size()
             yes_votes = grouped["yes_votes"].sum()
             no_votes = grouped["no_votes"].sum()
-            total_votes, yes_pct, no_pct = _calculate_vote_stats(yes_votes, no_votes)
+            total_votes, yes_pct, no_pct = _calculate_vote_stats(
+                yes_votes, no_votes
+            )
 
             return pd.DataFrame(
                 {
@@ -570,11 +514,68 @@ def _(mo):
 
 
 @app.cell
+def _(LinearRegression, np, plt):
+    def plot_lnr_yes_pct_vs_cvap(
+        df, cvap_column, yes_pct_column, group_label="White", title_suffix=""
+    ):
+        # Handle NaN values by dropping them for plotting
+        plot_data = df.dropna(subset=[cvap_column, yes_pct_column])
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        # Reshape data for sklearn
+        X = plot_data[cvap_column].values.reshape(-1, 1)
+        y = plot_data[yes_pct_column].values
+
+        # Fit linear regression
+        model = LinearRegression()
+        model.fit(X, y)
+
+        # Predict for line plot
+        X_range = np.linspace(0, 100, 100).reshape(-1, 1)
+        y_pred = model.predict(X_range)
+
+        # Scatter plot
+        ax.scatter(
+            plot_data[cvap_column],
+            plot_data[yes_pct_column],
+            alpha=0.6,
+            s=5,
+            edgecolor="none",
+            label="Precincts",
+        )
+
+        # Regression line
+        ax.plot(
+            X_range[:, 0],
+            y_pred,
+            color="red",
+            linewidth=1,
+            label=f"Linear fit: y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
+        )
+
+        ax.set_xlabel(f"Percent {group_label} Voters")
+        ax.set_ylabel("Yes Vote Percentage")
+        ax.set_title(
+            f"Yes Vote Percentage vs. Percent {group_label} Voters {title_suffix}"
+        )
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+
+        # Set axis limits to ensure full visibility
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+
+        # Use plt.gca() as the last expression
+        return plt.gca()
+    return (plot_lnr_yes_pct_vs_cvap,)
+
+
+@app.cell
 def _(mo, standardized_group_labels_pct):
     demo_group_dropdown = mo.ui.dropdown(
         options=standardized_group_labels_pct.keys(), value="white"
     )
-    demo_group_dropdown
     return (demo_group_dropdown,)
 
 
@@ -583,31 +584,25 @@ def _(
     demo_group_dropdown,
     plot_lnr_yes_pct_vs_cvap,
     precinct_results_blocks,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_blocks,
-        standardized_group_labels_pct[demo_group_dropdown.value]["blocks"],
-        "yes_pct",
-        demo_group_dropdown.value.title().replace("_", " "),
-        "(Blocks)",
-    )
-    return
-
-
-@app.cell
-def _(
-    demo_group_dropdown,
-    plot_lnr_yes_pct_vs_cvap,
     precinct_results_tracts,
     standardized_group_labels_pct,
 ):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_tracts,
-        standardized_group_labels_pct[demo_group_dropdown.value]["tracts"],
-        "yes_pct",
-        demo_group_dropdown.value.title().replace("_", " "),
-        "(Tracts)",
+    (
+        demo_group_dropdown,
+        plot_lnr_yes_pct_vs_cvap(
+            precinct_results_blocks,
+            standardized_group_labels_pct[demo_group_dropdown.value]["blocks"],
+            "yes_pct",
+            demo_group_dropdown.value.title().replace("_", " "),
+            "(Blocks)",
+        ),
+        plot_lnr_yes_pct_vs_cvap(
+            precinct_results_tracts,
+            standardized_group_labels_pct[demo_group_dropdown.value]["tracts"],
+            "yes_pct",
+            demo_group_dropdown.value.title().replace("_", " "),
+            "(Tracts)",
+        ),
     )
     return
 
@@ -624,55 +619,32 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Blocks
-    """)
-    return
-
-
-@app.cell
-def _(demo_group_dropdown):
-    demo_group_dropdown
-    return
-
-
 @app.cell
 def _(
     demo_group_dropdown,
     precinct_results_blocks,
-    standardized_group_labels_pct,
-):
-    precinct_results_blocks[
-        [
-            standardized_group_labels_pct[demo_group_dropdown.value]["blocks"],
-            "yes_pct",
-        ]
-    ].dropna().corr(method="pearson")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Tracts
-    """)
-    return
-
-
-@app.cell
-def _(
-    demo_group_dropdown,
     precinct_results_tracts,
     standardized_group_labels_pct,
 ):
-    precinct_results_tracts[
-        [
-            standardized_group_labels_pct[demo_group_dropdown.value]["tracts"],
-            "yes_pct",
+    (
+        demo_group_dropdown,
+        precinct_results_blocks[
+            [
+                standardized_group_labels_pct[demo_group_dropdown.value]["blocks"],
+                "yes_pct",
+            ]
         ]
-    ].dropna().corr(method="pearson")
+        .dropna()
+        .corr(method="pearson"),
+        precinct_results_tracts[
+            [
+                standardized_group_labels_pct[demo_group_dropdown.value]["tracts"],
+                "yes_pct",
+            ]
+        ]
+        .dropna()
+        .corr(method="pearson"),
+    )
     return
 
 
@@ -712,30 +684,24 @@ def _(majority_analysis_blocks_df, majority_analysis_tracts_df):
 def _(
     plot_lnr_yes_pct_vs_cvap,
     precinct_results_blocks,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_blocks,
-        standardized_group_labels_pct["hispanic_or_latino"]["blocks"],
-        "yes_pct",
-        "Hispanic or Latino",
-        "(Blocks)",
-    )
-    return
-
-
-@app.cell
-def _(
-    plot_lnr_yes_pct_vs_cvap,
     precinct_results_tracts,
     standardized_group_labels_pct,
 ):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_tracts,
-        standardized_group_labels_pct["hispanic_or_latino"]["tracts"],
-        "yes_pct",
-        "Hispanic or Latino",
-        "(Tracts)",
+    (
+        plot_lnr_yes_pct_vs_cvap(
+            precinct_results_blocks,
+            standardized_group_labels_pct["hispanic_or_latino"]["blocks"],
+            "yes_pct",
+            "Hispanic or Latino",
+            "(Blocks)",
+        ),
+        plot_lnr_yes_pct_vs_cvap(
+            precinct_results_tracts,
+            standardized_group_labels_pct["hispanic_or_latino"]["tracts"],
+            "yes_pct",
+            "Hispanic or Latino",
+            "(Tracts)",
+        ),
     )
     return
 
@@ -764,30 +730,24 @@ def _(majority_analysis_blocks_df, majority_analysis_tracts_df):
 def _(
     plot_lnr_yes_pct_vs_cvap,
     precinct_results_blocks,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_blocks,
-        standardized_group_labels_pct["white"]["blocks"],
-        "yes_pct",
-        "White",
-        "(Blocks)",
-    )
-    return
-
-
-@app.cell
-def _(
-    plot_lnr_yes_pct_vs_cvap,
     precinct_results_tracts,
     standardized_group_labels_pct,
 ):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_tracts,
-        standardized_group_labels_pct["white"]["tracts"],
-        "yes_pct",
-        "White",
-        "(Tracts)",
+    (
+        plot_lnr_yes_pct_vs_cvap(
+            precinct_results_blocks,
+            standardized_group_labels_pct["white"]["blocks"],
+            "yes_pct",
+            "White",
+            "(Blocks)",
+        ),
+        plot_lnr_yes_pct_vs_cvap(
+            precinct_results_tracts,
+            standardized_group_labels_pct["white"]["tracts"],
+            "yes_pct",
+            "White",
+            "(Tracts)",
+        ),
     )
     return
 
