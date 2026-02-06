@@ -98,9 +98,6 @@ def _():
 
 @app.cell
 def _():
-    RESULTS_DATA_SVPREC_FP = (
-        "./inputs/statewide_db/state_g24_sov_data_by_g24_svprec.zip"
-    )
     RESULTS_DATA_SRPREC_FP = (
         "./inputs/statewide_db/state_g24_sov_data_by_g24_srprec.zip"
     )
