@@ -154,17 +154,6 @@ def _(display_options, mo):
     return (config_data_options_multiselect,)
 
 
-@app.cell
-def _(config_data_options_multiselect, mo):
-    mo.hstack(
-        [
-            config_data_options_multiselect,
-            mo.md(f"Selected datasets: {config_data_options_multiselect.value}"),
-        ]
-    )
-    return
-
-
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -313,11 +302,23 @@ def _(mo):
 
 
 @app.cell
+def _(config_data_options_multiselect, mo):
+    mo.vstack(
+        [
+            mo.md("## Select datasets"),
+            config_data_options_multiselect,
+            mo.md(f"**Datasets: {config_data_options_multiselect.value}**"),
+        ]
+    )
+    return
+
+
+@app.cell
 def _(
-    DATASET_CONFIG,
     VOTE_STANDARD,
     add_majority_racial_group,
     calculate_yes_pct,
+    dataset_config,
     mo,
     prepare_precinct_results_df,
     read_gis_data,
@@ -542,9 +543,9 @@ def _(county_level_demo_analysis, mo):
 @app.cell
 def _(
     ANALYSIS_GROUPS,
-    DATASET_CONFIG,
     DEFAULT_MAJORITY_THRESHOLD,
     analyze_by_group,
+    dataset_config,
     pd,
     precinct_results,
 ):
@@ -712,7 +713,7 @@ def _(ANALYSIS_GROUPS, mo):
 
 @app.cell
 def _(
-    dataset_config,
+    DATASET_CONFIG,
     demo_group_dropdown,
     mo,
     plot_lnr_yes_pct_vs_cvap,
