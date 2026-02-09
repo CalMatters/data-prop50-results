@@ -544,6 +544,7 @@ def _(
     GROUP_DISPLAY_LABELS,
     county_dropdown,
     county_level_demo_analysis,
+    mo,
     pd,
 ):
     def _transform_county_series_to_dataframe(
@@ -582,18 +583,25 @@ def _(
 
 
     _county = county_dropdown.value
-    {
-        "County": county_dropdown,
-        **{
-            _cfg["display_name"]: _transform_county_series_to_dataframe(
-                county_level_demo_analysis[_cfg["id"]].loc[_county],
-                _cfg["vote_display_labels"],
-                threshold=DEFAULT_MAJORITY_THRESHOLD,
-            )
-            for _cfg in DATASET_CONFIG
-            if _county in county_level_demo_analysis[_cfg["id"]].index
-        },
-    }
+    mo.vstack(
+        [
+            county_dropdown,
+            *[
+                mo.vstack(
+                    [
+                        mo.md(f"**{_cfg['display_name']}**"),
+                        _transform_county_series_to_dataframe(
+                            county_level_demo_analysis[_cfg["id"]].loc[_county],
+                            _cfg["vote_display_labels"],
+                            threshold=DEFAULT_MAJORITY_THRESHOLD,
+                        ),
+                    ]
+                )
+                for _cfg in DATASET_CONFIG
+                if _county in county_level_demo_analysis[_cfg["id"]].index
+            ],
+        ]
+    )
     return
 
 
@@ -673,25 +681,33 @@ def _(ANALYSIS_GROUPS, mo):
 def _(
     DATASET_CONFIG,
     demo_group_dropdown,
+    mo,
     plot_lnr_yes_pct_vs_cvap,
     precinct_results,
 ):
     _group = demo_group_dropdown.value
     _cvap_col = f"{_group}_pct"
     _group_label = _group.replace("_", " ").title()
-    (
-        demo_group_dropdown,
-        *[
-            plot_lnr_yes_pct_vs_cvap(
-                precinct_results[_cfg["id"]],
-                _cvap_col,
-                "yes_pct",
-                _group_label,
-                f"({_cfg['display_name']})",
-                y_label=f"{_cfg['vote_display_labels']['yes'].removesuffix(' %')} Vote Percentage",
-            )
-            for _cfg in DATASET_CONFIG
-        ],
+    mo.vstack(
+        [
+            demo_group_dropdown,
+            *[
+                mo.vstack(
+                    [
+                        mo.md(f"**{_cfg['display_name']}**"),
+                        plot_lnr_yes_pct_vs_cvap(
+                            precinct_results[_cfg["id"]],
+                            _cvap_col,
+                            "yes_pct",
+                            _group_label,
+                            f"({_cfg['display_name']})",
+                            y_label=f"{_cfg['vote_display_labels']['yes'].removesuffix(' %')} Vote Percentage",
+                        ),
+                    ]
+                )
+                for _cfg in DATASET_CONFIG
+            ],
+        ]
     )
     return
 
@@ -709,19 +725,24 @@ def _(mo):
 
 
 @app.cell
-def _(DATASET_CONFIG, demo_group_dropdown, precinct_results):
+def _(DATASET_CONFIG, demo_group_dropdown, mo, precinct_results):
     _group = demo_group_dropdown.value
     _cvap_col = f"{_group}_pct"
-    (
-        demo_group_dropdown,
-        {
-            _cfg["display_name"]: precinct_results[_cfg["id"]][
-                [_cvap_col, "yes_pct"]
-            ]
-            .dropna()
-            .corr(method="pearson")
-            for _cfg in DATASET_CONFIG
-        },
+    mo.vstack(
+        [
+            demo_group_dropdown,
+            *[
+                mo.vstack(
+                    [
+                        mo.md(f"**{_cfg['display_name']}**"),
+                        precinct_results[_cfg["id"]][[_cvap_col, "yes_pct"]]
+                        .dropna()
+                        .corr(method="pearson"),
+                    ]
+                )
+                for _cfg in DATASET_CONFIG
+            ],
+        ]
     )
     return
 
