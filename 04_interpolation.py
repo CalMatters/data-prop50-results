@@ -517,7 +517,11 @@ def _(
         merge_keys=MERGE_KEYS,
         join_pct_columns_func=join_pct_columns,
     )
-    return block_subgroup_est_columns, cvap_block_precinct_estimates
+    return (
+        block_extensive_vars,
+        block_subgroup_est_columns,
+        cvap_block_precinct_estimates,
+    )
 
 
 @app.cell
@@ -527,6 +531,62 @@ def _(MERGE_KEYS, audited_precinct_results_gdf, cvap_block_precinct_estimates):
     )
     precincts_results_cvap_block_merged.plot()
     return (precincts_results_cvap_block_merged,)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## 2024 results
+    """)
+    return
+
+
+@app.cell
+def _(gpd):
+    pres_2024_results_gdf = gpd.read_file("./outputs/precinct_results_2024.gpkg")
+    return (pres_2024_results_gdf,)
+
+
+@app.cell
+def _(
+    MERGE_KEYS,
+    PROJECTED_CRS,
+    block_extensive_vars,
+    block_subgroup_est_columns,
+    cvap_block_gdf,
+    interpolate_and_calculate_percentages,
+    join_pct_columns,
+    pres_2024_results_gdf,
+):
+    # Validate geometries and reproject to target CRS
+    _temp_cvap_block_proj, _temp_precincts_proj = (
+        validate_and_reproject_geometries(
+            cvap_block_gdf, pres_2024_results_gdf, PROJECTED_CRS
+        )
+    )
+
+    # Set index for target GeoDataFrame
+    _temp_target_gdf = _temp_precincts_proj.set_index(MERGE_KEYS)
+
+    # Perform interpolation and calculate percentages
+    cvap_block_precinct_2024_estimates = interpolate_and_calculate_percentages(
+        source_gdf=_temp_cvap_block_proj,
+        target_gdf=_temp_target_gdf,
+        extensive_variables=block_extensive_vars,
+        subgroup_columns=block_subgroup_est_columns,
+        merge_keys=MERGE_KEYS,
+        join_pct_columns_func=join_pct_columns,
+    )
+    return (cvap_block_precinct_2024_estimates,)
+
+
+@app.cell
+def _(MERGE_KEYS, cvap_block_precinct_2024_estimates, pres_2024_results_gdf):
+    precincts_2024_results_cvap_block_merged = merge_interpolated_results(
+        pres_2024_results_gdf, cvap_block_precinct_2024_estimates, MERGE_KEYS
+    )
+    precincts_2024_results_cvap_block_merged.plot()
+    return (precincts_2024_results_cvap_block_merged,)
 
 
 @app.cell(hide_code=True)
@@ -653,12 +713,19 @@ def _(mo):
 
 
 @app.cell
-def _(precincts_results_cvap_block_merged, precincts_results_cvap_merged):
+def _(
+    precincts_2024_results_cvap_block_merged,
+    precincts_results_cvap_block_merged,
+    precincts_results_cvap_merged,
+):
     precincts_results_cvap_merged.to_file(
         "./outputs/precincts_results_cvap_tracts.gpkg", driver="GPKG"
     )
     precincts_results_cvap_block_merged.to_file(
         "./outputs/precincts_results_cvap_blocks.gpkg", driver="GPKG"
+    )
+    precincts_2024_results_cvap_block_merged.to_file(
+        "./outputs/precincts_2024_results_cvap_blocks.gpkg", driver="GPKG"
     )
     return
 

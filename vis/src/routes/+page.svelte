@@ -26,6 +26,10 @@
 
 	const ADDRESS_LABEL_LAYER_NAME = 'address_label';
 
+	// County bounds for subtle border stroke (vis/static/county_bounds.geojson)
+	const COUNTY_BOUNDS_SOURCE_ID = 'county-bounds';
+	const COUNTY_BOUNDS_URL = '/county_bounds.geojson';
+
 	// if you want to change something about the map then we should use
 	// a component-level variable, in this case we'll call it map
 	let map = null;
@@ -169,6 +173,29 @@
 									'line-color': '#ffffff',
 									'line-width': 0.75,
 									'line-opacity': 0.6
+								}
+							},
+							insertBeforeLayerId
+						);
+					}
+
+					// County borders (subtle stroke on top of precincts)
+					if (!map.getSource(COUNTY_BOUNDS_SOURCE_ID)) {
+						map.addSource(COUNTY_BOUNDS_SOURCE_ID, {
+							type: 'geojson',
+							data: COUNTY_BOUNDS_URL
+						});
+					}
+					if (!map.getLayer('county-bounds-line')) {
+						map.addLayer(
+							{
+								id: 'county-bounds-line',
+								type: 'line',
+								source: COUNTY_BOUNDS_SOURCE_ID,
+								paint: {
+									'line-color': 'rgba(120, 120, 120, 0.5)',
+									'line-width': 0.75,
+									'line-opacity': 0.7
 								}
 							},
 							insertBeforeLayerId
