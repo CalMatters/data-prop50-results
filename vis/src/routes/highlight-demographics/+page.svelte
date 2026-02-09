@@ -27,6 +27,11 @@
 
 	const ADDRESS_LABEL_LAYER_NAME = 'address_label';
 
+	// Black highlight color for increased visibility
+	const HIGHLIGHT_COLOR = '#000000';
+	const DEFAULT_OUTLINE_COLOR = '#ffffff';
+	const DEFAULT_OUTLINE_WIDTH = 0.75;
+	const HIGHLIGHT_OUTLINE_WIDTH = 1.5; // Thicker to dominate over white borders
 	// County bounds for subtle border stroke (vis/static/county_bounds.geojson)
 	const COUNTY_BOUNDS_SOURCE_ID = 'county-bounds';
 	const COUNTY_BOUNDS_URL = '/county_bounds.geojson';
@@ -173,6 +178,54 @@
 							insertBeforeLayerId
 						);
 					}
+
+					// Add highlight layer on top of the white outline layer
+					if (!map.getLayer('precincts-outline-highlight')) {
+						map.addLayer(
+							{
+								id: 'precincts-outline-highlight',
+								type: 'line',
+								source: PRECINCT_SOURCE_ID,
+								'source-layer': PRECINCT_SOURCE_LAYER,
+								filter: ['==', ['get', 'majority_racial_group'], ''],
+								paint: {
+									'line-color': HIGHLIGHT_COLOR,
+									'line-width': HIGHLIGHT_OUTLINE_WIDTH,
+									'line-opacity': 1
+								},
+								layout: {
+									visibility: 'none'
+								}
+							},
+							insertBeforeLayerId
+						);
+
+						// Ensure highlight layer renders on top of white outline
+						if (map.getLayer('precincts-outline')) {
+							map.removeLayer('precincts-outline-highlight');
+							map.addLayer(
+								{
+									id: 'precincts-outline-highlight',
+									type: 'line',
+									source: PRECINCT_SOURCE_ID,
+									'source-layer': PRECINCT_SOURCE_LAYER,
+									filter: ['==', ['get', 'majority_racial_group'], ''],
+									paint: {
+										'line-color': HIGHLIGHT_COLOR,
+										'line-width': HIGHLIGHT_OUTLINE_WIDTH,
+										'line-opacity': 1
+									},
+									layout: {
+										visibility: 'none'
+									}
+								},
+								'precincts-outline'
+							);
+						}
+					}
+
+					// Initialize outline layer styling based on current selection
+					updateOutlineLayer(selectedRacialGroup);
 
 					// County borders (subtle stroke on top of precincts)
 					if (!map.getSource(COUNTY_BOUNDS_SOURCE_ID)) {
