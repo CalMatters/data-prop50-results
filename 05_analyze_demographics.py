@@ -82,13 +82,14 @@ def _():
 @app.cell
 def _():
     VOTE_DISPLAY_PROP50 = {"yes": "Yes %", "no": "No %"}
+    # mapping yes / no to Dem / Rep to correspond with the partisan gerrymander
     VOTE_DISPLAY_2024 = {"yes": "Democrat %", "no": "Republican %"}
 
     DATASET_CONFIG = [
         {
             "id": "blocks",
             "filepath": "./outputs/precincts_results_cvap_blocks.gpkg",
-            "display_name": "Blocks (Prop 50)",
+            "display_name": "Prop 50 (Blocks)",
             "group_labels_key": "blocks",
             "vote_column_mapping": {
                 "yes_votes": "yes_votes",
@@ -99,7 +100,7 @@ def _():
         {
             "id": "blocks_2024",
             "filepath": "./outputs/precincts_2024_results_cvap_blocks.gpkg",
-            "display_name": "Blocks (2024 Presidential)",
+            "display_name": "2024 Presidential (Blocks)",
             "group_labels_key": "blocks",
             "vote_column_mapping": {
                 "yes_votes": "dem_votes",
@@ -110,7 +111,7 @@ def _():
         {
             "id": "tracts",
             "filepath": "./outputs/precincts_results_cvap_tracts.gpkg",
-            "display_name": "Tracts (Prop 50)",
+            "display_name": "Prop 50 (Tracts)",
             "group_labels_key": "tracts",
             "vote_column_mapping": {
                 "yes_votes": "yes_votes",
