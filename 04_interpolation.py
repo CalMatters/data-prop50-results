@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -517,7 +517,11 @@ def _(
         merge_keys=MERGE_KEYS,
         join_pct_columns_func=join_pct_columns,
     )
-    return block_subgroup_est_columns, cvap_block_precinct_estimates
+    return (
+        block_extensive_vars,
+        block_subgroup_est_columns,
+        cvap_block_precinct_estimates,
+    )
 
 
 @app.cell
@@ -527,6 +531,62 @@ def _(MERGE_KEYS, audited_precinct_results_gdf, cvap_block_precinct_estimates):
     )
     precincts_results_cvap_block_merged.plot()
     return (precincts_results_cvap_block_merged,)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## 2024 results
+    """)
+    return
+
+
+@app.cell
+def _(gpd):
+    pres_2024_results_gdf = gpd.read_file("./outputs/precinct_results_2024.gpkg")
+    return (pres_2024_results_gdf,)
+
+
+@app.cell
+def _(
+    MERGE_KEYS,
+    PROJECTED_CRS,
+    block_extensive_vars,
+    block_subgroup_est_columns,
+    cvap_block_gdf,
+    interpolate_and_calculate_percentages,
+    join_pct_columns,
+    pres_2024_results_gdf,
+):
+    # Validate geometries and reproject to target CRS
+    _temp_cvap_block_proj, _temp_precincts_proj = (
+        validate_and_reproject_geometries(
+            cvap_block_gdf, pres_2024_results_gdf, PROJECTED_CRS
+        )
+    )
+
+    # Set index for target GeoDataFrame
+    _temp_target_gdf = _temp_precincts_proj.set_index(MERGE_KEYS)
+
+    # Perform interpolation and calculate percentages
+    cvap_block_precinct_2024_estimates = interpolate_and_calculate_percentages(
+        source_gdf=_temp_cvap_block_proj,
+        target_gdf=_temp_target_gdf,
+        extensive_variables=block_extensive_vars,
+        subgroup_columns=block_subgroup_est_columns,
+        merge_keys=MERGE_KEYS,
+        join_pct_columns_func=join_pct_columns,
+    )
+    return (cvap_block_precinct_2024_estimates,)
+
+
+@app.cell
+def _(MERGE_KEYS, cvap_block_precinct_2024_estimates, pres_2024_results_gdf):
+    precincts_2024_results_cvap_block_merged = merge_interpolated_results(
+        pres_2024_results_gdf, cvap_block_precinct_2024_estimates, MERGE_KEYS
+    )
+    precincts_2024_results_cvap_block_merged.plot()
+    return (precincts_2024_results_cvap_block_merged,)
 
 
 @app.cell(hide_code=True)
@@ -653,12 +713,19 @@ def _(mo):
 
 
 @app.cell
-def _(precincts_results_cvap_block_merged, precincts_results_cvap_merged):
+def _(
+    precincts_2024_results_cvap_block_merged,
+    precincts_results_cvap_block_merged,
+    precincts_results_cvap_merged,
+):
     precincts_results_cvap_merged.to_file(
         "./outputs/precincts_results_cvap_tracts.gpkg", driver="GPKG"
     )
     precincts_results_cvap_block_merged.to_file(
         "./outputs/precincts_results_cvap_blocks.gpkg", driver="GPKG"
+    )
+    precincts_2024_results_cvap_block_merged.to_file(
+        "./outputs/precincts_2024_results_cvap_blocks.gpkg", driver="GPKG"
     )
     return
 
@@ -864,7 +931,7 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Merge using the validated geometries
+    ## Merge using the validated geometries
     """)
     return
 
@@ -883,6 +950,132 @@ def _(
         validate="1:1",
     )
     precincts_results_cvap_block_merged_ai.plot()
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Calculate proportion of CVAP population in interpolation
+    """)
+    return
+
+
+@app.cell
+def _(
+    block_subgroup_est_columns,
+    cvap_block_gdf,
+    cvap_gdf,
+    precincts_results_cvap_block_merged,
+    precincts_results_cvap_merged,
+    tracts_subgroup_est_columns,
+):
+    def _calculate_and_print_ratio(state_gdf, merged_gdf, columns, level_name):
+        """
+        Calculate and print the proportion of total CVAP interpolated to precincts.
+
+        Parameters
+        ----------
+        state_gdf : gpd.GeoDataFrame
+            Original state-level GeoDataFrame with source totals
+        merged_gdf : gpd.GeoDataFrame
+            Merged GeoDataFrame with interpolated precinct data
+        columns : list[str]
+            List of subgroup columns to aggregate
+        level_name : str
+            Description of the geographic level (e.g., "tract level", "block level")
+        """
+        state_total = state_gdf[columns].sum().sum()
+        interpolated_total = merged_gdf[columns].sum().sum()
+
+        ratio = interpolated_total / state_total
+
+        print(
+            f"Proportion of total CVAP interpolated to precincts ({level_name}): {ratio:.1%}"
+        )
+
+
+    _calculate_and_print_ratio(
+        cvap_gdf,
+        precincts_results_cvap_merged,
+        tracts_subgroup_est_columns,
+        "tract level",
+    )
+
+    _calculate_and_print_ratio(
+        cvap_block_gdf,
+        precincts_results_cvap_block_merged,
+        block_subgroup_est_columns,
+        "block level",
+    )
+    return
+
+
+@app.cell
+def _(
+    block_subgroup_est_columns,
+    cvap_block_gdf,
+    cvap_gdf,
+    pd,
+    precincts_results_cvap_block_merged,
+    precincts_results_cvap_merged,
+    tracts_subgroup_est_columns,
+):
+    def _create_interpolation_summary(state_gdf, merged_gdf, subgroup_columns):
+        """
+        Calculate summary statistics comparing state totals vs interpolated totals.
+
+        Parameters
+        ----------
+        state_gdf : GeoDataFrame
+            Original state-level GeoDataFrame with source data
+        merged_gdf : GeoDataFrame
+            Merged GeoDataFrame with interpolated data
+        subgroup_columns : list
+            List of column names to aggregate
+
+        Returns
+        -------
+        DataFrame
+            Summary with state_total, interpolated_total, and interpolated_pct
+        """
+        state_sums = state_gdf[subgroup_columns].sum()
+        interpolated_sums = merged_gdf[subgroup_columns].sum()
+
+        summary_df = pd.DataFrame(
+            {
+                "state_total": state_sums,
+                "interpolated_total": interpolated_sums,
+            }
+        )
+        summary_df["interpolated_pct"] = round(
+            (summary_df["interpolated_total"] / summary_df["state_total"]) * 100, 1
+        )
+        summary_df.index.name = "subgroup"
+
+        return summary_df
+
+
+    # Calculate totals for each subgroup column at the tract level
+    _tract_summary_df = _create_interpolation_summary(
+        cvap_gdf,
+        precincts_results_cvap_merged,
+        tracts_subgroup_est_columns,
+    )
+
+    # Calculate totals for each subgroup column at the block level
+    _block_summary_df = _create_interpolation_summary(
+        cvap_block_gdf,
+        precincts_results_cvap_block_merged,
+        block_subgroup_est_columns,
+    )
+
+    _tract_summary_df, _block_summary_df
+    return
+
+
+@app.cell
+def _():
     return
 
 
