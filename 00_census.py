@@ -421,7 +421,7 @@ def _():
         "CVAP_BLK23",   # Black or African American alone or in combination
         "CVAP_2OM23",   # Remainder of two or more race responses
     ]
-    # Composite columns we derive to match OMB categories and avoid double-counting.
+    # Composite columns we derive to and avoid double-counting.
     NEW_COMPOSITE_COLUMNS = [
         "_cvap_api23",  # Asian and Pacific Islander: CVAP_ASN23 + CVAP_NHP23
         "_cvap_amw23",  # American Indian / Alaska Native (non-Hispanic): CVAP_AIA23 - CVAP_AIB23 to avoid double count with Black
