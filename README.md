@@ -39,15 +39,19 @@ This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) 
 
 The notebooks follow a sequential pipeline:
 
-1. **`01_geography.py`** - Processes precinct geographic files from all counties
+1. **`00_census.py`** - Census ETL: county bounds, CVAP by tract, CVAP by block
+   - Output: `outputs/county_bounds.geojson`, `outputs/cvap_tracts.gpkg`, `outputs/cvap_blocks.gpkg`
+   - Run with: `just generate-cvap-file`
+
+2. **`01_geography.py`** - Processes precinct geographic files from all counties
    - Output: `outputs/precincts.gpkg`
    - Run with: `just generate-precincts-file`
 
-2. **`02_results.py`** - Cleans and standardizes precinct-level election results
+3. **`02_results.py`** - Cleans and standardizes precinct-level election results
    - Output: `outputs/results.csv`
    - Run with: `uv run marimo edit 02_results.py` (interactive) or `uv run 02_results.py`
 
-3. **`03_precincts_merge.py`** - Merges geography and results data
+4. **`03_precincts_merge.py`** - Merges geography and results data
    - Input: `outputs/precincts.gpkg` and `outputs/results.csv`
    - Output: `outputs/precinct_results.gpkg`
    - Run with: `just merge-precinct-results`
@@ -67,10 +71,10 @@ This will:
 
 **Note**: Marimo notebooks are just Python files - you can edit them in any editor, but the browser interface makes it easier to run and visualize results.
 
-There are three notebooks:
+Notebooks include:
 
+* `00_census.py` - Census ETL: county bounds, CVAP by tract, CVAP by block
 * `01_geography.py` - Precinct geographic data cleaning
-* `02_census.py` - CVAP by Tract
 * `02_results.py` - Precinct result data cleaning
 * `03_precincts_merge.py` - Merge precinct geography with results data
 
@@ -90,9 +94,9 @@ Reproject the voting precincts from each county into NAD83/California Albers and
  * `precinct_id` - The precinct ID from the county
  * `precinct_name` - The human-readable name included by the county, otherwise `None`
 
-#### `02_census.py` - CVAP by Tract
+#### `00_census.py` - Census ETL
 
-Produces a GIS file containing [Citizen Voting Age Population](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) (CVAP) data by census tract for California.
+Produces three GIS outputs: California county boundaries (`outputs/county_bounds.geojson`), [CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) by census tract (`outputs/cvap_tracts.gpkg`), and CVAP by block (`outputs/cvap_blocks.gpkg`). All use NAD83/California Albers (EPSG:3310). Run with `just generate-cvap-file`.
 
 #### `02_results.py` - Precinct result data cleaning
 

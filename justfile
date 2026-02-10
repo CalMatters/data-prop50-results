@@ -5,8 +5,7 @@ generate-results-file:
     uv run 02_results.py
 
 generate-cvap-file:
-    uv run 02_census.py
-    uv run 02b_census.py
+    uv run 00_census.py
 
 merge-precinct-results:
     uv run 03_precincts_merge.py
