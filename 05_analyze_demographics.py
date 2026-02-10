@@ -472,32 +472,32 @@ def _(DEFAULT_MAJORITY_THRESHOLD, pd):
 
 
 @app.cell
-def _(
-    ANALYSIS_GROUPS,
-    GROUP_DISPLAY_LABELS,
-    analyze_by_group,
-    dataset_config,
-    pd,
-    precinct_results,
-):
-    majority_analysis = {}
-    for _cfg in dataset_config:
+def _(ANALYSIS_GROUPS, GROUP_DISPLAY_LABELS, analyze_by_group, pd):
+    def build_majority_analysis_df(precinct_df, cfg):
+        """Build majority-analysis table (group rows, yes/no columns) from any precinct-level DataFrame."""
         _df = pd.DataFrame(
             {
-                g: analyze_by_group(
-                    precinct_results[_cfg["id"]], g, by_county=False
-                )
+                g: analyze_by_group(precinct_df, g, by_county=False)
                 for g in ANALYSIS_GROUPS
             }
         ).T
         _df.index = [GROUP_DISPLAY_LABELS[g] for g in ANALYSIS_GROUPS]
         _df = _df.rename(
             columns={
-                "yes_split_pct": _cfg["vote_display_labels"]["yes"],
-                "no_split_pct": _cfg["vote_display_labels"]["no"],
+                "yes_split_pct": cfg["vote_display_labels"]["yes"],
+                "no_split_pct": cfg["vote_display_labels"]["no"],
             }
         )
-        majority_analysis[_cfg["id"]] = _df
+        return _df
+    return (build_majority_analysis_df,)
+
+
+@app.cell
+def _(build_majority_analysis_df, dataset_config, precinct_results):
+    majority_analysis = {
+        _cfg["id"]: build_majority_analysis_df(precinct_results[_cfg["id"]], _cfg)
+        for _cfg in dataset_config
+    }
     return (majority_analysis,)
 
 
@@ -510,18 +510,25 @@ def _(mo):
 
 
 @app.cell
-def _(dataset_config, majority_analysis, mo):
-    mo.vstack(
-        [
-            mo.vstack(
-                [
-                    mo.md(f"{_cfg['display_name']}"),
-                    majority_analysis[_cfg["id"]],
-                ]
-            )
-            for _cfg in dataset_config
-        ]
-    )
+def _(dataset_config, mo):
+    def majority_analysis_display(analysis_dict):
+        return mo.vstack(
+            [
+                mo.vstack(
+                    [
+                        mo.md(f"{_cfg['display_name']}"),
+                        analysis_dict[_cfg["id"]],
+                    ]
+                )
+                for _cfg in dataset_config
+            ]
+        )
+    return (majority_analysis_display,)
+
+
+@app.cell
+def _(majority_analysis, majority_analysis_display):
+    majority_analysis_display(majority_analysis)
     return
 
 
@@ -537,7 +544,7 @@ def _(mo):
 def _(county_level_demo_analysis, mo):
     counties = list(county_level_demo_analysis["blocks"].index)
     county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
-    return (county_dropdown,)
+    return counties, county_dropdown
 
 
 @app.cell
@@ -685,6 +692,56 @@ def _(
             vote_shift_table,
         ]
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### County multiselect
+    """)
+    return
+
+
+@app.cell
+def _(counties, mo):
+    county_multiselect = mo.ui.multiselect(counties, full_width=True)
+    county_multiselect
+    return (county_multiselect,)
+
+
+@app.cell
+def _(
+    build_majority_analysis_df,
+    county_multiselect,
+    dataset_config,
+    majority_analysis_display,
+    mo,
+    precinct_results,
+):
+    def _county_subset_majority_display(selected_counties):
+        if not selected_counties:
+            return mo.md(
+                "Select one or more counties to see aggregated majority analysis."
+            )
+        _subset = {
+            _cfg["id"]: build_majority_analysis_df(
+                precinct_results[_cfg["id"]].loc[
+                    precinct_results[_cfg["id"]]["county"].isin(selected_counties)
+                ],
+                _cfg,
+            )
+            for _cfg in dataset_config
+        }
+        return mo.vstack(
+            [
+                mo.md(f"**Selected counties:** {', '.join(selected_counties)}"),
+                majority_analysis_display(_subset),
+            ]
+        )
+
+
+    _county_subset_majority_display(county_multiselect.value)
     return
 
 
