@@ -642,6 +642,55 @@ def _(
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    ### Vote shift
+    """)
+    return
+
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    DEFAULT_MAJORITY_THRESHOLD,
+    GROUP_DISPLAY_LABELS,
+    county_dropdown,
+    county_level_demo_analysis,
+    mo,
+    pd,
+):
+    _county = county_dropdown.value
+    _prop50_id, _pres2024_id = "blocks", "blocks_2024"
+
+    _prop50_data = county_level_demo_analysis[_prop50_id].loc[_county]
+    _pres2024_data = county_level_demo_analysis[_pres2024_id].loc[_county]
+    # Use constant until dynamic threshold setting is available.
+    _suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+
+    _vote_shift_data = [
+        {
+            "group": GROUP_DISPLAY_LABELS[g],
+            "vote_shift": round(
+                _prop50_data[f"{g}{_suffix}"] - _pres2024_data[f"{g}{_suffix}"], 1
+            ),
+        }
+        for g in ANALYSIS_GROUPS
+        if f"{g}{_suffix}" in _prop50_data.index
+        and f"{g}{_suffix}" in _pres2024_data.index
+    ]
+    vote_shift_table = pd.DataFrame(_vote_shift_data)
+
+    mo.vstack(
+        [
+            county_dropdown,
+            mo.md(f"**Vote shift (Yes % − Democrat %) for {_county}**"),
+            vote_shift_table,
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Demographic scatterplot and linear regression
 
     Linear regression is plotted for exploratory purposes. We would need to [validate the assumptions required](https://online.stat.psu.edu/stat200/lesson/12/12.3/12.3.2) to use linear regression in our final analysis. The results by majority group is currently the preferred analysis tool.
