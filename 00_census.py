@@ -415,11 +415,11 @@ def _():
     GIS_REQUIRED_COLUMNS = ["GEOID20", "geometry"]
     # RDH 2023 CVAP block-level estimates (ACS 2019–2023). Retain OMB-aligned categories as-is.
     COLUMNS_TO_RETAIN_AS_IS = [
-        "CVAP_TOT23",   # CVAP estimate for total
-        "CVAP_HSP23",   # Hispanic or Latino
-        "CVAP_WHT23",   # White alone
-        "CVAP_BLK23",   # Black or African American alone or in combination
-        "CVAP_2OM23",   # Remainder of two or more race responses
+        "CVAP_TOT23",  # CVAP estimate for total
+        "CVAP_HSP23",  # Hispanic or Latino
+        "CVAP_WHT23",  # White alone
+        "CVAP_BLK23",  # Black or African American alone or in combination
+        "CVAP_2OM23",  # Remainder of two or more race responses
     ]
     # Composite columns we derive to and avoid double-counting.
     NEW_COMPOSITE_COLUMNS = [
