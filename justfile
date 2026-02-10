@@ -2,7 +2,8 @@ generate-precincts-file:
     uv run 01_geography.py
 
 generate-results-file:
-    uv run 02_results.py
+    uv run 02a_results_2025.py
+    uv run 02b_results_2024.py
 
 generate-cvap-file:
     uv run 00_census.py
@@ -16,8 +17,8 @@ interpolate-cvap:
 generate-all-data:
     just generate-precincts-file
     just generate-results-file
-    just generate-cvap-file
     just merge-precinct-results
+    just generate-cvap-file
     just interpolate-cvap
 
 generate-demographics-pmtiles:
