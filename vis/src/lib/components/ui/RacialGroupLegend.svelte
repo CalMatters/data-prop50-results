@@ -46,7 +46,7 @@
 		</p>
 		<div class="saturation-example">
 			<div class="gradient-bar">
-				<div class="gradient-fill" style="background: linear-gradient(to right, {saturationExamples['Hispanic Or Latino'].light}, {saturationExamples['Hispanic Or Latino'].dark})"></div>
+				<div class="gradient-fill" style="background: linear-gradient(to right, #FFFFFF, #333333)"></div>
 				<div class="midpoint-indicator" title="50% - Yes wins above this line"></div>
 			</div>
 			<div class="gradient-labels">
