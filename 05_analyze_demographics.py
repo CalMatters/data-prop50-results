@@ -349,6 +349,16 @@ def _(
         f"but found {observed_null_yes_pct_count}."
     )
 
+    # Calculate vote shift from Harris to YES on Prop. 50
+    precinct_2025_results = precinct_results["blocks"]
+    precinct_2025_results["dem_pct_2024"] = caclulate_pct(
+        precinct_2025_results["dem_votes"],
+        precinct_2025_results["total_votes_2024"],
+    )
+    precinct_2025_results["vote_shift"] = round(
+        precinct_2025_results["yes_pct"] - precinct_2025_results["dem_pct_2024"], 1
+    )
+
     # Debug: county distribution of precincts with null yes_pct (validation opportunity)
     mo.vstack(
         [
@@ -995,6 +1005,10 @@ def _():
         "total_votes",
         "yes_pct",
         "no_pct",
+        "dem_votes",
+        "rep_votes",
+        "total_votes_2024",
+        "vote_shift",
         "majority_racial_group",
         "majority_racial_group_pct",
         "geometry",
