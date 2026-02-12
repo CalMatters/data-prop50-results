@@ -177,45 +177,29 @@ def _(calculate_percentage, pd):
 
 
 @app.function
-def validate_and_reproject_geometries(source_gdf, target_gdf, projected_crs):
+def validate_and_reproject_geometry(gdf, projected_crs):
     """
     Validate geometries using buffer(0) for invalid ones and reproject to target CRS.
 
     Parameters
     ----------
-    source_gdf : gpd.GeoDataFrame
-        Source GeoDataFrame (e.g., CVAP tracts or blocks)
-    target_gdf : gpd.GeoDataFrame
-        Target GeoDataFrame (e.g., precincts)
+    gdf : gpd.GeoDataFrame
+        GeoDataFrame to validate and reproject (e.g., CVAP tracts/blocks or precincts)
     projected_crs : str
         Target CRS to reproject to (e.g., "EPSG:3310")
 
     Returns
     -------
-    tuple
-        (validated_source_gdf, validated_target_gdf) both in projected_crs
+    gpd.GeoDataFrame
+        Validated and reprojected GeoDataFrame in projected_crs
     """
-    # Validate and fix source geometries
-    _temp_source_invalid = ~source_gdf.geometry.is_valid
-    _temp_source_valid = source_gdf.copy()
-    if _temp_source_invalid.any():
-        _temp_source_valid.loc[_temp_source_invalid, "geometry"] = (
-            _temp_source_valid.loc[_temp_source_invalid, "geometry"].buffer(0)
-        )
-
-    # Validate and fix target geometries
-    _temp_target_invalid = ~target_gdf.geometry.is_valid
-    _temp_target_valid = target_gdf.copy()
-    if _temp_target_invalid.any():
-        _temp_target_valid.loc[_temp_target_invalid, "geometry"] = (
-            _temp_target_valid.loc[_temp_target_invalid, "geometry"].buffer(0)
-        )
-
-    # Reproject both to target CRS
-    _temp_source_proj = _temp_source_valid.to_crs(projected_crs)
-    _temp_target_proj = _temp_target_valid.to_crs(projected_crs)
-
-    return _temp_source_proj, _temp_target_proj
+    _temp_invalid = ~gdf.geometry.is_valid
+    _temp_valid = gdf.copy()
+    if _temp_invalid.any():
+        _temp_valid.loc[_temp_invalid, "geometry"] = _temp_valid.loc[
+            _temp_invalid, "geometry"
+        ].buffer(0)
+    return _temp_valid.to_crs(projected_crs)
 
 
 @app.cell
@@ -225,7 +209,6 @@ def _(tobler):
         target_gdf,
         extensive_variables,
         subgroup_columns,
-        merge_keys,
         join_pct_columns_func,
     ):
         """
@@ -236,13 +219,11 @@ def _(tobler):
         source_gdf : gpd.GeoDataFrame
             Source GeoDataFrame (e.g., CVAP tracts or blocks) in projected CRS
         target_gdf : gpd.GeoDataFrame
-            Target GeoDataFrame (e.g., precincts) in projected CRS, indexed by merge_keys
+            Target GeoDataFrame (e.g., precincts) in projected CRS, indexed by merge keys
         extensive_variables : list[str]
             List of extensive variable column names to interpolate
         subgroup_columns : list[str]
             List of subgroup columns to sum for total calculation
-        merge_keys : list[str]
-            List of column names used as index in target_gdf
         join_pct_columns_func : callable
             Function to add percentage columns
 
@@ -332,15 +313,26 @@ def _(RESULTS_FP, read_gis_data):
 
 
 @app.cell
-def _(CVAP_FP, read_gis_data):
+def _(PROJECTED_CRS, gpd):
+    pres_2024_results_gdf = gpd.read_file("./outputs/precinct_results_2024.gpkg")
+    pres_2024_results_gdf = validate_and_reproject_geometry(
+        pres_2024_results_gdf, PROJECTED_CRS
+    )
+    return (pres_2024_results_gdf,)
+
+
+@app.cell
+def _(CVAP_FP, PROJECTED_CRS, read_gis_data):
     cvap_gdf = read_gis_data(CVAP_FP)
+    cvap_gdf = validate_and_reproject_geometry(cvap_gdf, PROJECTED_CRS)
     cvap_gdf.head()
     return (cvap_gdf,)
 
 
 @app.cell
-def _(CVAP_BLOCKS_FP, read_gis_data):
+def _(CVAP_BLOCKS_FP, PROJECTED_CRS, read_gis_data):
     cvap_block_gdf = read_gis_data(CVAP_BLOCKS_FP)
+    cvap_block_gdf = validate_and_reproject_geometry(cvap_block_gdf, PROJECTED_CRS)
     cvap_block_gdf.head()
     return (cvap_block_gdf,)
 
@@ -369,7 +361,7 @@ def _(ADDTNL_COUNTIES_PASSING_AUIDIT, AUDIT_SUMMARY_FILE_PREFIX, glob, pd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Filter
+    ## Filter
 
     I am filtering for counties where the results have passed a data audit in notebook `03`.
     """)
@@ -377,11 +369,14 @@ def _(mo):
 
 
 @app.cell
-def _(counties_passing_audit, precinct_results_gdf):
+def _(PROJECTED_CRS, counties_passing_audit, precinct_results_gdf):
     has_county_passed_audit = precinct_results_gdf["county"].isin(
         counties_passing_audit
     )
     audited_precinct_results_gdf = precinct_results_gdf[has_county_passed_audit]
+    audited_precinct_results_gdf = validate_and_reproject_geometry(
+        audited_precinct_results_gdf, PROJECTED_CRS
+    )
     audited_precinct_results_gdf
     return (audited_precinct_results_gdf,)
 
@@ -424,16 +419,8 @@ def _(CVAP_EST_COLUMN_SUFFIX, cvap_gdf):
 
 
 @app.cell
-def _(cvap_precinct_estimates):
-    # Display percentage columns
-    get_percentage_columns(cvap_precinct_estimates)
-    return
-
-
-@app.cell
 def _(
     MERGE_KEYS,
-    PROJECTED_CRS,
     audited_precinct_results_gdf,
     cvap_gdf,
     interpolate_and_calculate_percentages,
@@ -441,33 +428,22 @@ def _(
     tracts_extensive_variables_to_interpolate,
     tracts_subgroup_est_columns,
 ):
-    # Validate geometries and reproject to target CRS
-    _temp_cvap_proj, _temp_precincts_proj = validate_and_reproject_geometries(
-        cvap_gdf, audited_precinct_results_gdf, PROJECTED_CRS
-    )
-
     # Set index for target GeoDataFrame
-    _temp_target_gdf = _temp_precincts_proj.set_index(MERGE_KEYS)
+    _temp_target_gdf = audited_precinct_results_gdf.set_index(MERGE_KEYS)
 
     # Perform interpolation and calculate percentages
     cvap_precinct_estimates = interpolate_and_calculate_percentages(
-        source_gdf=_temp_cvap_proj,
+        source_gdf=cvap_gdf,
         target_gdf=_temp_target_gdf,
         extensive_variables=tracts_extensive_variables_to_interpolate,
         subgroup_columns=tracts_subgroup_est_columns,
-        merge_keys=MERGE_KEYS,
         join_pct_columns_func=join_pct_columns,
     )
-    return (cvap_precinct_estimates,)
 
-
-@app.cell
-def _(MERGE_KEYS, audited_precinct_results_gdf, cvap_precinct_estimates):
     precincts_results_cvap_merged = merge_interpolated_results(
         audited_precinct_results_gdf, cvap_precinct_estimates, MERGE_KEYS
     )
-    precincts_results_cvap_merged.plot()
-    return (precincts_results_cvap_merged,)
+    return cvap_precinct_estimates, precincts_results_cvap_merged
 
 
 @app.cell(hide_code=True)
@@ -482,7 +458,6 @@ def _(mo):
 def _(
     CVAP_COLUMN_KEYWORD,
     MERGE_KEYS,
-    PROJECTED_CRS,
     audited_precinct_results_gdf,
     cvap_block_gdf,
     interpolate_and_calculate_percentages,
@@ -498,42 +473,30 @@ def _(
         column for column in block_extensive_vars if "TOT" not in column
     ]
 
-    # Validate geometries and reproject to target CRS
-    _temp_cvap_block_proj, _temp_precincts_proj = (
-        validate_and_reproject_geometries(
-            cvap_block_gdf, audited_precinct_results_gdf, PROJECTED_CRS
-        )
-    )
-
     # Set index for target GeoDataFrame
-    _temp_target_gdf = _temp_precincts_proj.set_index(MERGE_KEYS)
+    _temp_target_gdf = audited_precinct_results_gdf.set_index(MERGE_KEYS)
 
     # Perform interpolation and calculate percentages
     cvap_block_precinct_estimates = interpolate_and_calculate_percentages(
-        source_gdf=_temp_cvap_block_proj,
+        source_gdf=cvap_block_gdf,
         target_gdf=_temp_target_gdf,
         extensive_variables=block_extensive_vars,
         subgroup_columns=block_subgroup_est_columns,
-        merge_keys=MERGE_KEYS,
         join_pct_columns_func=join_pct_columns,
+    )
+
+    precincts_results_cvap_block_merged = merge_interpolated_results(
+        audited_precinct_results_gdf, cvap_block_precinct_estimates, MERGE_KEYS
     )
     return (
         block_extensive_vars,
         block_subgroup_est_columns,
         cvap_block_precinct_estimates,
+        precincts_results_cvap_block_merged,
     )
 
 
-@app.cell
-def _(MERGE_KEYS, audited_precinct_results_gdf, cvap_block_precinct_estimates):
-    precincts_results_cvap_block_merged = merge_interpolated_results(
-        audited_precinct_results_gdf, cvap_block_precinct_estimates, MERGE_KEYS
-    )
-    precincts_results_cvap_block_merged.plot()
-    return (precincts_results_cvap_block_merged,)
-
-
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## 2024 results
@@ -542,15 +505,8 @@ def _(mo):
 
 
 @app.cell
-def _(gpd):
-    pres_2024_results_gdf = gpd.read_file("./outputs/precinct_results_2024.gpkg")
-    return (pres_2024_results_gdf,)
-
-
-@app.cell
 def _(
     MERGE_KEYS,
-    PROJECTED_CRS,
     block_extensive_vars,
     block_subgroup_est_columns,
     cvap_block_gdf,
@@ -558,35 +514,60 @@ def _(
     join_pct_columns,
     pres_2024_results_gdf,
 ):
-    # Validate geometries and reproject to target CRS
-    _temp_cvap_block_proj, _temp_precincts_proj = (
-        validate_and_reproject_geometries(
-            cvap_block_gdf, pres_2024_results_gdf, PROJECTED_CRS
-        )
-    )
-
     # Set index for target GeoDataFrame
-    _temp_target_gdf = _temp_precincts_proj.set_index(MERGE_KEYS)
+    _temp_target_gdf = pres_2024_results_gdf.set_index(MERGE_KEYS)
 
     # Perform interpolation and calculate percentages
     cvap_block_precinct_2024_estimates = interpolate_and_calculate_percentages(
-        source_gdf=_temp_cvap_block_proj,
+        source_gdf=cvap_block_gdf,
         target_gdf=_temp_target_gdf,
         extensive_variables=block_extensive_vars,
         subgroup_columns=block_subgroup_est_columns,
-        merge_keys=MERGE_KEYS,
         join_pct_columns_func=join_pct_columns,
     )
-    return (cvap_block_precinct_2024_estimates,)
 
-
-@app.cell
-def _(MERGE_KEYS, cvap_block_precinct_2024_estimates, pres_2024_results_gdf):
     precincts_2024_results_cvap_block_merged = merge_interpolated_results(
         pres_2024_results_gdf, cvap_block_precinct_2024_estimates, MERGE_KEYS
     )
-    precincts_2024_results_cvap_block_merged.plot()
     return (precincts_2024_results_cvap_block_merged,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## 2024 results to 2025 precincts
+    """)
+    return
+
+
+@app.cell
+def _(
+    MERGE_KEYS,
+    audited_precinct_results_gdf,
+    precincts_results_cvap_block_merged,
+    pres_2024_results_gdf,
+    tobler,
+):
+    RESULTS_2024_EXTENSIVE_VARS = ["dem_votes", "rep_votes", "total_votes_2024"]
+
+    _temp_target_gdf = audited_precinct_results_gdf.set_index(MERGE_KEYS)
+
+    # Perform area-weighted interpolation
+    _temp_interpolated = tobler.area_weighted.area_interpolate(
+        pres_2024_results_gdf.rename(columns={"total_votes": "total_votes_2024"}),
+        _temp_target_gdf,
+        extensive_variables=RESULTS_2024_EXTENSIVE_VARS,
+    )
+    _temp_interpolated[RESULTS_2024_EXTENSIVE_VARS] = _temp_interpolated[
+        RESULTS_2024_EXTENSIVE_VARS
+    ].apply(round)
+
+    precincts_2025_cvap_and_2024_interpolated_merged = merge_interpolated_results(
+        precincts_results_cvap_block_merged,
+        _temp_interpolated[RESULTS_2024_EXTENSIVE_VARS],
+        MERGE_KEYS,
+    )
+    return (precincts_2025_cvap_and_2024_interpolated_merged,)
 
 
 @app.cell(hide_code=True)
@@ -715,13 +696,13 @@ def _(mo):
 @app.cell
 def _(
     precincts_2024_results_cvap_block_merged,
-    precincts_results_cvap_block_merged,
+    precincts_2025_cvap_and_2024_interpolated_merged,
     precincts_results_cvap_merged,
 ):
     precincts_results_cvap_merged.to_file(
         "./outputs/precincts_results_cvap_tracts.gpkg", driver="GPKG"
     )
-    precincts_results_cvap_block_merged.to_file(
+    precincts_2025_cvap_and_2024_interpolated_merged.to_file(
         "./outputs/precincts_results_cvap_blocks.gpkg", driver="GPKG"
     )
     precincts_2024_results_cvap_block_merged.to_file(
@@ -749,7 +730,7 @@ def _(mo):
     return
 
 
-@app.cell
+@app.cell(disabled=True)
 def _(PROJECTED_CRS, Point, audited_precinct_results_gdf, cvap_gdf):
     # Check CRS of both GeoDataFrames
     print(f"CVAP GDF CRS: {cvap_gdf.crs}")
@@ -838,7 +819,7 @@ def _(PROJECTED_CRS, Point, audited_precinct_results_gdf, cvap_gdf):
     return cvap_gdf_ai_validated, precincts_gdf_ai_validated
 
 
-@app.cell
+@app.cell(disabled=True)
 def _(
     MERGE_KEYS,
     cvap_gdf_ai_validated,
@@ -872,42 +853,29 @@ def _(
     return
 
 
-@app.cell
+@app.cell(disabled=True)
 def _(
     CVAP_COLUMN_KEYWORD,
     MERGE_KEYS,
-    PROJECTED_CRS,
     cvap_block_gdf,
     join_pct_columns,
     precincts_gdf_ai_validated,
     tobler,
 ):
-    # Validate and reproject block geometries
-    _temp_cvap_block_invalid = ~cvap_block_gdf.geometry.is_valid
-    if _temp_cvap_block_invalid.any():
-        print(
-            f"Making {_temp_cvap_block_invalid.sum()} invalid block geometries valid..."
-        )
-        cvap_block_gdf.loc[_temp_cvap_block_invalid, "geometry"] = (
-            cvap_block_gdf.loc[_temp_cvap_block_invalid, "geometry"].buffer(0)
-        )
-
-    _temp_cvap_block_gdf_proj = cvap_block_gdf.to_crs(PROJECTED_CRS)
-
+    # cvap_block_gdf is already validated and reprojected in read_data
     _temp_block_extensive_vars = [
         column
-        for column in list(_temp_cvap_block_gdf_proj)
+        for column in list(cvap_block_gdf)
         if CVAP_COLUMN_KEYWORD in column.upper()
     ]
     _temp_block_subgroup_est_columns = [
         column for column in _temp_block_extensive_vars if "TOT" not in column
     ]
 
-    # Use the validated and reprojected geometries
     _temp_target_gdf = precincts_gdf_ai_validated.set_index(MERGE_KEYS)
 
     cvap_block_precinct_estimates_ai = tobler.area_weighted.area_interpolate(
-        _temp_cvap_block_gdf_proj,
+        cvap_block_gdf,
         _temp_target_gdf,
         extensive_variables=_temp_block_extensive_vars,
     )
@@ -936,7 +904,7 @@ def _(mo):
     return
 
 
-@app.cell
+@app.cell(disabled=True)
 def _(
     MERGE_KEYS,
     audited_precinct_results_gdf,
