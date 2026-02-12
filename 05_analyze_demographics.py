@@ -570,7 +570,7 @@ def _(mo):
 
 @app.cell
 def _(county_level_demo_analysis, mo):
-    counties = list(county_level_demo_analysis["blocks"].index)
+    counties = sorted(list(county_level_demo_analysis["blocks"].index))
     county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
     return counties, county_dropdown
 
