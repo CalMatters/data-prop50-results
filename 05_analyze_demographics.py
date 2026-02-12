@@ -710,6 +710,7 @@ def _(DEFAULT_MAJORITY_THRESHOLD):
 
 @app.cell
 def _(
+    ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
@@ -718,20 +719,13 @@ def _(
     mo,
     pd,
 ):
-    VOTE_SHIFT_TABLE_GROUPS = (
-        "asian",
-        "black_or_african_american",
-        "white",
-        "multiracial",
-    )
-
     prop50_by_county = county_level_demo_analysis[PROP50_DATASET_ID]
     pres2024_by_county = county_level_demo_analysis[PRES2024_DATASET_ID]
 
 
     def vote_shift_row_for_county(county):
         row = {"county": county}
-        for group_id in VOTE_SHIFT_TABLE_GROUPS:
+        for group_id in ANALYSIS_GROUPS:
             value = compute_vote_shift(
                 prop50_by_county.loc[county],
                 pres2024_by_county.loc[county],
@@ -745,9 +739,7 @@ def _(
     vote_shift_by_county = pd.DataFrame(
         [vote_shift_row_for_county(county) for county in prop50_by_county.index]
     )
-    column_order = ["county"] + [
-        GROUP_DISPLAY_LABELS[g] for g in VOTE_SHIFT_TABLE_GROUPS
-    ]
+    column_order = ["county"] + [GROUP_DISPLAY_LABELS[g] for g in ANALYSIS_GROUPS]
     vote_shift_by_county = vote_shift_by_county[
         [c for c in column_order if c in vote_shift_by_county.columns]
     ]
