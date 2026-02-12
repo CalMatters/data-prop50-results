@@ -340,8 +340,8 @@ def _(
     null_votes = (
         _df_validate["yes_votes"].isnull() & _df_validate["no_votes"].isnull()
     )
-    total_votes = _df_validate["yes_votes"] + _df_validate["no_votes"]
-    has_zero_total_votes = total_votes == 0
+    _total_votes = _df_validate["yes_votes"] + _df_validate["no_votes"]
+    has_zero_total_votes = _total_votes == 0
     expected_null_yes_pct_count = (null_votes | has_zero_total_votes).sum()
     observed_null_yes_pct_count = _df_validate["yes_pct"].isna().sum()
     assert expected_null_yes_pct_count == observed_null_yes_pct_count, (
@@ -365,14 +365,14 @@ def _(
 def _(precinct_results):
     TOTAL_YES_VOTES = 7453339
     TOTAL_NO_VOTES = 4116998
-    total_votes = TOTAL_YES_VOTES + TOTAL_NO_VOTES
+    total_votes_from_sov = TOTAL_YES_VOTES + TOTAL_NO_VOTES
 
     print(
-        f"Out of a total of {total_votes:,} votes cast, there were {TOTAL_YES_VOTES:,} 'Yes' votes and {TOTAL_NO_VOTES:,} 'No' votes on Prop 50.\n"
+        f"Out of a total of {total_votes_from_sov:,} votes cast, there were {TOTAL_YES_VOTES:,} 'Yes' votes and {TOTAL_NO_VOTES:,} 'No' votes on Prop 50.\n"
     )
 
     analysis_total_votes = precinct_results["blocks"]["total_votes"].sum()
-    analysis_total_votes_pct = analysis_total_votes / total_votes
+    analysis_total_votes_pct = analysis_total_votes / total_votes_from_sov
 
     print(
         f"Our analysis has processed data representing {analysis_total_votes_pct:.1%} of votes cast"
