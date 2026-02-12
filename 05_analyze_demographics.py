@@ -129,7 +129,29 @@ def _():
             "vote_display_labels": VOTE_DISPLAY_PROP50,
         },
     ]
-    return (DATASET_CONFIG,)
+
+    display_options = [
+        config_option["display_name"] for config_option in DATASET_CONFIG
+    ]
+    return DATASET_CONFIG, display_options
+
+
+@app.cell
+def _(DATASET_CONFIG, config_data_options_multiselect):
+    dataset_config = [
+        config_entry
+        for config_entry in DATASET_CONFIG
+        if config_entry["display_name"] in config_data_options_multiselect.value
+    ]
+    return (dataset_config,)
+
+
+@app.cell
+def _(display_options, mo):
+    config_data_options_multiselect = mo.ui.multiselect(
+        options=display_options, value=display_options
+    )
+    return (config_data_options_multiselect,)
 
 
 @app.cell(hide_code=True)
@@ -280,11 +302,23 @@ def _(mo):
 
 
 @app.cell
+def _(config_data_options_multiselect, mo):
+    mo.vstack(
+        [
+            mo.md("## Select datasets"),
+            config_data_options_multiselect,
+            mo.md(f"**Datasets: {config_data_options_multiselect.value}**"),
+        ]
+    )
+    return
+
+
+@app.cell
 def _(
-    DATASET_CONFIG,
     VOTE_STANDARD,
     add_majority_racial_group,
     calculate_yes_pct,
+    dataset_config,
     mo,
     prepare_precinct_results_df,
     read_gis_data,
@@ -292,7 +326,7 @@ def _(
     standardize_vote_columns,
 ):
     precinct_results = {}
-    for _cfg in DATASET_CONFIG:
+    for _cfg in dataset_config:
         df = read_gis_data(_cfg["filepath"], _cfg["id"])
         df = standardize_vote_columns(df, _cfg["vote_source_to_standard"])
         df = standardize_demographic_columns(df, _cfg["demographic_schema"])
@@ -438,32 +472,32 @@ def _(DEFAULT_MAJORITY_THRESHOLD, pd):
 
 
 @app.cell
-def _(
-    ANALYSIS_GROUPS,
-    DATASET_CONFIG,
-    GROUP_DISPLAY_LABELS,
-    analyze_by_group,
-    pd,
-    precinct_results,
-):
-    majority_analysis = {}
-    for _cfg in DATASET_CONFIG:
+def _(ANALYSIS_GROUPS, GROUP_DISPLAY_LABELS, analyze_by_group, pd):
+    def build_majority_analysis_df(precinct_df, cfg):
+        """Build majority-analysis table (group rows, yes/no columns) from any precinct-level DataFrame."""
         _df = pd.DataFrame(
             {
-                g: analyze_by_group(
-                    precinct_results[_cfg["id"]], g, by_county=False
-                )
+                g: analyze_by_group(precinct_df, g, by_county=False)
                 for g in ANALYSIS_GROUPS
             }
         ).T
         _df.index = [GROUP_DISPLAY_LABELS[g] for g in ANALYSIS_GROUPS]
         _df = _df.rename(
             columns={
-                "yes_split_pct": _cfg["vote_display_labels"]["yes"],
-                "no_split_pct": _cfg["vote_display_labels"]["no"],
+                "yes_split_pct": cfg["vote_display_labels"]["yes"],
+                "no_split_pct": cfg["vote_display_labels"]["no"],
             }
         )
-        majority_analysis[_cfg["id"]] = _df
+        return _df
+    return (build_majority_analysis_df,)
+
+
+@app.cell
+def _(build_majority_analysis_df, dataset_config, precinct_results):
+    majority_analysis = {
+        _cfg["id"]: build_majority_analysis_df(precinct_results[_cfg["id"]], _cfg)
+        for _cfg in dataset_config
+    }
     return (majority_analysis,)
 
 
@@ -476,18 +510,25 @@ def _(mo):
 
 
 @app.cell
-def _(DATASET_CONFIG, majority_analysis, mo):
-    mo.vstack(
-        [
-            mo.vstack(
-                [
-                    mo.md(f"{_cfg['display_name']}"),
-                    majority_analysis[_cfg["id"]],
-                ]
-            )
-            for _cfg in DATASET_CONFIG
-        ]
-    )
+def _(dataset_config, mo):
+    def majority_analysis_display(analysis_dict):
+        return mo.vstack(
+            [
+                mo.vstack(
+                    [
+                        mo.md(f"{_cfg['display_name']}"),
+                        analysis_dict[_cfg["id"]],
+                    ]
+                )
+                for _cfg in dataset_config
+            ]
+        )
+    return (majority_analysis_display,)
+
+
+@app.cell
+def _(majority_analysis, majority_analysis_display):
+    majority_analysis_display(majority_analysis)
     return
 
 
@@ -503,20 +544,20 @@ def _(mo):
 def _(county_level_demo_analysis, mo):
     counties = list(county_level_demo_analysis["blocks"].index)
     county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
-    return (county_dropdown,)
+    return counties, county_dropdown
 
 
 @app.cell
 def _(
     ANALYSIS_GROUPS,
-    DATASET_CONFIG,
     DEFAULT_MAJORITY_THRESHOLD,
     analyze_by_group,
+    dataset_config,
     pd,
     precinct_results,
 ):
     county_level_demo_analysis = {}
-    for _cfg in DATASET_CONFIG:
+    for _cfg in dataset_config:
         _df = pd.concat(
             [
                 analyze_by_group(
@@ -602,6 +643,105 @@ def _(
             ],
         ]
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Vote shift
+    """)
+    return
+
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    DEFAULT_MAJORITY_THRESHOLD,
+    GROUP_DISPLAY_LABELS,
+    county_dropdown,
+    county_level_demo_analysis,
+    mo,
+    pd,
+):
+    _county = county_dropdown.value
+    _prop50_id, _pres2024_id = "blocks", "blocks_2024"
+
+    _prop50_data = county_level_demo_analysis[_prop50_id].loc[_county]
+    _pres2024_data = county_level_demo_analysis[_pres2024_id].loc[_county]
+    # Use constant until dynamic threshold setting is available.
+    _suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+
+    _vote_shift_data = [
+        {
+            "group": GROUP_DISPLAY_LABELS[g],
+            "vote_shift": round(
+                _prop50_data[f"{g}{_suffix}"] - _pres2024_data[f"{g}{_suffix}"], 1
+            ),
+        }
+        for g in ANALYSIS_GROUPS
+        if f"{g}{_suffix}" in _prop50_data.index
+        and f"{g}{_suffix}" in _pres2024_data.index
+    ]
+    vote_shift_table = pd.DataFrame(_vote_shift_data)
+
+    mo.vstack(
+        [
+            county_dropdown,
+            mo.md(f"**Vote shift (Yes % − Democrat %) for {_county}**"),
+            vote_shift_table,
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### County multiselect
+    """)
+    return
+
+
+@app.cell
+def _(counties, mo):
+    county_multiselect = mo.ui.multiselect(counties, full_width=True)
+    county_multiselect
+    return (county_multiselect,)
+
+
+@app.cell
+def _(
+    build_majority_analysis_df,
+    county_multiselect,
+    dataset_config,
+    majority_analysis_display,
+    mo,
+    precinct_results,
+):
+    def _county_subset_majority_display(selected_counties):
+        if not selected_counties:
+            return mo.md(
+                "Select one or more counties to see aggregated majority analysis."
+            )
+        _subset = {
+            _cfg["id"]: build_majority_analysis_df(
+                precinct_results[_cfg["id"]].loc[
+                    precinct_results[_cfg["id"]]["county"].isin(selected_counties)
+                ],
+                _cfg,
+            )
+            for _cfg in dataset_config
+        }
+        return mo.vstack(
+            [
+                mo.md(f"**Selected counties:** {', '.join(selected_counties)}"),
+                majority_analysis_display(_subset),
+            ]
+        )
+
+
+    _county_subset_majority_display(county_multiselect.value)
     return
 
 
@@ -842,13 +982,13 @@ def _():
 
 @app.cell
 def _(
-    DATASET_CONFIG,
     MAP_EXPORT_COLUMNS,
     MAP_EXPORT_DRIVER,
+    dataset_config,
     pathlib,
     precinct_results,
 ):
-    for _cfg in DATASET_CONFIG:
+    for _cfg in dataset_config:
         _path = pathlib.Path(
             f"./outputs/precinct_results_plus_demographics_{_cfg['id']}.geojson"
         )
