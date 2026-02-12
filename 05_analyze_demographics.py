@@ -693,40 +693,110 @@ def _(mo):
 
 
 @app.cell
+def _(DEFAULT_MAJORITY_THRESHOLD):
+    PROP50_DATASET_ID = "blocks"
+    PRES2024_DATASET_ID = "blocks_2024"
+    YES_PCT_SUFFIX = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+
+
+    def compute_vote_shift(prop50_series, pres2024_series, group_id):
+        """Vote shift (Yes % − Democrat %) for one group; returns None if key missing."""
+        key = f"{group_id}{YES_PCT_SUFFIX}"
+        if key not in prop50_series.index or key not in pres2024_series.index:
+            return None
+        return round(float(prop50_series[key] - pres2024_series[key]), 1)
+    return PRES2024_DATASET_ID, PROP50_DATASET_ID, compute_vote_shift
+
+
+@app.cell
+def _(
+    GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    compute_vote_shift,
+    county_level_demo_analysis,
+    mo,
+    pd,
+):
+    VOTE_SHIFT_TABLE_GROUPS = (
+        "asian",
+        "black_or_african_american",
+        "white",
+        "multiracial",
+    )
+
+    prop50_by_county = county_level_demo_analysis[PROP50_DATASET_ID]
+    pres2024_by_county = county_level_demo_analysis[PRES2024_DATASET_ID]
+
+
+    def vote_shift_row_for_county(county):
+        row = {"county": county}
+        for group_id in VOTE_SHIFT_TABLE_GROUPS:
+            value = compute_vote_shift(
+                prop50_by_county.loc[county],
+                pres2024_by_county.loc[county],
+                group_id,
+            )
+            if value is not None:
+                row[GROUP_DISPLAY_LABELS[group_id]] = value
+        return row
+
+
+    vote_shift_by_county = pd.DataFrame(
+        [vote_shift_row_for_county(county) for county in prop50_by_county.index]
+    )
+    column_order = ["county"] + [
+        GROUP_DISPLAY_LABELS[g] for g in VOTE_SHIFT_TABLE_GROUPS
+    ]
+    vote_shift_by_county = vote_shift_by_county[
+        [c for c in column_order if c in vote_shift_by_county.columns]
+    ]
+
+    mo.vstack(
+        [
+            mo.md("**Vote shift (Yes % − Democrat %) by county (statewide)**"),
+            vote_shift_by_county,
+        ]
+    )
+    return
+
+
+@app.cell
 def _(
     ANALYSIS_GROUPS,
-    DEFAULT_MAJORITY_THRESHOLD,
     GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    compute_vote_shift,
     county_dropdown,
     county_level_demo_analysis,
     mo,
     pd,
 ):
-    _county = county_dropdown.value
-    _prop50_id, _pres2024_id = "blocks", "blocks_2024"
-
-    _prop50_data = county_level_demo_analysis[_prop50_id].loc[_county]
-    _pres2024_data = county_level_demo_analysis[_pres2024_id].loc[_county]
-    # Use constant until dynamic threshold setting is available.
-    _suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
-
-    _vote_shift_data = [
-        {
-            "group": GROUP_DISPLAY_LABELS[g],
-            "vote_shift": round(
-                _prop50_data[f"{g}{_suffix}"] - _pres2024_data[f"{g}{_suffix}"], 1
-            ),
-        }
-        for g in ANALYSIS_GROUPS
-        if f"{g}{_suffix}" in _prop50_data.index
-        and f"{g}{_suffix}" in _pres2024_data.index
+    _selected_county = county_dropdown.value
+    prop50_row = county_level_demo_analysis[PROP50_DATASET_ID].loc[
+        _selected_county
     ]
-    vote_shift_table = pd.DataFrame(_vote_shift_data)
+    pres2024_row = county_level_demo_analysis[PRES2024_DATASET_ID].loc[
+        _selected_county
+    ]
+
+    vote_shift_rows = []
+    for group_id in ANALYSIS_GROUPS:
+        value = compute_vote_shift(prop50_row, pres2024_row, group_id)
+        if value is not None:
+            vote_shift_rows.append(
+                {
+                    "group": GROUP_DISPLAY_LABELS[group_id],
+                    "vote_shift": value,
+                }
+            )
+    vote_shift_table = pd.DataFrame(vote_shift_rows)
 
     mo.vstack(
         [
             county_dropdown,
-            mo.md(f"**Vote shift (Yes % − Democrat %) for {_county}**"),
+            mo.md(f"**Vote shift (Yes % − Democrat %) for {_selected_county}**"),
             vote_shift_table,
         ]
     )
