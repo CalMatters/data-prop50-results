@@ -1,9 +1,13 @@
 <script>
 	// Svelte Components
+	import CountySelect from '$lib/components/ui/CountySelect.svelte';
 	import Credits from '$lib/components/ui/Credits.svelte';
 	import Header from '$lib/components/ui/Header.svelte';
 	import MapLibreMap from '$lib/components/maps/MapLibreMap.svelte';
- 	import RacialGroupLegend from '$lib/components/ui/RacialGroupLegend.svelte';
+	import RacialGroupLegend from '$lib/components/ui/RacialGroupLegend.svelte';
+
+	// this is the bounding boxes of each county
+	import counties from '$lib/ca-county-bounding-boxes.json';
 
 	// this is a JS object that should form the basis of what you
 	// pass as the `style` prop to <MapLibreMap />
@@ -30,9 +34,46 @@
 	const COUNTY_BOUNDS_SOURCE_ID = 'county-bounds';
 	const COUNTY_BOUNDS_URL = '/county_bounds.geojson';
 
+	// Color for selected county boundary
+	const SELECTED_COUNTY_STROKE_COLOR = '#212121';
+	const SELECTED_COUNTY_STROKE_WIDTH = 2;
+
+	let { data } = $props();
+	let { county } = data;
+
 	// if you want to change something about the map then we should use
 	// a component-level variable, in this case we'll call it map
-	let map = null;
+	let map = $state(null);
+	let selectedCounty = $state(null);
+
+	function zoomToAndHighlightSelectedCounty() {
+		// create a bbox for the selected county
+		const bbox = [
+			[selectedCounty?.xmin, selectedCounty?.ymin],
+			[selectedCounty?.xmax, selectedCounty?.ymax]
+		];
+
+		// set the map to those boundaries
+		map.fitBounds(bbox, { padding: 40 });
+
+		// use a maplibre expression to only show the border
+		// of the selected county
+		// https://maplibre.org/maplibre-style-spec/expressions/
+		map.setPaintProperty('selected-county-bounds-line', 'line-width', [
+			'case',
+			['==', ['get', 'NAME'], selectedCounty.COUNTY_NAME],
+			SELECTED_COUNTY_STROKE_WIDTH,
+			0
+		]);
+	}
+
+	$effect(() => {
+		// check for variables and declare dependencies at the
+		// same time - https://svelte.dev/docs/svelte/$effect
+		if (!map || !selectedCounty) return;
+
+		zoomToAndHighlightSelectedCounty();
+	});
 </script>
 
 <main class="graphic">
@@ -40,6 +81,14 @@
 		title="Precinct Results and Demographics"
 		copy="Explore voting results and demographic data by precinct. Colors represent the majority racial group in each precinct based on Census American Community Survey Citizen Voting Age Population (CVAP) data."
 		size="inline"
+	/>
+
+	<CountySelect
+		initialValue={county}
+		label="Selected county"
+		onchange={(county) => {
+			selectedCounty = counties.find((d) => d.COUNTY_NAME.toLowerCase() === county?.toLowerCase());
+		}}
 	/>
 
 	<RacialGroupLegend />
@@ -60,13 +109,15 @@
 						});
 					}
 
-					const insertBeforeLayerId = map.getStyle()?.layers?.find((l) => l.id === ADDRESS_LABEL_LAYER_NAME)?.id;
+					const insertBeforeLayerId = map
+						.getStyle()
+						?.layers?.find((l) => l.id === ADDRESS_LABEL_LAYER_NAME)?.id;
 
 					if (!map.getLayer('precincts-fill')) {
 						// Build fill-color expression using colors from guide.scss CSS variables
 						// Colors are explicitly sourced from RACIAL_GROUP_COLORS which references guide.scss
 						// Saturation varies based on yes_pct (0-100): higher yes_pct = higher saturation
-						
+
 						// Normalize racial group first
 						const normalizedGroup = [
 							'coalesce',
@@ -84,10 +135,10 @@
 							],
 							'__null__'
 						];
-						
+
 						// Get yes_pct value (default to 0 if missing)
 						const yesPct = ['coalesce', ['get', 'yes_pct'], 0];
-						
+
 						// Create fill-color expression that interpolates saturation based on yes_pct
 						// Using exponential interpolation and very light colors at 0% for more dramatic contrast
 						const fillColorExpression = [
@@ -98,9 +149,12 @@
 								'interpolate',
 								['exponential', 1.5],
 								yesPct,
-								0, '#E8F2FA', // Very light blue (almost white)
-								50, '#9BC0E0', // Medium blue
-								100, RACIAL_GROUP_COLORS['White'] // Full saturation blue_500
+								0,
+								'#E8F2FA', // Very light blue (almost white)
+								50,
+								'#9BC0E0', // Medium blue
+								100,
+								RACIAL_GROUP_COLORS['White'] // Full saturation blue_500
 							],
 							// Multiracial: interpolate from very light violet to saturated violet
 							['==', normalizedGroup, 'Multiracial'],
@@ -108,9 +162,12 @@
 								'interpolate',
 								['exponential', 1.5],
 								yesPct,
-								0, '#F0E8F7', // Very light violet (almost white)
-								50, '#C9A5E1', // Medium violet
-								100, RACIAL_GROUP_COLORS['Multiracial'] // Full saturation violet_500
+								0,
+								'#F0E8F7', // Very light violet (almost white)
+								50,
+								'#C9A5E1', // Medium violet
+								100,
+								RACIAL_GROUP_COLORS['Multiracial'] // Full saturation violet_500
 							],
 							// Hispanic Or Latino: interpolate from very light orange to saturated orange
 							['==', normalizedGroup, 'Hispanic Or Latino'],
@@ -118,9 +175,12 @@
 								'interpolate',
 								['exponential', 1.5],
 								yesPct,
-								0, '#FBF0E5', // Very light orange (almost white)
-								50, '#F2B872', // Medium orange
-								100, RACIAL_GROUP_COLORS['Hispanic Or Latino'] // Full saturation orange_500
+								0,
+								'#FBF0E5', // Very light orange (almost white)
+								50,
+								'#F2B872', // Medium orange
+								100,
+								RACIAL_GROUP_COLORS['Hispanic Or Latino'] // Full saturation orange_500
 							],
 							// Black Or African American: interpolate from very light green to saturated green
 							['==', normalizedGroup, 'Black Or African American'],
@@ -128,9 +188,12 @@
 								'interpolate',
 								['exponential', 1.5],
 								yesPct,
-								0, '#E8F5E3', // Very light green (almost white)
-								50, '#8DCC6F', // Medium green
-								100, RACIAL_GROUP_COLORS['Black Or African American'] // Full saturation green_500
+								0,
+								'#E8F5E3', // Very light green (almost white)
+								50,
+								'#8DCC6F', // Medium green
+								100,
+								RACIAL_GROUP_COLORS['Black Or African American'] // Full saturation green_500
 							],
 							// Asian: interpolate from very light red to saturated red
 							['==', normalizedGroup, 'Asian'],
@@ -138,9 +201,12 @@
 								'interpolate',
 								['exponential', 1.5],
 								yesPct,
-								0, '#FAE8E6', // Very light red (almost white)
-								50, '#E18A7F', // Medium red
-								100, RACIAL_GROUP_COLORS['Asian'] // Full saturation red_500
+								0,
+								'#FAE8E6', // Very light red (almost white)
+								50,
+								'#E18A7F', // Medium red
+								100,
+								RACIAL_GROUP_COLORS['Asian'] // Full saturation red_500
 							],
 							// Default: grey for null/unknown values
 							RACIAL_GROUP_COLORS[null]
@@ -202,6 +268,27 @@
 						);
 					}
 
+					if (!map.getLayer('selected-county-bounds-line')) {
+						map.addLayer(
+							{
+								id: 'selected-county-bounds-line',
+								type: 'line',
+								source: COUNTY_BOUNDS_SOURCE_ID,
+								paint: {
+									'line-color': SELECTED_COUNTY_STROKE_COLOR,
+									'line-width': [
+										'case',
+										['==', ['get', 'NAME'], 'NULL'],
+										SELECTED_COUNTY_STROKE_WIDTH,
+										0
+									],
+									'line-opacity': 0.7
+								}
+							},
+							insertBeforeLayerId
+						);
+					}
+
 					// Add click handler for popup
 					const popup = new maplibregl.Popup({
 						closeButton: true,
@@ -218,12 +305,9 @@
 						const yesPct = feature.properties.yes_pct;
 
 						// Format the percentage values
-						const groupPctFormatted = majorityGroupPct != null 
-							? Math.round(majorityGroupPct) 
-							: 'N/A';
-						const yesPctFormatted = yesPct != null 
-							? Math.round(yesPct) 
-							: 'N/A';
+						const groupPctFormatted =
+							majorityGroupPct != null ? Math.round(majorityGroupPct) : 'N/A';
+						const yesPctFormatted = yesPct != null ? Math.round(yesPct) : 'N/A';
 
 						// Format the group label - for multiracial, move percentage into parentheses
 						let groupLabel;
@@ -248,10 +332,7 @@
 							</div>
 						`;
 
-						popup
-							.setLngLat(e.lngLat)
-							.setHTML(popupContent)
-							.addTo(map);
+						popup.setLngLat(e.lngLat).setHTML(popupContent).addTo(map);
 					});
 
 					// Change cursor on hover

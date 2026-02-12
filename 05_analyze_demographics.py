@@ -340,13 +340,23 @@ def _(
     null_votes = (
         _df_validate["yes_votes"].isnull() & _df_validate["no_votes"].isnull()
     )
-    total_votes = _df_validate["yes_votes"] + _df_validate["no_votes"]
-    has_zero_total_votes = total_votes == 0
+    _total_votes = _df_validate["yes_votes"] + _df_validate["no_votes"]
+    has_zero_total_votes = _total_votes == 0
     expected_null_yes_pct_count = (null_votes | has_zero_total_votes).sum()
     observed_null_yes_pct_count = _df_validate["yes_pct"].isna().sum()
     assert expected_null_yes_pct_count == observed_null_yes_pct_count, (
         f"Expected {expected_null_yes_pct_count} null values in 'yes_pct', "
         f"but found {observed_null_yes_pct_count}."
+    )
+
+    # Calculate vote shift from Harris to YES on Prop. 50
+    precinct_2025_results = precinct_results["blocks"]
+    precinct_2025_results["dem_pct_2024"] = caclulate_pct(
+        precinct_2025_results["dem_votes"],
+        precinct_2025_results["total_votes_2024"],
+    )
+    precinct_2025_results["vote_shift"] = round(
+        precinct_2025_results["yes_pct"] - precinct_2025_results["dem_pct_2024"], 1
     )
 
     # Debug: county distribution of precincts with null yes_pct (validation opportunity)
@@ -359,6 +369,34 @@ def _(
         ]
     )
     return (precinct_results,)
+
+
+@app.cell
+def _(precinct_results):
+    TOTAL_YES_VOTES = 7453339
+    TOTAL_NO_VOTES = 4116998
+    total_votes_from_sov = TOTAL_YES_VOTES + TOTAL_NO_VOTES
+
+    print(
+        f"Out of a total of {total_votes_from_sov:,} votes cast, there were {TOTAL_YES_VOTES:,} 'Yes' votes and {TOTAL_NO_VOTES:,} 'No' votes on Prop 50.\n"
+    )
+
+    analysis_total_votes = precinct_results["blocks"]["total_votes"].sum()
+    analysis_total_votes_pct = analysis_total_votes / total_votes_from_sov
+
+    print(
+        f"Our analysis has processed data representing {analysis_total_votes_pct:.1%} of votes cast"
+    )
+
+    analysis_yes_votes = precinct_results["blocks"]["yes_votes"].sum()
+    analysis_no_votes = precinct_results["blocks"]["no_votes"].sum()
+
+    analysis_yes_proportion = analysis_yes_votes / TOTAL_YES_VOTES
+    analysis_no_proportion = analysis_no_votes / TOTAL_NO_VOTES
+
+    print(f"YES VOTES: {analysis_yes_proportion:.1%}")
+    print(f"NO VOTES: {analysis_no_proportion:.1%}")
+    return
 
 
 @app.cell(hide_code=True)
@@ -542,7 +580,7 @@ def _(mo):
 
 @app.cell
 def _(county_level_demo_analysis, mo):
-    counties = list(county_level_demo_analysis["blocks"].index)
+    counties = sorted(list(county_level_demo_analysis["blocks"].index))
     county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
     return counties, county_dropdown
 
@@ -1037,6 +1075,10 @@ def _():
         "total_votes",
         "yes_pct",
         "no_pct",
+        "dem_votes",
+        "rep_votes",
+        "total_votes_2024",
+        "vote_shift",
         "majority_racial_group",
         "majority_racial_group_pct",
         "geometry",
