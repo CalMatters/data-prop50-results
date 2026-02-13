@@ -22,7 +22,7 @@
 	//   vis/static/precinct_results_plus_demographics.pmtiles
 	// It will be served at:
 	//   /precinct_results_plus_demographics.pmtiles
-	const PRECINCT_PMTILES_URL = 'pmtiles:///precinct_results_plus_demographics.pmtiles';
+	const PRECINCT_PMTILES_URL = 'pmtiles:///precinct_results_plus_demographics_blocks.pmtiles';
 	const PRECINCT_SOURCE_ID = 'precincts';
 	// If nothing renders, this is the *first* thing to change:
 	// it must match the tippecanoe `-l <LAYER_NAME>` you used.
