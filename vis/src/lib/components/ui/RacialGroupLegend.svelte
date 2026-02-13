@@ -1,12 +1,22 @@
 <!--
  @component
  A legend for racial group colors with saturation variance explanation
- 
+
  Shows each racial group with its color and explains how saturation
- varies based on yes_pct (vote percentage).
+ varies based on the selected metric (yes_pct or vote_shift).
 -->
 <script>
 	import { RACIAL_GROUP_COLORS } from '$lib/racial-group-colors.js';
+
+	let {
+		saturationMetric = 'yes_pct',
+		onSaturationMetricChange = () => {}
+	} = $props();
+
+	const SATURATION_OPTIONS = [
+		{ value: 'yes_pct', label: 'Prop 50 yes %' },
+		{ value: 'vote_shift', label: 'Vote shift vs Harris 2024' }
+	];
 
 	const racialGroups = [
 		{ label: 'Hispanic Or Latino', color: RACIAL_GROUP_COLORS['Hispanic Or Latino'] },
@@ -38,21 +48,46 @@
 	</div>
 	
 	<div class="saturation-note">
-		<p class="note-title">Color Saturation</p>
+		<p class="note-title">
+			Color Saturation:
+			<select
+				value={saturationMetric}
+				onchange={(e) => onSaturationMetricChange(e.currentTarget.value)}
+				aria-label="Saturation metric"
+			>
+				{#each SATURATION_OPTIONS as opt}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+		</p>
 		<p class="note-text">
-			The saturation of each color varies based on the percentage of "yes" votes in that precinct. 
-			Darker, more saturated colors indicate higher percentages of "yes" votes, while lighter colors 
-			indicate lower percentages.
+			{#if saturationMetric === 'yes_pct'}
+				The saturation of each color varies based on the percentage of "yes" votes in that precinct.
+				Darker, more saturated colors indicate higher percentages of "yes" votes, while lighter colors
+				indicate lower percentages.
+			{:else}
+				The saturation of each color varies based on the shift in support from Harris (2024) to Prop 50 (2025).
+				Darker colors indicate more shift toward Prop 50; lighter colors indicate less shift or shift away.
+			{/if}
 		</p>
 		<div class="saturation-example">
 			<div class="gradient-bar">
 				<div class="gradient-fill" style="background: linear-gradient(to right, #FFFFFF, #333333)"></div>
-				<div class="midpoint-indicator" title="50% - Yes wins above this line"></div>
+				<div
+					class="midpoint-indicator"
+					title={saturationMetric === 'yes_pct' ? '50% - Yes wins above this line' : '0% - No shift'}
+				></div>
 			</div>
 			<div class="gradient-labels">
-				<span>Yes losing</span>
-				<span class="midpoint-label">50%</span>
-				<span>Yes winning</span>
+				{#if saturationMetric === 'yes_pct'}
+					<span>Yes losing</span>
+					<span class="midpoint-label">50%</span>
+					<span>Yes winning</span>
+				{:else}
+					<span>−15%</span>
+					<span class="midpoint-label">0%</span>
+					<span>+15%</span>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -121,6 +156,14 @@
 		font-weight: 700;
 		font-size: var(--detail-size);
 		line-height: var(--detail-height);
+		color: var(--gray_600);
+	}
+
+	.saturation-note .note-title select {
+		margin-left: 8px;
+		font-family: var(--font-family);
+		font-size: var(--detail-size);
+		font-weight: 600;
 		color: var(--gray_600);
 	}
 

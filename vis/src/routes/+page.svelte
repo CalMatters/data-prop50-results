@@ -38,6 +38,9 @@
 	const SELECTED_COUNTY_STROKE_COLOR = '#212121';
 	const SELECTED_COUNTY_STROKE_WIDTH = 2;
 
+	/** Saturation metric for precinct fill: 'yes_pct' (0–100) or 'vote_shift' (±15%). */
+	let saturationMetric = $state('yes_pct');
+
 	let { data } = $props();
 	let { county } = data;
 
@@ -45,6 +48,88 @@
 	// a component-level variable, in this case we'll call it map
 	let map = $state(null);
 	let selectedCounty = $state(null);
+
+	// Normalized racial group expression (same for all metrics)
+	const normalizedGroup = [
+		'coalesce',
+		[
+			'case',
+			['has', 'majority_racial_group'],
+			[
+				'case',
+				['==', ['slice', ['get', 'majority_racial_group'], 0, 11], 'Multiracial'],
+				'Multiracial',
+				['get', 'majority_racial_group']
+			],
+			'__null__'
+		],
+		'__null__'
+	];
+
+	/**
+	 * Build MapLibre fill-color expression for precincts by metric.
+	 * @param {'yes_pct' | 'vote_shift'} metric
+	 */
+	function buildPrecinctFillColorExpression(metric) {
+		const isYesPct = metric === 'yes_pct';
+		const value = isYesPct
+			? ['coalesce', ['get', 'yes_pct'], 0]
+			: ['coalesce', ['get', 'vote_shift'], 0];
+		const stops = isYesPct
+			? [0, 50, 100]
+			: [-15, 0, 15];
+		const [v0, v1, v2] = stops;
+
+		return [
+			'case',
+			['==', normalizedGroup, 'White'],
+			[
+				'interpolate',
+				['exponential', 1.5],
+				value,
+				v0, '#E8F2FA',
+				v1, '#9BC0E0',
+				v2, RACIAL_GROUP_COLORS['White']
+			],
+			['==', normalizedGroup, 'Multiracial'],
+			[
+				'interpolate',
+				['exponential', 1.5],
+				value,
+				v0, '#F0E8F7',
+				v1, '#C9A5E1',
+				v2, RACIAL_GROUP_COLORS['Multiracial']
+			],
+			['==', normalizedGroup, 'Hispanic Or Latino'],
+			[
+				'interpolate',
+				['exponential', 1.5],
+				value,
+				v0, '#FBF0E5',
+				v1, '#F2B872',
+				v2, RACIAL_GROUP_COLORS['Hispanic Or Latino']
+			],
+			['==', normalizedGroup, 'Black Or African American'],
+			[
+				'interpolate',
+				['exponential', 1.5],
+				value,
+				v0, '#E8F5E3',
+				v1, '#8DCC6F',
+				v2, RACIAL_GROUP_COLORS['Black Or African American']
+			],
+			['==', normalizedGroup, 'Asian'],
+			[
+				'interpolate',
+				['exponential', 1.5],
+				value,
+				v0, '#FAE8E6',
+				v1, '#E18A7F',
+				v2, RACIAL_GROUP_COLORS['Asian']
+			],
+			RACIAL_GROUP_COLORS[null]
+		];
+	}
 
 	function zoomToAndHighlightSelectedCounty() {
 		// create a bbox for the selected county
@@ -74,6 +159,15 @@
 
 		zoomToAndHighlightSelectedCounty();
 	});
+
+	$effect(() => {
+		if (!map || !map.getLayer('precincts-fill')) return;
+		map.setPaintProperty(
+			'precincts-fill',
+			'fill-color',
+			buildPrecinctFillColorExpression(saturationMetric)
+		);
+	});
 </script>
 
 <main class="graphic">
@@ -91,7 +185,10 @@
 		}}
 	/>
 
-	<RacialGroupLegend />
+	<RacialGroupLegend
+		saturationMetric={saturationMetric}
+		onSaturationMetricChange={(v) => (saturationMetric = v)}
+	/>
 
 	<section>
 		<MapLibreMap
@@ -114,104 +211,6 @@
 						?.layers?.find((l) => l.id === ADDRESS_LABEL_LAYER_NAME)?.id;
 
 					if (!map.getLayer('precincts-fill')) {
-						// Build fill-color expression using colors from guide.scss CSS variables
-						// Colors are explicitly sourced from RACIAL_GROUP_COLORS which references guide.scss
-						// Saturation varies based on yes_pct (0-100): higher yes_pct = higher saturation
-
-						// Normalize racial group first
-						const normalizedGroup = [
-							'coalesce',
-							[
-								'case',
-								['has', 'majority_racial_group'],
-								[
-									'case',
-									// Check if string starts with "Multiracial" by comparing first 11 characters
-									['==', ['slice', ['get', 'majority_racial_group'], 0, 11], 'Multiracial'],
-									'Multiracial',
-									['get', 'majority_racial_group']
-								],
-								'__null__'
-							],
-							'__null__'
-						];
-
-						// Get yes_pct value (default to 0 if missing)
-						const yesPct = ['coalesce', ['get', 'yes_pct'], 0];
-
-						// Create fill-color expression that interpolates saturation based on yes_pct
-						// Using exponential interpolation and very light colors at 0% for more dramatic contrast
-						const fillColorExpression = [
-							'case',
-							// White: interpolate from very light blue to saturated blue
-							['==', normalizedGroup, 'White'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0,
-								'#E8F2FA', // Very light blue (almost white)
-								50,
-								'#9BC0E0', // Medium blue
-								100,
-								RACIAL_GROUP_COLORS['White'] // Full saturation blue_500
-							],
-							// Multiracial: interpolate from very light violet to saturated violet
-							['==', normalizedGroup, 'Multiracial'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0,
-								'#F0E8F7', // Very light violet (almost white)
-								50,
-								'#C9A5E1', // Medium violet
-								100,
-								RACIAL_GROUP_COLORS['Multiracial'] // Full saturation violet_500
-							],
-							// Hispanic Or Latino: interpolate from very light orange to saturated orange
-							['==', normalizedGroup, 'Hispanic Or Latino'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0,
-								'#FBF0E5', // Very light orange (almost white)
-								50,
-								'#F2B872', // Medium orange
-								100,
-								RACIAL_GROUP_COLORS['Hispanic Or Latino'] // Full saturation orange_500
-							],
-							// Black Or African American: interpolate from very light green to saturated green
-							['==', normalizedGroup, 'Black Or African American'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0,
-								'#E8F5E3', // Very light green (almost white)
-								50,
-								'#8DCC6F', // Medium green
-								100,
-								RACIAL_GROUP_COLORS['Black Or African American'] // Full saturation green_500
-							],
-							// Asian: interpolate from very light red to saturated red
-							['==', normalizedGroup, 'Asian'],
-							[
-								'interpolate',
-								['exponential', 1.5],
-								yesPct,
-								0,
-								'#FAE8E6', // Very light red (almost white)
-								50,
-								'#E18A7F', // Medium red
-								100,
-								RACIAL_GROUP_COLORS['Asian'] // Full saturation red_500
-							],
-							// Default: grey for null/unknown values
-							RACIAL_GROUP_COLORS[null]
-						];
-
 						map.addLayer(
 							{
 								id: 'precincts-fill',
@@ -219,8 +218,7 @@
 								source: PRECINCT_SOURCE_ID,
 								'source-layer': PRECINCT_SOURCE_LAYER,
 								paint: {
-									// Conditional coloring based on majority_racial_group
-									'fill-color': fillColorExpression,
+									'fill-color': buildPrecinctFillColorExpression('yes_pct'),
 									'fill-opacity': 0.75
 								}
 							},
