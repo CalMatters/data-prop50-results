@@ -22,7 +22,7 @@
 	//   vis/static/precinct_results_plus_demographics.pmtiles
 	// It will be served at:
 	//   /precinct_results_plus_demographics.pmtiles
-	const PRECINCT_PMTILES_URL = 'pmtiles:///precinct_results_plus_demographics.pmtiles';
+	const PRECINCT_PMTILES_URL = 'pmtiles:///precinct_results_plus_demographics_blocks.pmtiles';
 	const PRECINCT_SOURCE_ID = 'precincts';
 	// If nothing renders, this is the *first* thing to change:
 	// it must match the tippecanoe `-l <LAYER_NAME>` you used.
@@ -292,8 +292,6 @@
 						);
 					}
 
-					const win_margin = ['/', ['abs', ['-', ['coalesce', ['get', 'yes_pct'], 0], 50]], 300];
-
 					if (!map.getLayer('precincts-shift-arrow')) {
 						map.addLayer({
 							id: 'precincts-shift-arrow',
@@ -302,9 +300,14 @@
 							'source-layer': PRECINCT_SOURCE_LAYER,
 							layout: {
 								'icon-image': 'arrow',
-								'icon-rotate': ['case', ['>=', ['coalesce', ['get', 'yes_pct'], 0], 50], -10, -170],
-								'icon-size': win_margin,
-								'icon-overlap': 'always'
+								'icon-overlap': 'always',
+								'icon-rotate': ['case', ['<', ['get', 'vote_shift'], 0], -10, -170],
+								'icon-size': ['case',
+									['has', 'vote_shift'],
+									['/', ['abs', ['get', 'vote_shift']], 500],
+									0
+								]
+									// '/', ['abs', ['get', 'vote_shift']], 1000],
 							},
 							paint: {
 								'icon-opacity': 0.8
