@@ -213,19 +213,7 @@ inputs/census/tl_2020_06_tabblock20.zip
 inputs/statewide_db/srprec_state_g24_v01_shp.zip
 
 # Generated output files
-outputs/results.csv
-outputs/precincts.*
-outputs/cvap_tracts.gpkg
-outputs/cvap_blocks.gpkg
-outputs/precinct_results.gpkg
-outputs/precincts_results_cvap_*
-outputs/precinct_results.gpkg
-outputs/*pmtiles
-outputs/*json
-outputs/*.mbtiles
-outputs/*.geojson
-outputs/precinct_results_2024.gpkg
-outputs/precincts_2024_results_cvap_blocks.gpkg
+outputs/*
 
 # Ignore debug outputs
 debug/*.csv
