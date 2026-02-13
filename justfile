@@ -14,14 +14,20 @@ merge-precinct-results:
 interpolate-cvap:
     uv run 04_interpolation.py
 
+generate-analysis-exports:
+    uv run 05_analyze_demographics.py
+
 generate-all-data:
     just generate-precincts-file
     just generate-results-file
     just merge-precinct-results
     just generate-cvap-file
     just interpolate-cvap
+    just generate-analysis-exports
 
 generate-demographics-pmtiles:
     npx mapshaper outputs/precinct_results_plus_demographics_blocks.geojson -proj wgs84 init=EPSG:3310 -o format=geojson ndjson outputs/precinct_results_plus_demographics_blocks_nd.json
     tippecanoe -f -l precincts -o outputs/precinct_results_plus_demographics_blocks.pmtiles --maximum-zoom=14 --minimum-zoom=4 --read-parallel outputs/precinct_results_plus_demographics_blocks_nd.json
-    cp outputs/precinct_results_plus_demographics_blocks.pmtiles vis/static/precinct_results_plus_demographics_blocks.pmtiles
+    mv outputs/precinct_results_plus_demographics_blocks.pmtiles vis/static/precinct_results_plus_demographics_blocks.pmtiles
+    rm outputs/precinct_results_plus_demographics_blocks.geojson
+    rm outputs/precinct_results_plus_demographics_blocks_nd.json
