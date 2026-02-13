@@ -34,37 +34,16 @@ def _(mo):
 
 
 @app.cell
-def _(precinct_results_blocks):
-    TOTAL_YES_VOTES = 7453339
-    TOTAL_NO_VOTES = 4116998
-    total_votes = TOTAL_YES_VOTES + TOTAL_NO_VOTES
-
-    print(
-        f"Out of a total of {total_votes:,} votes cast, there were {TOTAL_YES_VOTES:,} 'Yes' votes and {TOTAL_NO_VOTES:,} 'No' votes on Prop 50.\n"
-    )
-
-    analysis_total_votes = precinct_results_blocks["total_votes"].sum()
-    analysis_total_votes_pct = analysis_total_votes / total_votes
-
-    print(
-        f"Our analysis has processed data representing {analysis_total_votes_pct:.1%} of votes cast"
-    )
-
-    analysis_yes_votes = precinct_results_blocks["yes_votes"].sum()
-    analysis_no_votes = precinct_results_blocks["no_votes"].sum()
-
-    analysis_yes_proportion = analysis_yes_votes / TOTAL_YES_VOTES
-    analysis_no_proportion = analysis_no_votes / TOTAL_NO_VOTES
-
-    print(f"YES VOTES: {analysis_yes_proportion:.1%}")
-    print(f"NO VOTES: {analysis_no_proportion:.1%}")
-    return
-
-
-@app.cell
 def _():
-    VOTE_COUNT_COLUMNS = ["yes_votes", "no_votes", "total_votes"]
-    return (VOTE_COUNT_COLUMNS,)
+    VOTE_STANDARD = ("yes_votes", "no_votes", "total_votes")
+    DEMOGRAPHIC_STANDARD = (
+        "asian_pct",
+        "black_or_african_american_pct",
+        "hispanic_or_latino_pct",
+        "white_pct",
+    )
+    DEFAULT_MAJORITY_THRESHOLD = 50
+    return DEFAULT_MAJORITY_THRESHOLD, VOTE_STANDARD
 
 
 @app.cell
@@ -89,33 +68,90 @@ def _():
 
 @app.cell
 def _():
-    # Dictionary mapping standardized group labels to their equivalents in each dataset
-    STANDARDIZED_GROUP_LABELS = {
-        "asian": {"tracts": "asian_alone_cvap_est", "blocks": "_cvap_api23"},
-        "black_or_african_american": {
-            "tracts": "black_or_african_american_alone_cvap_est",
-            "blocks": "CVAP_BLK23",
+    # Maps schema type -> {source_column_name: standard_name}
+    # Blocks GPKG: CVAP_BLK23_pct, CVAP_HSP23_pct, CVAP_WHT23_pct, _cvap_api23_pct (from 02b_census)
+    # Tracts GPKG: asian_alone_cvap_est_pct, black_or_african_american_alone_cvap_est_pct, ... (from 02_census)
+    DEMOGRAPHIC_SOURCE_TO_STANDARD = {
+        "blocks": {
+            "_cvap_api23_pct": "asian_pct",  # Asian+PI from 02b_census
+            "CVAP_BLK23_pct": "black_or_african_american_pct",
+            "CVAP_HSP23_pct": "hispanic_or_latino_pct",
+            "CVAP_WHT23_pct": "white_pct",
         },
-        "hispanic_or_latino": {
-            "tracts": "hispanic_or_latino_cvap_est",
-            "blocks": "CVAP_HSP23",
+        "tracts": {
+            "asian_alone_cvap_est_pct": "asian_pct",
+            "black_or_african_american_alone_cvap_est_pct": "black_or_african_american_pct",
+            "hispanic_or_latino_cvap_est_pct": "hispanic_or_latino_pct",
+            "white_alone_cvap_est_pct": "white_pct",
         },
-        "white": {"tracts": "white_alone_cvap_est", "blocks": "CVAP_WHT23"},
     }
-    return (STANDARDIZED_GROUP_LABELS,)
+    return (DEMOGRAPHIC_SOURCE_TO_STANDARD,)
 
 
 @app.cell
-def _(STANDARDIZED_GROUP_LABELS):
-    # Create percentage version of the mapping
-    standardized_group_labels_pct = {
-        key: {
-            "tracts": value["tracts"].replace("_est", "_est_pct"),
-            "blocks": value["blocks"] + "_pct",
-        }
-        for key, value in STANDARDIZED_GROUP_LABELS.items()
-    }
-    return (standardized_group_labels_pct,)
+def _():
+    VOTE_DISPLAY_PROP50 = {"yes": "Yes %", "no": "No %"}
+    # mapping yes / no to Dem / Rep to correspond with the partisan gerrymander
+    VOTE_DISPLAY_2024 = {"yes": "Democrat %", "no": "Republican %"}
+
+    DATASET_CONFIG = [
+        {
+            "id": "blocks",
+            "filepath": "./outputs/precincts_results_cvap_blocks.gpkg",
+            "display_name": "Prop 50 (Blocks)",
+            "demographic_schema": "blocks",
+            "vote_source_to_standard": {
+                "yes_votes": "yes_votes",
+                "no_votes": "no_votes",
+            },
+            "vote_display_labels": VOTE_DISPLAY_PROP50,
+        },
+        {
+            "id": "blocks_2024",
+            "filepath": "./outputs/precincts_2024_results_cvap_blocks.gpkg",
+            "display_name": "2024 Presidential (Blocks)",
+            "demographic_schema": "blocks",
+            "vote_source_to_standard": {
+                "dem_votes": "yes_votes",
+                "rep_votes": "no_votes",
+            },
+            "vote_display_labels": VOTE_DISPLAY_2024,
+        },
+        {
+            "id": "tracts",
+            "filepath": "./outputs/precincts_results_cvap_tracts.gpkg",
+            "display_name": "Prop 50 (Tracts)",
+            "demographic_schema": "tracts",
+            "vote_source_to_standard": {
+                "yes_votes": "yes_votes",
+                "no_votes": "no_votes",
+            },
+            "vote_display_labels": VOTE_DISPLAY_PROP50,
+        },
+    ]
+
+    display_options = [
+        config_option["display_name"] for config_option in DATASET_CONFIG
+    ]
+    return DATASET_CONFIG, display_options
+
+
+@app.cell
+def _(DATASET_CONFIG, config_data_options_multiselect):
+    dataset_config = [
+        config_entry
+        for config_entry in DATASET_CONFIG
+        if config_entry["display_name"] in config_data_options_multiselect.value
+    ]
+    return (dataset_config,)
+
+
+@app.cell
+def _(display_options, mo):
+    config_data_options_multiselect = mo.ui.multiselect(
+        options=display_options, value=display_options
+    )
+    return (config_data_options_multiselect,)
 
 
 @app.cell(hide_code=True)
@@ -124,13 +160,6 @@ def _(mo):
     ## Filepaths
     """)
     return
-
-
-@app.cell
-def _():
-    PRECINCT_RESULTS_TRACTS_FP = "./outputs/precincts_results_cvap_tracts.gpkg"
-    PRECINCT_RESULTS_BLOCKS_FP = "./outputs/precincts_results_cvap_blocks.gpkg"
-    return PRECINCT_RESULTS_BLOCKS_FP, PRECINCT_RESULTS_TRACTS_FP
 
 
 @app.cell(hide_code=True)
@@ -142,12 +171,34 @@ def _(mo):
 
 
 @app.cell
-def _(gpd):
+def _(DEMOGRAPHIC_SOURCE_TO_STANDARD, gpd):
     def read_gis_data(fp, name="", **read_file_kwargs):
         gdf = gpd.read_file(fp, **read_file_kwargs)
         print(f"{name.upper()} COLUMNS: {list(gdf)}\n")
         return gdf
-    return (read_gis_data,)
+
+
+    def standardize_vote_columns(df, vote_source_to_standard):
+        """Rename source vote columns to standard yes_votes/no_votes. Adds total_votes if missing."""
+        rename_map = {
+            k: v for k, v in vote_source_to_standard.items() if k in df.columns
+        }
+        df = df.rename(columns=rename_map)
+        if "total_votes" not in df.columns:
+            df["total_votes"] = df["yes_votes"] + df["no_votes"]
+        return df
+
+
+    def standardize_demographic_columns(df, demographic_schema):
+        """Rename source demographic pct columns to standard names."""
+        mapping = DEMOGRAPHIC_SOURCE_TO_STANDARD[demographic_schema]
+        rename_map = {k: v for k, v in mapping.items() if k in df.columns}
+        return df.rename(columns=rename_map)
+    return (
+        read_gis_data,
+        standardize_demographic_columns,
+        standardize_vote_columns,
+    )
 
 
 @app.function
@@ -196,16 +247,13 @@ def _(np):
 
 
 @app.cell
-def _(np, pd):
-    def get_majority_racial_group(
-        row, group_labels_pct, dataset_type, threshold=50
-    ):
+def _(ANALYSIS_GROUPS, np, pd):
+    def get_majority_racial_group(row, threshold=50):
         """Determine the majority racial group for a single precinct and return both group and percentage.
         If no group exceeds the threshold, return 'Multiracial' with the plurality group and its percentage."""
-        # Extract percentages for each racial group, using .get() to handle missing keys gracefully
+        demographic_groups = [g for g in ANALYSIS_GROUPS if g != "multiracial"]
         group_percentages = {
-            group: row.get(group_labels_pct[group][dataset_type])
-            for group in group_labels_pct
+            group: row.get(f"{group}_pct") for group in demographic_groups
         }
 
         valid_percentages = {
@@ -234,75 +282,15 @@ def _(get_majority_racial_group, np, pd):
         return df
 
 
-    def add_majority_racial_group(df, group_labels_pct, dataset_type):
+    def add_majority_racial_group(df):
         """Add majority_racial_group and majority_racial_group_pct columns."""
         df = df.copy()
         df[["majority_racial_group", "majority_racial_group_pct"]] = df.apply(
-            lambda row: pd.Series(
-                get_majority_racial_group(row, group_labels_pct, dataset_type)
-            ),
+            lambda row: pd.Series(get_majority_racial_group(row)),
             axis=1,
         )
         return df
     return add_majority_racial_group, prepare_precinct_results_df
-
-
-@app.cell
-def _(LinearRegression, np, plt):
-    def plot_lnr_yes_pct_vs_cvap(
-        df, cvap_column, yes_pct_column, group_label="White", title_suffix=""
-    ):
-        # Handle NaN values by dropping them for plotting
-        plot_data = df.dropna(subset=[cvap_column, yes_pct_column])
-
-        fig, ax = plt.subplots(figsize=(8, 6))
-
-        # Reshape data for sklearn
-        X = plot_data[cvap_column].values.reshape(-1, 1)
-        y = plot_data[yes_pct_column].values
-
-        # Fit linear regression
-        model = LinearRegression()
-        model.fit(X, y)
-
-        # Predict for line plot
-        X_range = np.linspace(0, 100, 100).reshape(-1, 1)
-        y_pred = model.predict(X_range)
-
-        # Scatter plot
-        ax.scatter(
-            plot_data[cvap_column],
-            plot_data[yes_pct_column],
-            alpha=0.6,
-            s=5,
-            edgecolor="none",
-            label="Precincts",
-        )
-
-        # Regression line
-        ax.plot(
-            X_range[:, 0],
-            y_pred,
-            color="red",
-            linewidth=1,
-            label=f"Linear fit: y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
-        )
-
-        ax.set_xlabel(f"Percent {group_label} Voters")
-        ax.set_ylabel("Yes Vote Percentage")
-        ax.set_title(
-            f"Yes Vote Percentage vs. Percent {group_label} Voters {title_suffix}"
-        )
-        ax.grid(True, alpha=0.3)
-        ax.legend()
-
-        # Set axis limits to ensure full visibility
-        ax.set_xlim(0, 100)
-        ax.set_ylim(0, 100)
-
-        # Use plt.gca() as the last expression
-        return plt.gca()
-    return (plot_lnr_yes_pct_vs_cvap,)
 
 
 @app.cell(hide_code=True)
@@ -314,58 +302,101 @@ def _(mo):
 
 
 @app.cell
+def _(config_data_options_multiselect, mo):
+    mo.vstack(
+        [
+            mo.md("## Select datasets"),
+            config_data_options_multiselect,
+            mo.md(f"**Datasets: {config_data_options_multiselect.value}**"),
+        ]
+    )
+    return
+
+
+@app.cell
 def _(
-    PRECINCT_RESULTS_BLOCKS_FP,
-    PRECINCT_RESULTS_TRACTS_FP,
-    VOTE_COUNT_COLUMNS,
+    VOTE_STANDARD,
     add_majority_racial_group,
     calculate_yes_pct,
+    dataset_config,
+    mo,
     prepare_precinct_results_df,
     read_gis_data,
-    standardized_group_labels_pct,
+    standardize_demographic_columns,
+    standardize_vote_columns,
 ):
-    def _load_and_prepare(fp, name):
-        df = read_gis_data(fp, name)
-        df = prepare_precinct_results_df(df, VOTE_COUNT_COLUMNS)
-        return calculate_yes_pct(df)
+    precinct_results = {}
+    for _cfg in dataset_config:
+        df = read_gis_data(_cfg["filepath"], _cfg["id"])
+        df = standardize_vote_columns(df, _cfg["vote_source_to_standard"])
+        df = standardize_demographic_columns(df, _cfg["demographic_schema"])
+        df = prepare_precinct_results_df(df, list(VOTE_STANDARD))
+        df = calculate_yes_pct(df)
+        df = add_majority_racial_group(df)
+        precinct_results[_cfg["id"]] = df
 
-
-    precinct_results_blocks = _load_and_prepare(
-        PRECINCT_RESULTS_BLOCKS_FP, "blocks"
-    )
-    precinct_results_tracts = _load_and_prepare(
-        PRECINCT_RESULTS_TRACTS_FP, "tracts"
-    )
-
-    # Validate null yes_pct count: expected when both votes null or total votes = 0
+    # Validate null yes_pct count on tracts dataset
+    _df_validate = precinct_results["tracts"]
     null_votes = (
-        precinct_results_tracts["yes_votes"].isnull()
-        & precinct_results_tracts["no_votes"].isnull()
+        _df_validate["yes_votes"].isnull() & _df_validate["no_votes"].isnull()
     )
-    total_votes = (
-        precinct_results_tracts["yes_votes"] + precinct_results_tracts["no_votes"]
-    )
-    has_zero_total_votes = total_votes == 0
+    _total_votes = _df_validate["yes_votes"] + _df_validate["no_votes"]
+    has_zero_total_votes = _total_votes == 0
     expected_null_yes_pct_count = (null_votes | has_zero_total_votes).sum()
-    observed_null_yes_pct_count = precinct_results_tracts["yes_pct"].isna().sum()
-
+    observed_null_yes_pct_count = _df_validate["yes_pct"].isna().sum()
     assert expected_null_yes_pct_count == observed_null_yes_pct_count, (
-        f"Expected {expected_null_yes_pct_count} null values in 'yes_pct' for blocks, "
+        f"Expected {expected_null_yes_pct_count} null values in 'yes_pct', "
         f"but found {observed_null_yes_pct_count}."
     )
 
-    precinct_results_blocks = add_majority_racial_group(
-        precinct_results_blocks, standardized_group_labels_pct, "blocks"
+    # Calculate vote shift from Harris to YES on Prop. 50
+    precinct_2025_results = precinct_results["blocks"]
+    precinct_2025_results["dem_pct_2024"] = caclulate_pct(
+        precinct_2025_results["dem_votes"],
+        precinct_2025_results["total_votes_2024"],
     )
-    precinct_results_tracts = add_majority_racial_group(
-        precinct_results_tracts, standardized_group_labels_pct, "tracts"
+    precinct_2025_results["vote_shift"] = round(
+        precinct_2025_results["yes_pct"] - precinct_2025_results["dem_pct_2024"], 1
     )
 
     # Debug: county distribution of precincts with null yes_pct (validation opportunity)
-    precinct_results_blocks.loc[
-        precinct_results_blocks["yes_pct"].isna(), "county"
-    ].value_counts()
-    return precinct_results_blocks, precinct_results_tracts
+    mo.vstack(
+        [
+            mo.md("## County distribution of precincts with null yes_pct"),
+            precinct_results["blocks"]
+            .loc[precinct_results["blocks"]["yes_pct"].isna(), "county"]
+            .value_counts(),
+        ]
+    )
+    return (precinct_results,)
+
+
+@app.cell
+def _(precinct_results):
+    TOTAL_YES_VOTES = 7453339
+    TOTAL_NO_VOTES = 4116998
+    total_votes_from_sov = TOTAL_YES_VOTES + TOTAL_NO_VOTES
+
+    print(
+        f"Out of a total of {total_votes_from_sov:,} votes cast, there were {TOTAL_YES_VOTES:,} 'Yes' votes and {TOTAL_NO_VOTES:,} 'No' votes on Prop 50.\n"
+    )
+
+    analysis_total_votes = precinct_results["blocks"]["total_votes"].sum()
+    analysis_total_votes_pct = analysis_total_votes / total_votes_from_sov
+
+    print(
+        f"Our analysis has processed data representing {analysis_total_votes_pct:.1%} of votes cast"
+    )
+
+    analysis_yes_votes = precinct_results["blocks"]["yes_votes"].sum()
+    analysis_no_votes = precinct_results["blocks"]["no_votes"].sum()
+
+    analysis_yes_proportion = analysis_yes_votes / TOTAL_YES_VOTES
+    analysis_no_proportion = analysis_no_votes / TOTAL_NO_VOTES
+
+    print(f"YES VOTES: {analysis_yes_proportion:.1%}")
+    print(f"NO VOTES: {analysis_no_proportion:.1%}")
+    return
 
 
 @app.cell(hide_code=True)
@@ -389,19 +420,17 @@ def _(mo):
 
 
 @app.cell
-def _(pd):
-    # Shared helper to calculate vote statistics from yes/no vote counts
-    def _calculate_vote_stats(yes_votes, no_votes):
-        total_votes = yes_votes + no_votes
+def _(DEFAULT_MAJORITY_THRESHOLD, pd):
+    def _calculate_vote_stats(yes_votes, no_votes, total_votes=None):
+        if total_votes is None:
+            total_votes = yes_votes + no_votes
         yes_pct = caclulate_pct(yes_votes, total_votes)
         no_pct = caclulate_pct(no_votes, total_votes)
         return total_votes, yes_pct, no_pct
 
 
-    def analyze_by_group(
-        df, group_key, dataset_type, threshold=50, by_county=False
-    ):
-        """Analyze vote stats for a demographic group. Returns dict (state-level) or DataFrame (county-level)."""
+    def _get_majority_precincts(df, group_key):
+        """Filter df to precincts where majority_racial_group matches group_key."""
         if group_key == "multiracial":
             mask = df["majority_racial_group"].str.startswith(
                 "Multiracial", na=False
@@ -409,170 +438,220 @@ def _(pd):
         else:
             formatted_label = group_key.replace("_", " ").title()
             mask = df["majority_racial_group"] == formatted_label
+        return df[mask]
 
-        majority_precincts = df[mask]
 
-        if by_county:
-            if majority_precincts.empty:
-                return pd.DataFrame(
-                    {
-                        "county": [],
-                        f"{group_key}_{threshold}_precinct_count": [],
-                        f"{group_key}_{threshold}_yes_pct": [],
-                        f"{group_key}_{threshold}_no_pct": [],
-                    },
-                ).set_index("county")
+    def analyze_by_group_state(
+        df, group_key, threshold=DEFAULT_MAJORITY_THRESHOLD
+    ):
+        """Analyze vote stats for a demographic group at state level. Returns dict."""
+        majority_precincts = _get_majority_precincts(df, group_key)
+        total_yes_votes = majority_precincts["yes_votes"].sum()
+        total_no_votes = majority_precincts["no_votes"].sum()
+        total_votes_grouped = majority_precincts["total_votes"].sum()
+        total_votes, yes_split_pct, no_split_pct = _calculate_vote_stats(
+            total_yes_votes, total_no_votes, total_votes_grouped
+        )
+        return {
+            "group": group_key,
+            "threshold": threshold,
+            "num_precincts": len(majority_precincts),
+            "total_votes": total_votes,
+            "yes_votes": total_yes_votes,
+            "no_votes": total_no_votes,
+            "yes_split_pct": yes_split_pct,
+            "no_split_pct": no_split_pct,
+        }
 
-            grouped = majority_precincts.groupby("county")
-            precinct_counts = grouped.size()
-            yes_votes = grouped["yes_votes"].sum()
-            no_votes = grouped["no_votes"].sum()
-            total_votes, yes_pct, no_pct = _calculate_vote_stats(
-                yes_votes, no_votes
-            )
 
+    def analyze_by_group_county(
+        df, group_key, threshold=DEFAULT_MAJORITY_THRESHOLD
+    ):
+        """Analyze vote stats for a demographic group by county. Returns DataFrame."""
+        majority_precincts = _get_majority_precincts(df, group_key)
+        if majority_precincts.empty:
             return pd.DataFrame(
                 {
-                    "county": precinct_counts.index,
-                    f"{group_key}_{threshold}_precinct_count": precinct_counts.values,
-                    f"{group_key}_{threshold}_yes_pct": yes_pct.values,
-                    f"{group_key}_{threshold}_no_pct": no_pct.values,
-                    f"{group_key}_{threshold}_total_votes": total_votes.values,
+                    "county": [],
+                    f"{group_key}_{threshold}_precinct_count": [],
+                    f"{group_key}_{threshold}_yes_pct": [],
+                    f"{group_key}_{threshold}_no_pct": [],
                 },
             ).set_index("county")
-        else:
-            total_yes_votes = majority_precincts["yes_votes"].sum()
-            total_no_votes = majority_precincts["no_votes"].sum()
-            total_votes, yes_split_pct, no_split_pct = _calculate_vote_stats(
-                total_yes_votes, total_no_votes
-            )
-            return {
-                "group": group_key,
-                "dataset_type": dataset_type,
-                "threshold": threshold,
-                "num_precincts": len(majority_precincts),
-                "total_votes": total_votes,
-                "yes_votes": total_yes_votes,
-                "no_votes": total_no_votes,
-                "yes_split_pct": yes_split_pct,
-                "no_split_pct": no_split_pct,
-            }
+
+        grouped = majority_precincts.groupby("county")
+        precinct_counts = grouped.size()
+        yes_votes = grouped["yes_votes"].sum()
+        no_votes = grouped["no_votes"].sum()
+        total_votes_grouped = grouped["total_votes"].sum()
+        total_votes, yes_pct, no_pct = _calculate_vote_stats(
+            yes_votes, no_votes, total_votes_grouped
+        )
+
+        return pd.DataFrame(
+            {
+                "county": precinct_counts.index,
+                f"{group_key}_{threshold}_precinct_count": precinct_counts.values,
+                f"{group_key}_{threshold}_yes_pct": yes_pct.values,
+                f"{group_key}_{threshold}_no_pct": no_pct.values,
+                f"{group_key}_{threshold}_total_votes": total_votes.values,
+            },
+        ).set_index("county")
+
+
+    def analyze_by_group(
+        df, group_key, threshold=DEFAULT_MAJORITY_THRESHOLD, by_county=False
+    ):
+        """Analyze vote stats for a demographic group. Returns dict (state) or DataFrame (county)."""
+        if by_county:
+            return analyze_by_group_county(df, group_key, threshold)
+        return analyze_by_group_state(df, group_key, threshold)
     return (analyze_by_group,)
 
 
 @app.cell
-def _(
-    ANALYSIS_GROUPS,
-    GROUP_DISPLAY_LABELS,
-    analyze_by_group,
-    pd,
-    precinct_results_blocks,
-    precinct_results_tracts,
-):
-    # State-level analysis
-    majority_analysis_results_blocks = {
-        group: analyze_by_group(
-            precinct_results_blocks, group, dataset_type="blocks", by_county=False
+def _(ANALYSIS_GROUPS, GROUP_DISPLAY_LABELS, analyze_by_group, pd):
+    def build_majority_analysis_df(precinct_df, cfg):
+        """Build majority-analysis table (group rows, yes/no columns) from any precinct-level DataFrame."""
+        _df = pd.DataFrame(
+            {
+                g: analyze_by_group(precinct_df, g, by_county=False)
+                for g in ANALYSIS_GROUPS
+            }
+        ).T
+        _df.index = [GROUP_DISPLAY_LABELS[g] for g in ANALYSIS_GROUPS]
+        _df = _df.rename(
+            columns={
+                "yes_split_pct": cfg["vote_display_labels"]["yes"],
+                "no_split_pct": cfg["vote_display_labels"]["no"],
+            }
         )
-        for group in ANALYSIS_GROUPS
-    }
-    majority_analysis_results_tracts = {
-        group: analyze_by_group(
-            precinct_results_tracts, group, dataset_type="tracts", by_county=False
-        )
-        for group in ANALYSIS_GROUPS
-    }
+        return _df
+    return (build_majority_analysis_df,)
 
-    majority_analysis_blocks_df = pd.DataFrame(majority_analysis_results_blocks).T
-    majority_analysis_tracts_df = pd.DataFrame(majority_analysis_results_tracts).T
-    majority_analysis_blocks_df.index = [
-        GROUP_DISPLAY_LABELS[g] for g in ANALYSIS_GROUPS
-    ]
-    majority_analysis_tracts_df.index = [
-        GROUP_DISPLAY_LABELS[g] for g in ANALYSIS_GROUPS
-    ]
-    return majority_analysis_blocks_df, majority_analysis_tracts_df
+
+@app.cell
+def _(build_majority_analysis_df, dataset_config, precinct_results):
+    majority_analysis = {
+        _cfg["id"]: build_majority_analysis_df(precinct_results[_cfg["id"]], _cfg)
+        for _cfg in dataset_config
+    }
+    return (majority_analysis,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Aggregate
+    """)
+    return
+
+
+@app.cell
+def _(dataset_config, mo):
+    def majority_analysis_display(analysis_dict):
+        return mo.vstack(
+            [
+                mo.vstack(
+                    [
+                        mo.md(f"{_cfg['display_name']}"),
+                        analysis_dict[_cfg["id"]],
+                    ]
+                )
+                for _cfg in dataset_config
+            ]
+        )
+    return (majority_analysis_display,)
+
+
+@app.cell
+def _(majority_analysis, majority_analysis_display):
+    majority_analysis_display(majority_analysis)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### County
+    """)
+    return
+
+
+@app.cell
+def _(county_level_demo_analysis, mo):
+    counties = sorted(list(county_level_demo_analysis["blocks"].index))
+    county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
+    return counties, county_dropdown
 
 
 @app.cell
 def _(
     ANALYSIS_GROUPS,
+    DEFAULT_MAJORITY_THRESHOLD,
     analyze_by_group,
+    dataset_config,
     pd,
-    precinct_results_blocks,
-    precinct_results_tracts,
+    precinct_results,
 ):
-    # County-level analysis
-    county_level_demo_analysis_blocks, county_level_demo_analysis_tracts = (
-        pd.concat(
+    county_level_demo_analysis = {}
+    for _cfg in dataset_config:
+        _df = pd.concat(
             [
-                analyze_by_group(_dataset, g, dataset_type=_type, by_county=True)
-                for g in ANALYSIS_GROUPS
+                analyze_by_group(
+                    precinct_results[_cfg["id"]],
+                    group,
+                    threshold=DEFAULT_MAJORITY_THRESHOLD,
+                    by_county=True,
+                )
+                for group in ANALYSIS_GROUPS
             ],
             axis=1,
         )
-        for _type, _dataset in [
-            ("blocks", precinct_results_blocks),
-            ("tracts", precinct_results_tracts),
+        precinct_count_cols = [
+            col for col in _df.columns if col.endswith("_precinct_count")
         ]
-    )
-
-    precinct_count_cols_blocks = [
-        col
-        for col in county_level_demo_analysis_blocks.columns
-        if col.endswith("_precinct_count")
-    ]
-    precinct_count_cols_tracts = [
-        col
-        for col in county_level_demo_analysis_tracts.columns
-        if col.endswith("_precinct_count")
-    ]
-
-    county_level_demo_analysis_blocks[precinct_count_cols_blocks] = (
-        county_level_demo_analysis_blocks[precinct_count_cols_blocks].fillna(0)
-    )
-    county_level_demo_analysis_tracts[precinct_count_cols_tracts] = (
-        county_level_demo_analysis_tracts[precinct_count_cols_tracts].fillna(0)
-    )
-    return county_level_demo_analysis_blocks, county_level_demo_analysis_tracts
-
-
-@app.cell
-def _(county_level_demo_analysis_blocks, mo):
-    counties = list(county_level_demo_analysis_blocks.index)
-    county_dropdown = mo.ui.dropdown(counties, value=counties[0], searchable=True)
-    return (county_dropdown,)
+        _df[precinct_count_cols] = _df[precinct_count_cols].fillna(0)
+        county_level_demo_analysis[_cfg["id"]] = _df
+    return (county_level_demo_analysis,)
 
 
 @app.cell
 def _(
+    DATASET_CONFIG,
+    DEFAULT_MAJORITY_THRESHOLD,
     GROUP_DISPLAY_LABELS,
     county_dropdown,
-    county_level_demo_analysis_blocks,
-    county_level_demo_analysis_tracts,
+    county_level_demo_analysis,
+    mo,
     pd,
 ):
-    def _transform_county_series_to_dataframe(series):
-        # Extract columns that end with "_yes_pct" to identify demographic groups
-        yes_pct_cols = [col for col in series.index if col.endswith("_yes_pct")]
+    def _transform_county_series_to_dataframe(
+        series, vote_display_labels, threshold=DEFAULT_MAJORITY_THRESHOLD
+    ):
+        yes_pct_suffix = f"_{threshold}_yes_pct"
+        yes_pct_cols = [
+            col for col in series.index if col.endswith(yes_pct_suffix)
+        ]
 
         data = []
         for pct_col in yes_pct_cols:
-            group_key = pct_col.split("_50_yes_pct")[0]
-            precinct_col = pct_col.replace("_yes_pct", "_precinct_count")
-            no_pct_col = pct_col.replace("_yes_pct", "_no_pct")
+            group_key = pct_col.removesuffix(yes_pct_suffix)
+            group_threshold_prefix = f"{group_key}_{threshold}"
+            precinct_col = f"{group_threshold_prefix}_precinct_count"
+            no_pct_col = f"{group_threshold_prefix}_no_pct"
 
             data.append(
                 {
                     "precinct_count": series[precinct_col],
-                    "total_votes": series[f"{group_key}_50_total_votes"],
-                    "yes_pct": series[pct_col],
-                    "no_pct": series[no_pct_col],
+                    "total_votes": series[f"{group_key}_{threshold}_total_votes"],
+                    vote_display_labels["yes"]: series[pct_col],
+                    vote_display_labels["no"]: series[no_pct_col],
                 }
             )
 
         display_labels = [
-            GROUP_DISPLAY_LABELS[col.split("_50_yes_pct")[0]]
+            GROUP_DISPLAY_LABELS[col.removesuffix(yes_pct_suffix)]
             for col in yes_pct_cols
         ]
         df = pd.DataFrame(data, index=display_labels)
@@ -582,15 +661,195 @@ def _(
         return df
 
 
-    {
-        "County": county_dropdown,
-        "BLOCKS": _transform_county_series_to_dataframe(
-            county_level_demo_analysis_blocks.loc[county_dropdown.value]
-        ),
-        "TRACTS": _transform_county_series_to_dataframe(
-            county_level_demo_analysis_tracts.loc[county_dropdown.value]
-        ),
-    }
+    _county = county_dropdown.value
+    mo.vstack(
+        [
+            county_dropdown,
+            *[
+                mo.vstack(
+                    [
+                        mo.md(f"**{_cfg['display_name']}**"),
+                        _transform_county_series_to_dataframe(
+                            county_level_demo_analysis[_cfg["id"]].loc[_county],
+                            _cfg["vote_display_labels"],
+                            threshold=DEFAULT_MAJORITY_THRESHOLD,
+                        ),
+                    ]
+                )
+                for _cfg in DATASET_CONFIG
+                if _county in county_level_demo_analysis[_cfg["id"]].index
+            ],
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Vote shift
+    """)
+    return
+
+
+@app.cell
+def _(DEFAULT_MAJORITY_THRESHOLD):
+    PROP50_DATASET_ID = "blocks"
+    PRES2024_DATASET_ID = "blocks_2024"
+    YES_PCT_SUFFIX = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+
+
+    def compute_vote_shift(prop50_series, pres2024_series, group_id):
+        """Vote shift (Yes % − Democrat %) for one group; returns None if key missing."""
+        key = f"{group_id}{YES_PCT_SUFFIX}"
+        if key not in prop50_series.index or key not in pres2024_series.index:
+            return None
+        return round(float(prop50_series[key] - pres2024_series[key]), 1)
+    return PRES2024_DATASET_ID, PROP50_DATASET_ID, compute_vote_shift
+
+
+@app.cell
+def _(
+    GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    compute_vote_shift,
+    county_level_demo_analysis,
+    mo,
+    pd,
+):
+    VOTE_SHIFT_TABLE_GROUPS = (
+        "asian",
+        "black_or_african_american",
+        "white",
+        "multiracial",
+    )
+
+    prop50_by_county = county_level_demo_analysis[PROP50_DATASET_ID]
+    pres2024_by_county = county_level_demo_analysis[PRES2024_DATASET_ID]
+
+
+    def vote_shift_row_for_county(county):
+        row = {"county": county}
+        for group_id in VOTE_SHIFT_TABLE_GROUPS:
+            value = compute_vote_shift(
+                prop50_by_county.loc[county],
+                pres2024_by_county.loc[county],
+                group_id,
+            )
+            if value is not None:
+                row[GROUP_DISPLAY_LABELS[group_id]] = value
+        return row
+
+
+    vote_shift_by_county = pd.DataFrame(
+        [vote_shift_row_for_county(county) for county in prop50_by_county.index]
+    )
+    column_order = ["county"] + [
+        GROUP_DISPLAY_LABELS[g] for g in VOTE_SHIFT_TABLE_GROUPS
+    ]
+    vote_shift_by_county = vote_shift_by_county[
+        [c for c in column_order if c in vote_shift_by_county.columns]
+    ]
+
+    mo.vstack(
+        [
+            mo.md("**Vote shift (Yes % − Democrat %) by county (statewide)**"),
+            vote_shift_by_county,
+        ]
+    )
+    return
+
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    compute_vote_shift,
+    county_dropdown,
+    county_level_demo_analysis,
+    mo,
+    pd,
+):
+    _selected_county = county_dropdown.value
+    prop50_row = county_level_demo_analysis[PROP50_DATASET_ID].loc[
+        _selected_county
+    ]
+    pres2024_row = county_level_demo_analysis[PRES2024_DATASET_ID].loc[
+        _selected_county
+    ]
+
+    vote_shift_rows = []
+    for group_id in ANALYSIS_GROUPS:
+        value = compute_vote_shift(prop50_row, pres2024_row, group_id)
+        if value is not None:
+            vote_shift_rows.append(
+                {
+                    "group": GROUP_DISPLAY_LABELS[group_id],
+                    "vote_shift": value,
+                }
+            )
+    vote_shift_table = pd.DataFrame(vote_shift_rows)
+
+    mo.vstack(
+        [
+            county_dropdown,
+            mo.md(f"**Vote shift (Yes % − Democrat %) for {_selected_county}**"),
+            vote_shift_table,
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### County multiselect
+    """)
+    return
+
+
+@app.cell
+def _(counties, mo):
+    county_multiselect = mo.ui.multiselect(counties, full_width=True)
+    county_multiselect
+    return (county_multiselect,)
+
+
+@app.cell
+def _(
+    build_majority_analysis_df,
+    county_multiselect,
+    dataset_config,
+    majority_analysis_display,
+    mo,
+    precinct_results,
+):
+    def _county_subset_majority_display(selected_counties):
+        if not selected_counties:
+            return mo.md(
+                "Select one or more counties to see aggregated majority analysis."
+            )
+        _subset = {
+            _cfg["id"]: build_majority_analysis_df(
+                precinct_results[_cfg["id"]].loc[
+                    precinct_results[_cfg["id"]]["county"].isin(selected_counties)
+                ],
+                _cfg,
+            )
+            for _cfg in dataset_config
+        }
+        return mo.vstack(
+            [
+                mo.md(f"**Selected counties:** {', '.join(selected_counties)}"),
+                majority_analysis_display(_subset),
+            ]
+        )
+
+
+    _county_subset_majority_display(county_multiselect.value)
     return
 
 
@@ -605,44 +864,98 @@ def _(mo):
 
 
 @app.cell
-def _(mo, standardized_group_labels_pct):
+def _(LinearRegression, np, plt):
+    def plot_lnr_yes_pct_vs_cvap(
+        df,
+        cvap_column,
+        yes_pct_column,
+        group_label="White",
+        title_suffix="",
+        y_label="Yes Vote Percentage",
+    ):
+        plot_data = df.dropna(subset=[cvap_column, yes_pct_column])
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        X = plot_data[cvap_column].values.reshape(-1, 1)
+        y = plot_data[yes_pct_column].values
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        X_range = np.linspace(0, 100, 100).reshape(-1, 1)
+        y_pred = model.predict(X_range)
+
+        ax.scatter(
+            plot_data[cvap_column],
+            plot_data[yes_pct_column],
+            alpha=0.6,
+            s=5,
+            edgecolor="none",
+            label="Precincts",
+        )
+
+        ax.plot(
+            X_range[:, 0],
+            y_pred,
+            color="red",
+            linewidth=1,
+            label=f"Linear fit: y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
+        )
+
+        ax.set_xlabel(f"Percent {group_label} Voters")
+        ax.set_ylabel(y_label)
+        ax.set_title(f"{y_label} vs. Percent {group_label} Voters {title_suffix}")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+
+        return plt.gca()
+    return (plot_lnr_yes_pct_vs_cvap,)
+
+
+@app.cell
+def _(ANALYSIS_GROUPS, mo):
     demo_group_dropdown = mo.ui.dropdown(
-        options=standardized_group_labels_pct.keys(), value="white"
+        options=[g for g in ANALYSIS_GROUPS if g != "multiracial"],
+        value="white",
     )
-    demo_group_dropdown
     return (demo_group_dropdown,)
 
 
 @app.cell
 def _(
+    DATASET_CONFIG,
     demo_group_dropdown,
+    mo,
     plot_lnr_yes_pct_vs_cvap,
-    precinct_results_blocks,
-    standardized_group_labels_pct,
+    precinct_results,
 ):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_blocks,
-        standardized_group_labels_pct[demo_group_dropdown.value]["blocks"],
-        "yes_pct",
-        demo_group_dropdown.value.title().replace("_", " "),
-        "(Blocks)",
-    )
-    return
-
-
-@app.cell
-def _(
-    demo_group_dropdown,
-    plot_lnr_yes_pct_vs_cvap,
-    precinct_results_tracts,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_tracts,
-        standardized_group_labels_pct[demo_group_dropdown.value]["tracts"],
-        "yes_pct",
-        demo_group_dropdown.value.title().replace("_", " "),
-        "(Tracts)",
+    _group = demo_group_dropdown.value
+    _cvap_col = f"{_group}_pct"
+    _group_label = _group.replace("_", " ").title()
+    mo.vstack(
+        [
+            demo_group_dropdown,
+            *[
+                mo.vstack(
+                    [
+                        mo.md(f"**{_cfg['display_name']}**"),
+                        plot_lnr_yes_pct_vs_cvap(
+                            precinct_results[_cfg["id"]],
+                            _cvap_col,
+                            "yes_pct",
+                            _group_label,
+                            f"({_cfg['display_name']})",
+                            y_label=f"{_cfg['vote_display_labels']['yes'].removesuffix(' %')} Vote Percentage",
+                        ),
+                    ]
+                )
+                for _cfg in DATASET_CONFIG
+            ],
+        ]
     )
     return
 
@@ -659,55 +972,26 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Blocks
-    """)
-    return
-
-
 @app.cell
-def _(demo_group_dropdown):
-    demo_group_dropdown
-    return
-
-
-@app.cell
-def _(
-    demo_group_dropdown,
-    precinct_results_blocks,
-    standardized_group_labels_pct,
-):
-    precinct_results_blocks[
+def _(DATASET_CONFIG, demo_group_dropdown, mo, precinct_results):
+    _group = demo_group_dropdown.value
+    _cvap_col = f"{_group}_pct"
+    mo.vstack(
         [
-            standardized_group_labels_pct[demo_group_dropdown.value]["blocks"],
-            "yes_pct",
+            demo_group_dropdown,
+            *[
+                mo.vstack(
+                    [
+                        mo.md(f"**{_cfg['display_name']}**"),
+                        precinct_results[_cfg["id"]][[_cvap_col, "yes_pct"]]
+                        .dropna()
+                        .corr(method="pearson"),
+                    ]
+                )
+                for _cfg in DATASET_CONFIG
+            ],
         ]
-    ].dropna().corr(method="pearson")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    Tracts
-    """)
-    return
-
-
-@app.cell
-def _(
-    demo_group_dropdown,
-    precinct_results_tracts,
-    standardized_group_labels_pct,
-):
-    precinct_results_tracts[
-        [
-            standardized_group_labels_pct[demo_group_dropdown.value]["tracts"],
-            "yes_pct",
-        ]
-    ].dropna().corr(method="pearson")
+    )
     return
 
 
@@ -734,44 +1018,13 @@ def _(mo):
 
 
 @app.cell
-def _(majority_analysis_blocks_df, majority_analysis_tracts_df):
+def _():
     # what were the results in majority hispanic or latino precincts?
-    (
-        majority_analysis_blocks_df.loc["Hispanic Or Latino"],
-        majority_analysis_tracts_df.loc["Hispanic Or Latino"],
-    )
     return
 
 
 @app.cell
-def _(
-    plot_lnr_yes_pct_vs_cvap,
-    precinct_results_blocks,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_blocks,
-        standardized_group_labels_pct["hispanic_or_latino"]["blocks"],
-        "yes_pct",
-        "Hispanic or Latino",
-        "(Blocks)",
-    )
-    return
-
-
-@app.cell
-def _(
-    plot_lnr_yes_pct_vs_cvap,
-    precinct_results_tracts,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_tracts,
-        standardized_group_labels_pct["hispanic_or_latino"]["tracts"],
-        "yes_pct",
-        "Hispanic or Latino",
-        "(Tracts)",
-    )
+def _():
     return
 
 
@@ -786,44 +1039,13 @@ def _(mo):
 
 
 @app.cell
-def _(majority_analysis_blocks_df, majority_analysis_tracts_df):
+def _():
     # what were the results in majority white precincts?
-    (
-        majority_analysis_blocks_df.loc["White"],
-        majority_analysis_tracts_df.loc["White"],
-    )
     return
 
 
 @app.cell
-def _(
-    plot_lnr_yes_pct_vs_cvap,
-    precinct_results_blocks,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_blocks,
-        standardized_group_labels_pct["white"]["blocks"],
-        "yes_pct",
-        "White",
-        "(Blocks)",
-    )
-    return
-
-
-@app.cell
-def _(
-    plot_lnr_yes_pct_vs_cvap,
-    precinct_results_tracts,
-    standardized_group_labels_pct,
-):
-    plot_lnr_yes_pct_vs_cvap(
-        precinct_results_tracts,
-        standardized_group_labels_pct["white"]["tracts"],
-        "yes_pct",
-        "White",
-        "(Tracts)",
-    )
+def _():
     return
 
 
@@ -853,6 +1075,10 @@ def _():
         "total_votes",
         "yes_pct",
         "no_pct",
+        "dem_votes",
+        "rep_votes",
+        "total_votes_2024",
+        "vote_shift",
         "majority_racial_group",
         "majority_racial_group_pct",
         "geometry",
@@ -862,87 +1088,32 @@ def _():
 
 @app.cell
 def _():
-    MAP_EXPORT_PATH = "./outputs/precinct_results_plus_demographics.geojson"
     MAP_EXPORT_DRIVER = "geojson"
-    return MAP_EXPORT_DRIVER, MAP_EXPORT_PATH
-
-
-@app.cell
-def _(
-    MAP_EXPORT_COLUMNS,
-    np,
-    pd,
-    precinct_results_blocks,
-    precinct_results_tracts,
-    standardized_group_labels_pct,
-):
-    def get_majority_racial_group(
-        row, group_labels_pct, dataset_type, threshold=50
-    ):
-        """Determine the majority racial group for a single precinct and return both group and percentage.
-        If no group exceeds the threshold, return 'Multiracial' with the plurality group and its percentage."""
-        # Extract percentages for each racial group, using .get() to handle missing keys gracefully
-        group_percentages = {
-            group: row.get(group_labels_pct[group][dataset_type])
-            for group in group_labels_pct
-        }
-
-        valid_percentages = {
-            k: v for k, v in group_percentages.items() if pd.notna(v)
-        }
-        if not valid_percentages:
-            return np.nan, np.nan
-
-        plurality_group = max(valid_percentages, key=valid_percentages.get)
-        max_percentage = valid_percentages[plurality_group]
-        plurality_group_label = plurality_group.replace("_", " ").title()
-
-        # Return majority group if it exceeds threshold, else multiracial label
-        if max_percentage > threshold:
-            return plurality_group_label, max_percentage
-        return f"Multiracial ({plurality_group_label} plurality)", max_percentage
-
-
-    # Apply to create majority_racial_group and majority_racial_group_pct columns for blocks data
-    precinct_results_blocks[
-        ["majority_racial_group", "majority_racial_group_pct"]
-    ] = precinct_results_blocks.apply(
-        lambda row: pd.Series(
-            get_majority_racial_group(row, standardized_group_labels_pct, "blocks")
-        ),
-        axis=1,
-    )
-
-    # Apply to create majority_racial_group and majority_racial_group_pct columns for tracts data
-    precinct_results_tracts[
-        ["majority_racial_group", "majority_racial_group_pct"]
-    ] = precinct_results_tracts.apply(
-        lambda row: pd.Series(
-            get_majority_racial_group(row, standardized_group_labels_pct, "tracts")
-        ),
-        axis=1,
-    )
-
-    precinct_results_blocks[MAP_EXPORT_COLUMNS]
-    return
+    return (MAP_EXPORT_DRIVER,)
 
 
 @app.cell
 def _(
     MAP_EXPORT_COLUMNS,
     MAP_EXPORT_DRIVER,
-    MAP_EXPORT_PATH,
+    dataset_config,
     pathlib,
-    precinct_results_blocks,
+    precinct_results,
 ):
-    # Check if the file exists and delete it before writing
-    path = pathlib.Path(MAP_EXPORT_PATH)
-    if path.exists():
-        path.unlink()
-
-    precinct_results_blocks[MAP_EXPORT_COLUMNS].to_file(
-        MAP_EXPORT_PATH, driver=MAP_EXPORT_DRIVER
-    )
+    for _cfg in dataset_config:
+        _path = pathlib.Path(
+            f"./outputs/precinct_results_plus_demographics_{_cfg['id']}.geojson"
+        )
+        if _path.exists():
+            _path.unlink()
+        _cols = [
+            c
+            for c in MAP_EXPORT_COLUMNS
+            if c in precinct_results[_cfg["id"]].columns
+        ]
+        precinct_results[_cfg["id"]][_cols].to_file(
+            str(_path), driver=MAP_EXPORT_DRIVER
+        )
     return
 
 
