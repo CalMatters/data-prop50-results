@@ -303,11 +303,16 @@
 						const majorityGroup = feature.properties.majority_racial_group;
 						const majorityGroupPct = feature.properties.majority_racial_group_pct;
 						const yesPct = feature.properties.yes_pct;
+						const voteShift = feature.properties.vote_shift;
 
 						// Format the percentage values
 						const groupPctFormatted =
 							majorityGroupPct != null ? Math.round(majorityGroupPct) : 'N/A';
 						const yesPctFormatted = yesPct != null ? Math.round(yesPct) : 'N/A';
+						const voteShiftFormatted =
+							voteShift != null
+								? `${voteShift >= 0 ? '+' : ''}${Math.round(voteShift)}`
+								: null;
 
 						// Format the group label - for multiracial, move percentage into parentheses
 						let groupLabel;
@@ -325,10 +330,14 @@
 						}
 
 						// Create popup HTML content
+						const supportLine =
+							voteShiftFormatted != null
+								? `Prop 50 received <strong>${yesPctFormatted}%</strong> support; <strong>${voteShiftFormatted}%</strong> compared to Harris in 2024`
+								: `Prop 50 received <strong>${yesPctFormatted}%</strong> support`;
 						const popupContent = `
 							<div class="popup-content">
 								<p class="popup-line"><strong>${groupLabel}</strong> majority precinct</p>
-								<p class="popup-line">Prop 50 received <strong>${yesPctFormatted}%</strong> support</p>
+								<p class="popup-line">${supportLine}</p>
 							</div>
 						`;
 
