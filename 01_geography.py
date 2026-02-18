@@ -1972,13 +1972,20 @@ def _(PROJECTED_CRS, gpd):
     _GIS_LAYER = "Sierra_County_Voter_Precincts_2021"
     sierra = gpd.read_file(_GIS_FP, layer=_GIS_LAYER).to_crs(PROJECTED_CRS)
 
+    # use "precinct_name" as the `precinct_id` because
+    # the precincts in sierra are unique based on their
+    # human readable name, which is also reported in
+    # the results data for the county.
     sierra = alter_df(
         df=sierra,
         county="Sierra",
-        rename={"PRECINCT": "precinct_id", "NAME": "precinct_name"},
+        rename={"NAME": "precinct_id", "PRECINCT": "precinct_name"},
     )
 
-    sierra.head()
+    # account for a subtle difference in the naming of two precincts: Sierra Brooks No 1 and Sierra Brooks No 2
+    sierra['precinct_id'] = sierra['precinct_id'].str.replace('No. ', 'No ')
+
+    sierra
     return (sierra,)
 
 
