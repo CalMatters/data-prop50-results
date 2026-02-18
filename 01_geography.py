@@ -1576,10 +1576,10 @@ def _(PROJECTED_CRS, gpd):
     san_francisco = alter_df(
         df=san_francisco,
         county="San Francisco",
-        rename={"Consolidat": "precinct_name", "ElecPct": "precinct_id"}
+        rename={"Consolidat": "precinct_name", "ElecPct": "precinct_id"},
     )
 
-    san_francisco['precinct_id'] = san_francisco['precinct_id'].astype(str)
+    san_francisco["precinct_id"] = san_francisco["precinct_id"].astype(str)
 
     san_francisco
     return (san_francisco,)
@@ -1594,23 +1594,78 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/san_joaquin/precincts/Precincts_2025.json"
+def _(pd):
+    _CONSOLIDATION_CROSSWALK_FP = (
+        "inputs/counties/san_joaquin/25sp_ewmr008_votabsregpctxref.xls"
+    )
+    san_joaquin_consolidation_crosswalk = pd.read_excel(
+        _CONSOLIDATION_CROSSWALK_FP, skiprows=1, skipfooter=2
+    )
+
+    # clean and format crosswalk file
+    san_joaquin_consolidation_crosswalk["Voting Precinct"] = (
+        san_joaquin_consolidation_crosswalk["Voting Precinct"].ffill()
+    )
+    san_joaquin_consolidation_crosswalk["Voting Precinct"] = (
+        san_joaquin_consolidation_crosswalk["Voting Precinct"].str.split(
+            " - ", expand=True
+        )[0]
+    )
+    san_joaquin_consolidation_crosswalk["Regular Pct"] = (
+        san_joaquin_consolidation_crosswalk["Regular Pct"].str.split(
+            " PCT ", expand=True
+        )[0]
+    )
+    san_joaquin_consolidation_crosswalk = san_joaquin_consolidation_crosswalk[
+        ["Voting Precinct", "Regular Pct", "VBM Pct"]
+    ]
+    return (san_joaquin_consolidation_crosswalk,)
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, san_joaquin_consolidation_crosswalk):
+    _GIS_FP = "inputs/counties/san_joaquin/MB_25SP_shp/MB_25SWP_Export_Output.shp"
     san_joaquin = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
+    # join with GIS data so we can dissolve/consolidate
+    san_joaquin_with_crosswalk = san_joaquin.merge(
+        san_joaquin_consolidation_crosswalk,
+        left_on="Sub_ID_00",
+        right_on="Regular Pct",
+        how="outer",
+        indicator=True,
+        validate="m:1",
+    )
+    san_joaquin_matched = validate_crosswalk_merge(
+        san_joaquin_with_crosswalk,
+        debug_prefix="san_joaquin",
+        left_only_cols=["Sub_ID_00", "_merge"],
+        right_only_cols=["Voting Precinct", "Regular Pct", "VBM Pct", "_merge"],
+    )
+    san_joaquin = san_joaquin_matched.dissolve("Voting Precinct")
+
     san_joaquin = alter_df(
-        df=san_joaquin,
+        df=san_joaquin.reset_index(),
         county="San Joaquin",
-        rename={"PRECINCT": "precinct_id"},
+        rename={"Voting Precinct": "precinct_id"},
         drop=[
             "OBJECTID_1",
             "OBJECTID",
-            "PERIMETER",
-            "Sub_ID_00",
-            "GlobalID",
-            "Shape__Area",
+            "spatial_LOPERIMETER",
+            "PRECINCT_",
+            "PRECINCT_I",
+            "PRECINCT",
             "Area",
-            "Shape__Length",
+            "Sub_ID_00",
+            "Shape_Leng",
+            "Shape_Area",
+            "MB_CON",
+            "REG_PCT",
+            "COLOR",
+            "Regular Pct",
+            "VBM Pct",
+            "spatial_LO",
+            "PERIMETER",
         ],
     )
 
