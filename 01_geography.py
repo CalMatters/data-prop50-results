@@ -1623,7 +1623,7 @@ def _(pd):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd, san_joaquin_consolidation_crosswalk, validate_crosswalk_merge):
+def _(PROJECTED_CRS, gpd, san_joaquin_consolidation_crosswalk):
     _GIS_FP = "inputs/counties/san_joaquin/MB_25SP_shp/MB_25SWP_Export_Output.shp"
     san_joaquin = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
