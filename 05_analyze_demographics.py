@@ -1109,6 +1109,97 @@ def _(precinct_results):
     precinct_results[MAP_EXPORT_CONFIG_KEY].to_file(
         str(_path), driver=MAP_EXPORT_DRIVER
     )
+    return (MAP_EXPORT_CONFIG_KEY,)
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    Export partner data
+
+    This file is used to produce a [Google Sheet](https://docs.google.com/spreadsheets/d/1W5_vdO3vjfrGStJVJ0M2XNHmK1-rfDVTet2GnRt-4cw/edit?gid=0#gid=0) sharing the analysis data with partners.
+    """)
+    return
+
+
+@app.cell
+def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
+    _PARTNER_EXPORT_PATH = "./outputs/partner_export.csv"
+    _PCT_COLUMNS = [
+        "yes_pct",
+        "no_pct",
+        "dem_pct_24",
+        "rep_pct_24",
+        "vote_shift",
+        "turnout",
+        "largest_racial_group_pct",
+    ]
+
+    _COLUMN_RENAMES = {
+        "total_votes": "total_votes_25",
+        "dem_votes": "dem_votes_24",
+        "rep_votes": "rep_votes_24",
+        "total_votes_2024": "total_votes_24",
+        "majority_racial_group_pct": "largest_racial_group_pct",
+        "dem_pct_2024": "dem_pct_24",
+        "rep_pct_2024": "rep_pct_24",
+    }
+
+    _EXPORT_COLUMNS = [
+        "county",
+        "precinct_id",
+        "total_votes_25",
+        "yes_votes",
+        "no_votes",
+        "yes_pct",
+        "no_pct",
+        "registered_voters",
+        "turnout",
+        "total_votes_24",
+        "dem_votes_24",
+        "rep_votes_24",
+        "dem_pct_24",
+        "rep_pct_24",
+        "vote_shift",
+        "majority_racial_group",
+        "plurality_racial_group",
+        "largest_racial_group_pct",
+    ]
+
+    precinct_results_export = (
+        precinct_results[MAP_EXPORT_CONFIG_KEY]
+        .rename(columns=_COLUMN_RENAMES)
+        .copy()
+    )
+
+    # Split the combined majority_racial_group string into separate majority and plurality columns
+    precinct_results_export[
+        ["majority_racial_group", "plurality_racial_group"]
+    ] = (
+        precinct_results_export["majority_racial_group"]
+        .str.strip(")")
+        .str.split("(", expand=True)
+    )
+
+    # Clean up whitespace and remove the "plurality" suffix from the plurality column
+    precinct_results_export["majority_racial_group"] = precinct_results_export[
+        "majority_racial_group"
+    ].str.strip()
+    precinct_results_export["plurality_racial_group"] = (
+        precinct_results_export["plurality_racial_group"]
+        .str.removesuffix("plurality")
+        .str.strip()
+    )
+
+    # divide by 100 for Google Sheet formatting
+    precinct_results_export[_PCT_COLUMNS] = (
+        precinct_results_export[_PCT_COLUMNS] / 100
+    )
+
+    precinct_results_export = precinct_results_export[_EXPORT_COLUMNS]
+
+    precinct_results_export.to_csv(_PARTNER_EXPORT_PATH, index=False)
+    del precinct_results_export
     return
 
 
