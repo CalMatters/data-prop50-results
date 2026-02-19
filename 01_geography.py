@@ -2038,7 +2038,7 @@ def _(PROJECTED_CRS, gpd):
     )
 
     # account for a subtle difference in the naming of two precincts: Sierra Brooks No 1 and Sierra Brooks No 2
-    sierra['precinct_id'] = sierra['precinct_id'].str.replace('No. ', 'No ')
+    sierra["precinct_id"] = sierra["precinct_id"].str.replace("No. ", "No ")
 
     sierra
     return (sierra,)
@@ -2112,26 +2112,32 @@ def _(mo):
 
 @app.cell
 def _(pd):
-    _SONOMA_CROSSWALK_FP = "inputs/counties/sonoma/EWMJ034_VotingPct_RegPct_BalType.txt"
-    sonoma_crosswalk_file = open(_SONOMA_CROSSWALK_FP,'r')
+    _SONOMA_CROSSWALK_FP = (
+        "inputs/counties/sonoma/EWMJ034_VotingPct_RegPct_BalType.txt"
+    )
+    sonoma_crosswalk_file = open(_SONOMA_CROSSWALK_FP, "r")
     sonoma_crosswalk = []
 
     for sonoma_crosswalk_file_line in sonoma_crosswalk_file:
         # do some cleanup on each line to make it easier to split
-        sonoma_crosswalk_file_line = sonoma_crosswalk_file_line.replace(',', '').replace('\t', ' ')
+        sonoma_crosswalk_file_line = sonoma_crosswalk_file_line.replace(
+            ",", ""
+        ).replace("\t", " ")
         # then split on empty spaces
-        sonoma_crosswalk_file_line_split = sonoma_crosswalk_file_line.split(' ')
+        sonoma_crosswalk_file_line_split = sonoma_crosswalk_file_line.split(" ")
         # the first "cell" will be the consolidated precinct id
         consolidated_precinct_id = sonoma_crosswalk_file_line_split[0]
 
-        if consolidated_precinct_id == 'VPCT':
+        if consolidated_precinct_id == "VPCT":
             continue
-    
+
         for v in sonoma_crosswalk_file_line_split[1:-1]:
-            sonoma_crosswalk.append({
-                "consolidated_precinct": consolidated_precinct_id,
-                "regular_precinct": v
-            })
+            sonoma_crosswalk.append(
+                {
+                    "consolidated_precinct": consolidated_precinct_id,
+                    "regular_precinct": v,
+                }
+            )
 
     sonoma_crosswalk = pd.DataFrame(sonoma_crosswalk)
     return (sonoma_crosswalk,)
@@ -2147,16 +2153,37 @@ def _(PROJECTED_CRS, gpd, sonoma_crosswalk):
     sonoma = sonoma[sonoma_should_be_kept].copy()
 
     # get the precinct ID that will be used for consolidation
-    sonoma = sonoma.merge(sonoma_crosswalk, left_on="Precinct", right_on="regular_precinct")
+    sonoma_with_crosswalk = sonoma.merge(
+        sonoma_crosswalk,
+        left_on="Precinct",
+        right_on="regular_precinct",
+        how="outer",
+        indicator=True,
+        validate="m:1",
+    )
+    sonoma_matched = validate_crosswalk_merge(
+        sonoma_with_crosswalk,
+        debug_prefix="sonoma",
+        left_only_cols=["Precinct", "_merge"],
+        right_only_cols=["consolidated_precinct", "regular_precinct", "_merge"],
+    )
 
     # then dissolve based on the consolidated precinct id
-    sonoma = sonoma.dissolve('consolidated_precinct').reset_index()
+    sonoma = sonoma_matched.dissolve("consolidated_precinct").reset_index()
 
     sonoma = alter_df(
         df=sonoma.reset_index(drop=True),
         county="Sonoma",
         rename={"consolidated_precinct": "precinct_id"},
-        drop=["Precinct", "VotingPrec", "created_us", "created_da", "last_edite", "last_edi_1", "regular_precinct"],
+        drop=[
+            "Precinct",
+            "VotingPrec",
+            "created_us",
+            "created_da",
+            "last_edite",
+            "last_edi_1",
+            "regular_precinct",
+        ],
     )
 
     sonoma
