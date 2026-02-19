@@ -348,6 +348,10 @@ def _(
         precinct_2025_results["dem_votes"],
         precinct_2025_results["total_votes_2024"],
     )
+    precinct_2025_results["rep_pct_2024"] = caclulate_pct(
+        precinct_2025_results["dem_votes"],
+        precinct_2025_results["total_votes_2024"],
+    )
     precinct_2025_results["vote_shift"] = round(
         precinct_2025_results["yes_pct"] - precinct_2025_results["dem_pct_2024"], 1
     )
