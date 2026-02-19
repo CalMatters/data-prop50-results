@@ -2111,19 +2111,55 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/sonoma/precincts/ROVPublic_Precincts.json"
+def _(pd):
+    _SONOMA_CROSSWALK_FP = "inputs/counties/sonoma/EWMJ034_VotingPct_RegPct_BalType.txt"
+    sonoma_crosswalk_file = open(_SONOMA_CROSSWALK_FP,'r')
+    sonoma_crosswalk = []
+
+    for sonoma_crosswalk_file_line in sonoma_crosswalk_file:
+        # do some cleanup on each line to make it easier to split
+        sonoma_crosswalk_file_line = sonoma_crosswalk_file_line.replace(',', '').replace('\t', ' ')
+        # then split on empty spaces
+        sonoma_crosswalk_file_line_split = sonoma_crosswalk_file_line.split(' ')
+        # the first "cell" will be the consolidated precinct id
+        consolidated_precinct_id = sonoma_crosswalk_file_line_split[0]
+
+        if consolidated_precinct_id == 'VPCT':
+            continue
+    
+        for v in sonoma_crosswalk_file_line_split[1:-1]:
+            sonoma_crosswalk.append({
+                "consolidated_precinct": consolidated_precinct_id,
+                "regular_precinct": v
+            })
+
+    sonoma_crosswalk = pd.DataFrame(sonoma_crosswalk)
+    return (sonoma_crosswalk,)
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, sonoma_crosswalk):
+    _GIS_FP = "inputs/counties/sonoma/November 4, 2025 PCTS.zip"
     sonoma = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
-    sonoma = alter_df(
-        df=sonoma,
-        county="Sonoma",
-        rename={"OBJECTID": "precinct_id"},
-        drop=["SubPrecinct", "Shape__Area", "Shape__Length"],
-    )
-    sonoma["precinct_name"] = None
+    # precincts with a "Precinct" value of 9999999 can be dropped
+    sonoma_should_be_kept = sonoma["Precinct"] != "9999999"
+    sonoma = sonoma[sonoma_should_be_kept].copy()
 
-    sonoma.head()
+    # get the precinct ID that will be used for consolidation
+    sonoma = sonoma.merge(sonoma_crosswalk, left_on="Precinct", right_on="regular_precinct")
+
+    # then dissolve based on the consolidated precinct id
+    sonoma = sonoma.dissolve('consolidated_precinct').reset_index()
+
+    sonoma = alter_df(
+        df=sonoma.reset_index(drop=True),
+        county="Sonoma",
+        rename={"consolidated_precinct": "precinct_id"},
+        drop=["Precinct", "VotingPrec", "created_us", "created_da", "last_edite", "last_edi_1", "regular_precinct"],
+    )
+
+    sonoma
     return (sonoma,)
 
 
