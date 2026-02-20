@@ -34,6 +34,13 @@
 	/** Input shows search query while typing, or selected precinct ID when not searching. */
 	const displayValue = $derived(query !== '' ? query : (selectedPrecinctId ?? ''));
 
+	/** ID of the currently highlighted listbox option (for aria-activedescendant). */
+	const highlightedOptionId = $derived(
+		highlightedIndex >= 0 && filteredPrecinctIds[highlightedIndex]
+			? `option-${filteredPrecinctIds[highlightedIndex]}`
+			: undefined
+	);
+
 	function selectPrecinct(precinctId) {
 		onchange(precinctId);
 		query = '';
@@ -105,7 +112,7 @@
 			aria-expanded={open}
 			aria-controls={listId}
 			aria-autocomplete="list"
-			aria-activedescendant={highlightedIndex >= 0 && filteredPrecinctIds[highlightedIndex] ? `option-${filteredPrecinctIds[highlightedIndex]}` : undefined}
+			aria-activedescendant={highlightedOptionId}
 			value={displayValue}
 			oninput={(e) => (query = e.currentTarget.value)}
 			onfocus={() => (open = true)}
