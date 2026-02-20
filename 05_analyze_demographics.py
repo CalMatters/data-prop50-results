@@ -4,6 +4,7 @@ __generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 with app.setup:
+    import json
     import pathlib
 
     import geopandas as gpd
@@ -1200,6 +1201,25 @@ def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
 
     precinct_results_export.to_csv(_PARTNER_EXPORT_PATH, index=False)
     del precinct_results_export
+    
+
+@app.cell
+def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
+    _precincts_df = precinct_results[MAP_EXPORT_CONFIG_KEY][
+        ["county", "precinct_id"]
+    ]
+    county_precinct_dict = (
+        _precincts_df.groupby("county")["precinct_id"].apply(list).to_dict()
+    )
+
+    _output_path = pathlib.Path("./outputs/county_precincts.json")
+    with _output_path.open("w") as f:
+        json.dump(county_precinct_dict, f)
+    return
+
+
+@app.cell
+def _():
     return
 
 
