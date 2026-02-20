@@ -4,7 +4,9 @@
 	import Credits from '$lib/components/ui/Credits.svelte';
 	import Header from '$lib/components/ui/Header.svelte';
 	import MapLibreMap from '$lib/components/maps/MapLibreMap.svelte';
+	import PrecinctSelect from '$lib/components/ui/PrecinctSelect.svelte';
 	import RacialGroupLegend from '$lib/components/ui/RacialGroupLegend.svelte';
+	import { onMount } from 'svelte';
 
 	// this is the bounding boxes of each county
 	import counties from '$lib/ca-county-bounding-boxes.json';
@@ -48,6 +50,14 @@
 	// a component-level variable, in this case we'll call it map
 	let map = $state(null);
 	let selectedCounty = $state(null);
+	let selectedPrecinctId = $state(null);
+	/** County name → list of precinct IDs (from /county_precincts.json) */
+	let countyPrecincts = $state(/** @type {Record<string, string[]>} */ ({}));
+
+	onMount(async () => {
+		const res = await fetch('/county_precincts.json');
+		if (res.ok) countyPrecincts = await res.json();
+	});
 
 	// Normalized racial group expression (same for all metrics)
 	const normalizedGroup = [
@@ -168,6 +178,19 @@
 			buildPrecinctFillColorExpression(saturationMetric)
 		);
 	});
+
+	$effect(() => {
+		if (!map || !map.getLayer('selected-precinct-outline')) return;
+		const filter =
+			selectedCounty && selectedPrecinctId
+				? [
+						'all',
+						['==', ['get', 'county'], selectedCounty.COUNTY_NAME],
+						['==', ['get', 'precinct_id'], selectedPrecinctId]
+					]
+				: ['==', ['get', 'precinct_id'], ''];
+		map.setFilter('selected-precinct-outline', filter);
+	});
 </script>
 
 <main class="graphic">
@@ -182,8 +205,18 @@
 		label="Selected county"
 		onchange={(county) => {
 			selectedCounty = counties.find((d) => d.COUNTY_NAME.toLowerCase() === county?.toLowerCase());
+			selectedPrecinctId = null;
 		}}
 	/>
+
+	{#if selectedCounty}
+		<PrecinctSelect
+			precinctIds={countyPrecincts[selectedCounty.COUNTY_NAME] ?? []}
+			selectedPrecinctId={selectedPrecinctId}
+			onchange={(id) => (selectedPrecinctId = id)}
+			label="Selected precinct"
+		/>
+	{/if}
 
 	<RacialGroupLegend
 		saturationMetric={saturationMetric}
@@ -284,6 +317,25 @@
 								}
 							},
 							insertBeforeLayerId
+						);
+					}
+
+					// Selected precinct outline (on top of precincts-outline, below county bounds)
+					if (!map.getLayer('selected-precinct-outline')) {
+						map.addLayer(
+							{
+								id: 'selected-precinct-outline',
+								type: 'line',
+								source: PRECINCT_SOURCE_ID,
+								'source-layer': PRECINCT_SOURCE_LAYER,
+								filter: ['==', ['get', 'precinct_id'], ''],
+								paint: {
+									'line-color': SELECTED_COUNTY_STROKE_COLOR,
+									'line-width': SELECTED_COUNTY_STROKE_WIDTH,
+									'line-opacity': 0.7
+								}
+							},
+							'county-bounds-line'
 						);
 					}
 
