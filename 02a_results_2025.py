@@ -32,7 +32,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return EsriDumper, Path, json, mo, np, pd, pdfplumber, re, warnings
+    return EsriDumper, Path, json, mo, pd, pdfplumber, re, warnings
 
 
 @app.cell
@@ -1781,14 +1781,14 @@ def _(bfill_without_downcast_warning, pd, standardize_results_df):
         skipfooter=_SKIP_FOOTER_ROWS,
     )
 
+    # backfill the data so that precincts and vote counts are on the same row
+    san_bernardino = bfill_without_downcast_warning(san_bernardino)
+
     # remove rows for formatting and voting method breakdown
     for _exclude_val in _PRECINCT_EXCLUDE_VALUES:
         san_bernardino = san_bernardino[
             san_bernardino["Precinct"] != _exclude_val
         ].copy()
-
-    # backfill the data so that precincts and vote counts are on the same row
-    san_bernardino = bfill_without_downcast_warning(san_bernardino)
 
     san_bernardino = standardize_results_df(
         results_df=san_bernardino,
