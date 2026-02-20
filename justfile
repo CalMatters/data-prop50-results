@@ -24,6 +24,7 @@ generate-all-data:
     just generate-cvap-file
     just interpolate-cvap
     just generate-analysis-exports
+    mv outputs/county_precincts.json vis/static/
 
 generate-demographics-pmtiles:
     npx mapshaper outputs/precinct_results_plus_demographics_blocks.geojson -proj wgs84 init=EPSG:3310 -o format=geojson ndjson outputs/precinct_results_plus_demographics_blocks_nd.json
