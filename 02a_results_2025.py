@@ -32,7 +32,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
-    return EsriDumper, Path, json, mo, np, pd, pdfplumber, re, warnings
+    return EsriDumper, Path, json, mo, pd, pdfplumber, re, warnings
 
 
 @app.cell
@@ -1771,7 +1771,6 @@ def _(bfill_without_downcast_warning, pd, standardize_results_df):
         "Electionwide",
         "Mail Ballot",
         "Polling Place",
-        "Total",
     ]
 
     san_bernardino = pd.read_excel(
@@ -1789,6 +1788,8 @@ def _(bfill_without_downcast_warning, pd, standardize_results_df):
 
     # backfill the data so that precincts and vote counts are on the same row
     san_bernardino = bfill_without_downcast_warning(san_bernardino)
+    san_bernardino = san_bernardino[san_bernardino["Precinct"] != "Total"].copy()
+
 
     san_bernardino = standardize_results_df(
         results_df=san_bernardino,
