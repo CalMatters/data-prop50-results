@@ -1897,7 +1897,7 @@ def _(PROJECTED_CRS, gpd, pd):
         santa_barbara_crosswalk,
         left_on="PrcID",
         right_on="Regular Pct",
-        how="inner",
+        how="outer",
         validate="m:1",
         indicator=True,
     )
@@ -1908,7 +1908,7 @@ def _(PROJECTED_CRS, gpd, pd):
         right_only_cols=["Regular Pct", "Voting Precinct", "_merge"],
     )
 
-    santa_barbara = santa_barbara_with_crosswalk.dissolve("VBM Pct").reset_index()
+    santa_barbara = santa_barbara_matched.dissolve("VBM Pct").reset_index()
     santa_barbara = alter_df(
         df=santa_barbara,
         county="Santa Barbara",
