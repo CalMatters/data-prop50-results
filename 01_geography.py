@@ -81,6 +81,7 @@ def _(
     imperial,
     inyo,
     kern,
+    kings,
     lake,
     los_angeles,
     madera,
@@ -132,6 +133,7 @@ def _(
         imperial,
         inyo,
         kern,
+        kings,
         lake,
         los_angeles,
         madera,
@@ -1003,6 +1005,75 @@ def _(PROJECTED_CRS, gpd, kern_crosswalk, pd):
 
     kern
     return (kern,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Kings
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, pd):
+    _GIS_FP = "inputs/counties/kings/09022025/Export_Output_2.shp"
+    _KINGS_CROSSWALK_FP = "inputs/counties/kings/EWMJ015_RegPctVotPctXref.txt"
+
+    kings = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+    kings_crosswalk = pd.read_csv(_KINGS_CROSSWALK_FP, sep="\t")
+    kings_crosswalk["PRECINCTID"] = kings_crosswalk["PRECINCTID"].astype(str)
+
+    kings_with_crosswalk = kings.merge(
+        kings_crosswalk,
+        left_on="PRECINCT",
+        right_on="PRECINCTID",
+        how="inner",
+        validate="m:1",
+        indicator=True,
+    )
+    kings_matched = validate_crosswalk_merge(
+        kings_with_crosswalk,
+        debug_prefix="kings",
+        left_only_cols=["PRECINCT", "_merge"],
+        right_only_cols=["PRECINCTID", "_merge"],
+    )
+
+    kings = kings_with_crosswalk.dissolve("VOTINGPRECINCT").reset_index()
+    kings['VOTINGPRECINCT'] = kings['VOTINGPRECINCT'].str.split(' ', expand=True)[0]
+
+    kings = alter_df(
+        kings,
+        "Kings",
+        {"VOTINGPRECINCT": "precinct_id"},
+        [
+            "ID",
+            "PRECINCT",
+            "Precinct_N",
+            "Shape_Leng",
+            "Shape_Area",
+            "OID_",
+            "PRECINCTID_x",
+            "PRECINCTPO",
+            "PRECINCTNA",
+            "REGCOUNTTO",
+            "REGCOUNTAC",
+            "CONVERTED_",
+            "NEW_NAME",
+            "NEWEST_PRE",
+            "ROLL_UP_CO",
+            "ELECTIONABBR",
+            "PRECINCTID_y",
+            "PRECINCTPORTION",
+            "MAILBALLOT",
+            "ABSENTEEPRECINCT",
+            "BALLOTTYPE",
+            "_merge",
+        ],
+    )
+
+    kings
+    return (kings,)
 
 
 @app.cell(hide_code=True)
