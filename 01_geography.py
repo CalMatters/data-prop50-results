@@ -1875,26 +1875,62 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/santa_barbara/precincts/PrecinctsAug2025.json"
+def _(PROJECTED_CRS, gpd, pd):
+    _GIS_FP = "inputs/counties/santa_barbara/_REGPRECINCTS_20250905.zip"
+    _SANTA_BARBARA_CROSSWALK_FP = (
+        "inputs/counties/santa_barbara/ewmr008_votabsregpctxref.xls"
+    )
+    _SANTA_BARBARA_HEADER_N = 1
+    _SANTA_BARBARA_FOOTER_N = 2
     santa_barbara = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+    santa_barbara['geometry'] = santa_barbara['geometry'].make_valid()
 
+    santa_barbara_crosswalk = pd.read_excel(
+        _SANTA_BARBARA_CROSSWALK_FP,
+        skiprows=_SANTA_BARBARA_HEADER_N,
+        skipfooter=_SANTA_BARBARA_FOOTER_N,
+    )
+    santa_barbara_crosswalk['Voting Precinct'] = santa_barbara_crosswalk['Voting Precinct'].ffill()
+    santa_barbara_crosswalk['Regular Pct'] = santa_barbara_crosswalk['Regular Pct'].str.split(' ', expand=True)[0]
+
+    santa_barbara_with_crosswalk = santa_barbara.merge(
+        santa_barbara_crosswalk,
+        left_on="PrcID",
+        right_on="Regular Pct",
+        how="inner",
+        validate="m:1",
+        indicator=True,
+    )
+    santa_barbara_matched = validate_crosswalk_merge(
+        santa_barbara_with_crosswalk,
+        debug_prefix="santa_barbara",
+        left_only_cols=["PrcID", "_merge"],
+        right_only_cols=["Regular Pct", "Voting Precinct", "_merge"],
+    )
+
+    santa_barbara = santa_barbara_with_crosswalk.dissolve("VBM Pct").reset_index()
     santa_barbara = alter_df(
         df=santa_barbara,
         county="Santa Barbara",
-        rename={"PRECINCTID": "precinct_id", "ABRV_NAME": "precinct_name"},
+        rename={"VBM Pct": "precinct_id"},
         drop=[
-            "PRECINCT_N",
-            "PRCNCT_PRT",
-            "OBJECTID",
-            "Shape__Area",
-            "Shape__Length",
+            "PrcID",
+            "Shape_Leng",
+            "Shape_Area",
+            "Voting Precinct",
+            "MB?",
+            "Regular Pct",
+            "Ballot Type",
+            "Voting Precinct.1",
+            "MB?.1",
+            "VBM Pct.1",
+            "Regular Pct.1",
+            "Ballot Type.1",
+            "_merge",
         ],
     )
 
-    santa_barbara.head()
-
-    santa_barbara.plot()
+    santa_barbara
     return (santa_barbara,)
 
 
