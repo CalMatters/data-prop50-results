@@ -39,15 +39,19 @@ This project uses [Marimo](https://marimo.io/) (an interactive Python notebook) 
 
 The notebooks follow a sequential pipeline:
 
-1. **`01_geography.py`** - Processes precinct geographic files from all counties
+1. **`00_census.py`** - Census ETL: county bounds, CVAP by tract, CVAP by block
+   - Output: `outputs/county_bounds.geojson`, `outputs/cvap_tracts.gpkg`, `outputs/cvap_blocks.gpkg`
+   - Run with: `just generate-cvap-file`
+
+2. **`01_geography.py`** - Processes precinct geographic files from all counties
    - Output: `outputs/precincts.gpkg`
    - Run with: `just generate-precincts-file`
 
-2. **`02_results.py`** - Cleans and standardizes precinct-level election results
-   - Output: `outputs/results.csv`
-   - Run with: `uv run marimo edit 02_results.py` (interactive) or `uv run 02_results.py`
+3. **`02a_results_2025.py`** and **`02b_results_2024.py`** - Clean and standardize precinct-level election results
+   - Output: `02a` → `outputs/results.csv`; `02b` → `outputs/precinct_results_2024.gpkg` (and county-level outputs in `outputs/counties/`)
+   - Run with: `uv run marimo edit 02a_results_2025.py` or `uv run marimo edit 02b_results_2024.py` (interactive), or `just generate-results-file` to run both
 
-3. **`03_precincts_merge.py`** - Merges geography and results data
+4. **`03_precincts_merge.py`** - Merges geography and results data
    - Input: `outputs/precincts.gpkg` and `outputs/results.csv`
    - Output: `outputs/precinct_results.gpkg`
    - Run with: `just merge-precinct-results`
@@ -67,10 +71,12 @@ This will:
 
 **Note**: Marimo notebooks are just Python files - you can edit them in any editor, but the browser interface makes it easier to run and visualize results.
 
-There are three notebooks:
+Notebooks include:
 
+* `00_census.py` - Census ETL: county bounds, CVAP by tract, CVAP by block
 * `01_geography.py` - Precinct geographic data cleaning
-* `02_results.py` - Precinct result data cleaning
+* `02a_results_2025.py` - 2025 precinct result data cleaning
+* `02b_results_2024.py` - 2024 precinct result data cleaning
 * `03_precincts_merge.py` - Merge precinct geography with results data
 
 All notebooks read data from `inputs/` and write data to `outputs/`. See the "Data Processing Workflow" section above for details on how they connect.
@@ -89,7 +95,11 @@ Reproject the voting precincts from each county into NAD83/California Albers and
  * `precinct_id` - The precinct ID from the county
  * `precinct_name` - The human-readable name included by the county, otherwise `None`
 
-#### `02_results.py` - Precinct result data cleaning
+#### `00_census.py` - Census ETL
+
+Produces three GIS outputs: California county boundaries (`outputs/county_bounds.geojson`), [CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) by census tract (`outputs/cvap_tracts.gpkg`), and CVAP by block (`outputs/cvap_blocks.gpkg`). All use NAD83/California Albers (EPSG:3310). Run with `just generate-cvap-file`.
+
+#### `02a_results_2025.py` and `02b_results_2024.py` - Precinct result data cleaning
 
 Make sure that the precinct-level results data has the following columns for consistency:
 * `county` - The county containing the precinct
@@ -111,7 +121,8 @@ Merges the standardized precinct geography file (`outputs/precincts.gpkg`) with 
 The notebooks generate the following output files in the `outputs/` directory:
 
 * `precincts.gpkg` - Combined precinct geography from all counties (from `01_geography.py`)
-* `results.csv` - Standardized precinct-level election results (from `02_results.py`)
+* `results.csv` - Standardized precinct-level 2025 election results (from `02a_results_2025.py`)
 * `precinct_results.gpkg` - Merged geography and results data (from `03_precincts_merge.py`)
+* `precinct_results_2024.gpkg` - 2024 statewide merged results (from `02b_results_2024.py`); county-level outputs in `outputs/counties/`
 
 **Note**: Most output files are gitignored (see `.gitignore`).

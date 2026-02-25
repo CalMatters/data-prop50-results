@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.4"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -42,9 +42,15 @@ def _():
     PROJECTED_CRS = (
         "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
     )
+    return (PROJECTED_CRS,)
+
+
+@app.cell
+def _():
+    OUTPUT_COLUMNS = ["county", "precinct_id", "precinct_name", "geometry"]
     COMBINED_OUTPUT_PATH = "outputs/precincts.gpkg"
     COMBINED_OUTPUT_DRIVER = "GPKG"
-    return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, PROJECTED_CRS
+    return COMBINED_OUTPUT_DRIVER, COMBINED_OUTPUT_PATH, OUTPUT_COLUMNS
 
 
 @app.cell(hide_code=True)
@@ -64,8 +70,6 @@ def _(combined_reordered):
 
 @app.cell
 def _(
-    COMBINED_OUTPUT_DRIVER,
-    COMBINED_OUTPUT_PATH,
     alameda,
     amador,
     butte,
@@ -90,7 +94,6 @@ def _(
     napa,
     nevada,
     orange,
-    pd,
     placer,
     riverside,
     sacramento,
@@ -102,6 +105,7 @@ def _(
     san_luis_obispo,
     san_mateo,
     santa_barbara,
+    santa_clara,
     santa_cruz,
     shasta,
     sierra,
@@ -116,67 +120,76 @@ def _(
     yolo,
     yuba,
 ):
-    # create a new data frame from the data frames for each county
-    combined = pd.concat(
-        [
-            alameda,
-            amador,
-            butte,
-            colusa,
-            contra_costa,
-            fresno,
-            glenn,
-            humboldt,
-            imperial,
-            inyo,
-            kern,
-            lake,
-            los_angeles,
-            madera,
-            marin,
-            mariposa,
-            mendocino,
-            merced,
-            modoc,
-            mono,
-            monterey,
-            napa,
-            nevada,
-            orange,
-            placer,
-            riverside,
-            sacramento,
-            san_benito,
-            san_bernardino,
-            san_diego,
-            san_francisco,
-            san_joaquin,
-            san_luis_obispo,
-            san_mateo,
-            santa_barbara,
-            santa_cruz,
-            shasta,
-            sierra,
-            siskiyou,
-            solano,
-            sonoma,
-            sutter,
-            tehama,
-            tulare,
-            tuolumne,
-            ventura,
-            yolo,
-            yuba,
-        ]
-    )
+    COUNTIES_GDFS = [
+        alameda,
+        amador,
+        butte,
+        colusa,
+        contra_costa,
+        fresno,
+        glenn,
+        humboldt,
+        imperial,
+        inyo,
+        kern,
+        lake,
+        los_angeles,
+        madera,
+        marin,
+        mariposa,
+        mendocino,
+        merced,
+        modoc,
+        mono,
+        monterey,
+        napa,
+        nevada,
+        orange,
+        placer,
+        riverside,
+        sacramento,
+        san_benito,
+        san_bernardino,
+        san_diego,
+        san_francisco,
+        san_joaquin,
+        san_luis_obispo,
+        san_mateo,
+        santa_barbara,
+        santa_clara,
+        santa_cruz,
+        shasta,
+        sierra,
+        siskiyou,
+        solano,
+        sonoma,
+        sutter,
+        tehama,
+        tulare,
+        tuolumne,
+        ventura,
+        yolo,
+        yuba,
+    ]
+    return (COUNTIES_GDFS,)
 
-    # make sure any mising "precinct_name" values are empty strings
-    combined.fillna(value={"precinct_name": ""}, inplace=True)
+
+@app.cell
+def _(
+    COMBINED_OUTPUT_DRIVER,
+    COMBINED_OUTPUT_PATH,
+    COUNTIES_GDFS,
+    OUTPUT_COLUMNS,
+    pd,
+):
+    # create a new data frame from the data frames for each county
+    combined = pd.concat(COUNTIES_GDFS)
+
+    # make sure any missing "precinct_name" values are empty strings
+    combined = combined.fillna(value={"precinct_name": ""})
 
     # reorder the columns to make it more readable
-    combined_reordered = combined[
-        ["county", "precinct_id", "precinct_name", "geometry"]
-    ]
+    combined_reordered = combined[OUTPUT_COLUMNS]
 
     dupes = check_duplicates(combined_reordered)
 
@@ -195,18 +208,21 @@ def _(mo):
 
 
 @app.function
-def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
+def check_duplicates(df, columns_to_check=None):
     """
     Check for duplicate entries in the DataFrame based on specified columns.
     If duplicates are found, print a descriptive message listing the counties with duplicate IDs.
     Returns the duplicate rows sorted by the specified columns if possible; otherwise, returns unsorted duplicates.
+
     Parameters:
         df (pd.DataFrame): The input DataFrame to check for duplicates.
         columns_to_check (list): List of column names to identify duplicates. Defaults to ["county", "precinct_id"].
 
     Returns:
-        pd.DataFrame or bool: DataFrame of duplicate rows if found (sorted if possible), otherwise None.
+        pd.DataFrame | None: DataFrame of duplicate rows if found (sorted if possible), otherwise None.
     """
+    if columns_to_check is None:
+        columns_to_check = ["county", "precinct_id"]
     # Identify duplicate rows based on "county" and "precinct_id"
     duplicates = df[df.duplicated(subset=columns_to_check, keep=False)]
 
@@ -229,9 +245,54 @@ def check_duplicates(df, columns_to_check=["county", "precinct_id"]):
 
 
 @app.function
+def validate_crosswalk_merge(
+    merged, debug_prefix="", left_only_cols=None, right_only_cols=None
+):
+    """
+    Validate outer merge of GIS and crosswalk. Export unmatched rows to debug
+    CSVs. Returns only rows with _merge == "both", with _merge dropped.
+
+    Parameters:
+        merged (pd.DataFrame): The merged DataFrame containing GIS and crosswalk data with a "_merge" column
+            indicating the source of each row ("left_only", "right_only", or "both"). Can be applied by
+            setting the indicator parameter in pd.merge. Merge also requires left to be GIS precincts and
+            right to be the crosswalk data precincts
+        debug_prefix (str): A string prefix used to name the debug output files for unmatched precincts.
+        left_only_cols (list of str, optional): List of column names to include in the debug CSV for records
+            present only in the GIS data (default is all columns).
+        right_only_cols (list of str, optional): List of column names to include in the debug CSV for records
+            present only in the crosswalk data (default is all columns).
+
+    Returns:
+        pd.DataFrame: A filtered DataFrame containing only rows that matched in both datasets
+            (i.e., where _merge == "both"), with the "_merge" column dropped.
+    """
+    checks = {
+        "left_only": {
+            "message": "GIS precincts did not match in the crosswalk data.",
+            "cols": left_only_cols if left_only_cols else merged.columns,
+            "suffix": "unmatched_precincts",
+        },
+        "right_only": {
+            "message": "crosswalk component precincts have no match in the geographic data.",
+            "cols": right_only_cols if right_only_cols else merged.columns,
+            "suffix": "crosswalk_only_precincts",
+        },
+    }
+    for merge_val, config in checks.items():
+        subset = merged[merged["_merge"] == merge_val]
+        if len(subset) != 0:
+            print(f"Warning: {len(subset)} {config['message']}")
+            fp = f"debug/{debug_prefix}_{config['suffix']}.csv"
+            subset[config["cols"]].to_csv(fp, index=False)
+            print(f"Exported to {fp}")
+    return merged[merged["_merge"] == "both"].drop(columns=["_merge"])
+
+
+@app.function
 def alter_df(df, county, rename=None, drop=None):
     """
-    Alter the dataframe, in place, by renaming and dropping columns
+    Add county column, optionally rename and drop columns. Returns the modified DataFrame.
     """
     df["county"] = county
     if rename:
@@ -252,7 +313,7 @@ def _(mo):
     mo.md(r"""
     # Extract and transform by county
 
-    Each county's indepedent election adminstrator produces an election precincts map that needs to read in and transformed into our standardized format
+    Each county's independent election administrator produces an election precincts map that needs to be read in and transformed into our standardized format
     """)
     return
 
@@ -348,7 +409,8 @@ def _(PROJECTED_CRS, gpd):
     butte = alter_df(
         df=butte,
         county="Butte",
-        rename={"Name": "precinct_name", "id": "precinct_id"},
+        # note: the id and name columns in the source data unintuitively have the expected precinct name and id swapped
+        rename={"Name": "precinct_id", "id": "precinct_name"},
         drop=[
             "id",
             "Name",
@@ -526,7 +588,7 @@ def _():
             # if the data has 7 elements after the split that means it has
             # the results precinct id
             elif line_split_count == LINE_WITH_RESULTS_ID_SPLIT_COUNT:
-                new_last_seen_id = "%s" % line_split[RESULTS_PRECINCT_ID_INDEX]
+                new_last_seen_id = str(line_split[RESULTS_PRECINCT_ID_INDEX])
                 row = {
                     "registration_precinct": _strip_lang_signifier_from_registration_precinct_id(
                         line_split[REGISTRATION_PRECINCT_INDEX_WITH_RESULTS]
@@ -593,7 +655,7 @@ def _(extract_fresno_crosswalk_pdf_page, pd, pdfplumber):
 
 @app.cell
 def _(PROJECTED_CRS, fresno_page_rows, gpd):
-    # use fresno registration precicnts
+    # use fresno registration precincts
     _GIS_FP = "inputs/counties/fresno/precincts/ELECTIONS_PRECINCT_VW.zip"
     fresno = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
@@ -696,7 +758,7 @@ def _(PROJECTED_CRS, gpd):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Humbodlt
+    ## Humboldt
     """)
     return
 
@@ -957,8 +1019,8 @@ def _(PROJECTED_CRS, gpd):
     lake = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     lake = alter_df(
-        lake,
-        "Lake",
+        df=lake,
+        county="Lake",
         rename={"PRECINCT": "precinct_id"},
         drop=["NUMBER", "Shape_Leng", "Shape_Area"],
     )
@@ -1131,7 +1193,7 @@ def _(PROJECTED_CRS, gpd):
         drop=["Ballot_Lin", "Shape_Leng", "Shape_Area"],
     )
 
-    merced.head(None)
+    merced.head()
     return (merced,)
 
 
@@ -1292,7 +1354,7 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/orange/precincts/OC_Precinct_2024GE.zip"
+    _GIS_FP = "inputs/counties/orange/precincts/2025_Statewide_Special_Election_Precincts.zip"
     orange = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     orange = alter_df(
@@ -1302,7 +1364,7 @@ def _(PROJECTED_CRS, gpd):
         drop=["Shape_Leng", "Shape_Area"],
     )
 
-    orange.head()
+    orange
     return (orange,)
 
 
@@ -1340,18 +1402,18 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/riverside/precincts/Final Voting Precincts.zip"
+    _GIS_FP = "inputs/counties/riverside/precincts/riversidecaenr_9.json"
     riverside = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     riverside = alter_df(
         df=riverside,
         county="Riverside",
-        rename={"PRIMARY_NE": "precinct_id"},
+        rename={"sVotingPre": "precinct_id"},
         drop=[
             "SUM_lTotal",
-            "sVotingPre",
             "SUM_lTot_1",
             "VPMapping",
+            "PRIMARY_NE",
             "sVotingP_1",
             "iMailBallo",
             "Shape_Leng",
@@ -1363,7 +1425,12 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    riverside.head()
+    # change the precinct_id to match the format in the results file
+    riverside["precinct_id"] = (
+        riverside["precinct_id"].astype(str).str.replace(".0", "")
+    )
+
+    riverside
     return (riverside,)
 
 
@@ -1392,18 +1459,13 @@ def _(PROJECTED_CRS, gpd):
 def _(mo):
     mo.md(r"""
     ## San Benito
-
-    A dissolve operation is executed to join all the records with `precinct_id` `0`. These are associated with unpopulated areas such as water treatment plant, farmland, parks, open fields. [Read more issue #32](https://github.com/CalMatters/data-prop50-results/issues/32)
     """)
     return
 
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = (
-        "inputs/counties/san_benito/precincts/San_Benito_Base_Precincts_2025.zip"
-    )
-    _UNPOPULATED_PRECINCT_ID = "0"
+    _GIS_FP = "inputs/counties/san_benito/precincts/Consolidated_Precincts_November_2025.zip"
     san_benito = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_benito = alter_df(
@@ -1424,25 +1486,7 @@ def _(PROJECTED_CRS, gpd):
         ],
     )
 
-    assert len(check_duplicates(san_benito)) > 0, (
-        "Expected duplicates but found none"
-    )
-    unpopulated_precinct_count = (
-        san_benito["precinct_id"] == _UNPOPULATED_PRECINCT_ID
-    ).sum()
-    _predissolve_precinct_count = len(san_benito)
-    san_benito = san_benito.dissolve("precinct_id", as_index=False)
-    expected_count = _predissolve_precinct_count - (unpopulated_precinct_count - 1)
-    actual_count = len(san_benito)
-    assert actual_count == expected_count, (
-        f"San Benito dissolve assertion failed: expected {expected_count} precincts after dissolve, but got {actual_count}."
-    )
-    assert check_duplicates(san_benito) is None, (
-        "Expected no duplicate entires after dissolve operations but duplicate check returned True"
-    )
-    print("San Benito duplicate resolved using dissolve operation")
-
-    san_benito.head()
+    san_benito
     return (san_benito,)
 
 
@@ -1526,27 +1570,18 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/san_francisco/precincts/Election Precincts - Current, Defined 2022_20251120.zip"
+    _GIS_FP = "inputs/counties/san_francisco/precincts/110425_ElectionPcts090525_pg/110425_ElectionPcts_108_pg.shp"
     san_francisco = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_francisco = alter_df(
         df=san_francisco,
         county="San Francisco",
-        rename={"neigh22": "precinct_name", "prec_2022": "precinct_id"},
-        drop=[
-            "supe22",
-            "assemb22",
-            "cong22",
-            "bart22",
-            "boe22",
-            "sen22",
-            "histnhood",
-            "shape_leng",
-            "shape_area",
-        ],
+        rename={"Consolidat": "precinct_name", "ElecPct": "precinct_id"},
     )
 
-    san_francisco.head()
+    san_francisco["precinct_id"] = san_francisco["precinct_id"].astype(str)
+
+    san_francisco
     return (san_francisco,)
 
 
@@ -1559,23 +1594,78 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/san_joaquin/precincts/Precincts_2025.json"
+def _(pd):
+    _CONSOLIDATION_CROSSWALK_FP = (
+        "inputs/counties/san_joaquin/25sp_ewmr008_votabsregpctxref.xls"
+    )
+    san_joaquin_consolidation_crosswalk = pd.read_excel(
+        _CONSOLIDATION_CROSSWALK_FP, skiprows=1, skipfooter=2
+    )
+
+    # clean and format crosswalk file
+    san_joaquin_consolidation_crosswalk["Voting Precinct"] = (
+        san_joaquin_consolidation_crosswalk["Voting Precinct"].ffill()
+    )
+    san_joaquin_consolidation_crosswalk["Voting Precinct"] = (
+        san_joaquin_consolidation_crosswalk["Voting Precinct"].str.split(
+            " - ", expand=True
+        )[0]
+    )
+    san_joaquin_consolidation_crosswalk["Regular Pct"] = (
+        san_joaquin_consolidation_crosswalk["Regular Pct"].str.split(
+            " PCT ", expand=True
+        )[0]
+    )
+    san_joaquin_consolidation_crosswalk = san_joaquin_consolidation_crosswalk[
+        ["Voting Precinct", "Regular Pct", "VBM Pct"]
+    ]
+    return (san_joaquin_consolidation_crosswalk,)
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, san_joaquin_consolidation_crosswalk):
+    _GIS_FP = "inputs/counties/san_joaquin/MB_25SP_shp/MB_25SWP_Export_Output.shp"
     san_joaquin = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
+    # join with GIS data so we can dissolve/consolidate
+    san_joaquin_with_crosswalk = san_joaquin.merge(
+        san_joaquin_consolidation_crosswalk,
+        left_on="Sub_ID_00",
+        right_on="Regular Pct",
+        how="outer",
+        indicator=True,
+        validate="m:1",
+    )
+    san_joaquin_matched = validate_crosswalk_merge(
+        san_joaquin_with_crosswalk,
+        debug_prefix="san_joaquin",
+        left_only_cols=["Sub_ID_00", "_merge"],
+        right_only_cols=["Voting Precinct", "Regular Pct", "VBM Pct", "_merge"],
+    )
+    san_joaquin = san_joaquin_matched.dissolve("Voting Precinct")
+
     san_joaquin = alter_df(
-        df=san_joaquin,
+        df=san_joaquin.reset_index(),
         county="San Joaquin",
-        rename={"PRECINCT": "precinct_id"},
+        rename={"Voting Precinct": "precinct_id"},
         drop=[
             "OBJECTID_1",
             "OBJECTID",
-            "PERIMETER",
-            "Sub_ID_00",
-            "GlobalID",
-            "Shape__Area",
+            "spatial_LOPERIMETER",
+            "PRECINCT_",
+            "PRECINCT_I",
+            "PRECINCT",
             "Area",
-            "Shape__Length",
+            "Sub_ID_00",
+            "Shape_Leng",
+            "Shape_Area",
+            "MB_CON",
+            "REG_PCT",
+            "COLOR",
+            "Regular Pct",
+            "VBM Pct",
+            "spatial_LO",
+            "PERIMETER",
         ],
     )
 
@@ -1592,20 +1682,94 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
+def _(pd):
+    _CROSSWALK_FP = (
+        "inputs/counties/san_luis_obispo/precincts/EWMJ015_RegPctVotPctXref.txt"
+    )
+
+    # read in crosswalk from text file, make sure PRECINCTID column is a string
+    # and not a float
+    san_luis_obispo_crosswalk = pd.read_csv(
+        _CROSSWALK_FP, sep="\t", dtype={"PRECINCTID": str}
+    )
+
+    # the value that links to election results is part of the "VOTINGPRECINCT"
+    # column, extract it into its own column
+    san_luis_obispo_crosswalk["voting_precinct"] = san_luis_obispo_crosswalk[
+        "VOTINGPRECINCT"
+    ].str.split(" ", expand=True)[0]
+
+    # create a new value "registration_precinct" is that is the
+    # potential combination of two other values. When
+    # "PRECINCTPORTION" is nan then the value of the new column
+    # is simply "PRECINCTID"
+    # otherwise it is f"{PRECINCTID}.{PRECINCTPORTION}"
+    san_luis_obispo_crosswalk["registration_precinct"] = san_luis_obispo_crosswalk[
+        "PRECINCTID"
+    ].where(
+        san_luis_obispo_crosswalk["PRECINCTPORTION"].isna(),
+        san_luis_obispo_crosswalk["PRECINCTID"]
+        + "."
+        + san_luis_obispo_crosswalk["PRECINCTPORTION"],
+    )
+
+    # and drop the crosswalk columns we don't need
+    san_luis_obispo_crosswalk = san_luis_obispo_crosswalk.drop(
+        columns=[
+            "ELECTIONABBR",
+            "PRECINCTID",
+            "PRECINCTPORTION",
+            "VOTINGPRECINCT",
+            "MAILBALLOT",
+            "ABSENTEEPRECINCT",
+            "BALLOTTYPE",
+        ]
+    )
+
+    san_luis_obispo_crosswalk
+    return (san_luis_obispo_crosswalk,)
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd, san_luis_obispo_crosswalk):
     _GIS_FP = (
         "inputs/counties/san_luis_obispo/precincts/Voter_Precincts_-_2023.zip"
     )
     san_luis_obispo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
+    # merge the crosswalk with the geo dataframe
+    pre_merge_len = len(san_luis_obispo)
+    san_luis_obispo = san_luis_obispo.merge(
+        san_luis_obispo_crosswalk,
+        left_on="PrecinctFu",
+        right_on="registration_precinct",
+        how="outer",
+        validate="m:1",
+    )
+    post_merge_len = len(san_luis_obispo)
+    assert pre_merge_len == post_merge_len
+
+    # dissolve the features based on "voting_precinct_id"
+    san_luis_obispo = san_luis_obispo.dissolve("voting_precinct").reset_index()
+
+    # alter the geo data frame
     san_luis_obispo = alter_df(
         df=san_luis_obispo,
         county="San Luis Obispo",
-        rename={"PrecinctID": "precinct_id", "PrecinctFu": "precinct_name"},
-        drop=["OBJECTID", "PrecinctPo", "ShapeSTAre", "ShapeSTLen"],
+        rename={"voting_precinct": "precinct_id"},
+        drop=[
+            "OBJECTID",
+            "ShapeSTAre",
+            "ShapeSTLen",
+            "PrecinctFu",
+            "PrecinctID",
+            "PrecinctPo",
+            "PRECINCTID",
+            "registration_precinct",
+        ],
     )
 
-    san_luis_obispo.head()
+    san_luis_obispo
     return (san_luis_obispo,)
 
 
@@ -1617,55 +1781,85 @@ def _(mo):
     return
 
 
+@app.function
+def extract_san_mateo_crosswalk_pdf_page(page):
+    """
+    Extracts the crosswalk from PDF pages. The crosswalk connects "Regular
+    Precincts" which are used for voter registration (and therefore called
+    registration_precinct in this code) to "Voting Precincts" which are used
+    for results (and therefore called results_precinct in this code).
+
+    Parameters:
+        page (pdfplumber.Page): The PDF page to extract.
+
+    Returns:
+        list: A list of dicts, each with "registration_precinct" and
+            "results_precinct".
+    """
+    voting_precinct_header = "Voting\nPrecinct"
+
+    tables = page.extract_tables()
+    if not tables:
+        return []
+
+    page_rows = []
+    for table_row in tables[0]:
+        is_voting_precinct_header = table_row[0] == voting_precinct_header
+        if table_row is None or is_voting_precinct_header:
+            continue
+        results_precinct = table_row[0]
+        for cell in table_row[0:]:
+            registration_precinct = cell if cell else results_precinct
+            page_rows.append(
+                {
+                    "registration_precinct": registration_precinct,
+                    "results_precinct": results_precinct,
+                }
+            )
+    return page_rows
+
+
 @app.cell
 def _(PROJECTED_CRS, gpd, pd, pdfplumber):
-    san_mateo_crosswalk_rows = []
-
     _SM_CROSSWALK_PDF_PATH = (
         "inputs/counties/san_mateo/50_PrecinctConsolidations Nov2025.pdf"
     )
-    _FIRST_TABLE_INDEX = 0
-    _VOTING_PRECINCT_HEADER = "Voting\nPrecinct"
 
-    with pdfplumber.open(_SM_CROSSWALK_PDF_PATH) as _sm_pdf:
-        for _sm_page in _sm_pdf.pages:
-            _sm_table = _sm_page.extract_tables()
-            for _sm_table_row in _sm_table[_FIRST_TABLE_INDEX]:
-                if _sm_table_row[_FIRST_TABLE_INDEX] != _VOTING_PRECINCT_HEADER:
-                    _sm_precinct_id = _sm_table_row[_FIRST_TABLE_INDEX]
-                    for _sm_cell in _sm_table_row[1:]:
-                        san_mateo_crosswalk_rows.append(
-                            {
-                                "consolidated_precinct": _sm_precinct_id,
-                                "regular_precinct": _sm_cell
-                                if _sm_cell != ""
-                                else _sm_precinct_id,
-                            }
-                        )
-
-    san_mateo_crosswalk_rows = pd.DataFrame(
-        san_mateo_crosswalk_rows
-    ).drop_duplicates()
+    with pdfplumber.open(_SM_CROSSWALK_PDF_PATH) as san_mateo_crosswalk_pdf:
+        san_mateo_crosswalk = [
+            row
+            for page in san_mateo_crosswalk_pdf.pages
+            for row in extract_san_mateo_crosswalk_pdf_page(page)
+        ]
+    san_mateo_crosswalk = pd.DataFrame(san_mateo_crosswalk).drop_duplicates()
 
     _GIS_FP = "inputs/counties/san_mateo/precincts/ELECTION_PRECINCTS.shp"
     san_mateo = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     san_mateo_with_crosswalk = pd.merge(
         san_mateo,
-        san_mateo_crosswalk_rows,
+        san_mateo_crosswalk,
         left_on="PrecinctID",
-        right_on="regular_precinct",
+        right_on="registration_precinct",
+        how="outer",
+        indicator=True,
+        validate="m:1",
     )
 
-    san_mateo = san_mateo_with_crosswalk.dissolve(
-        "consolidated_precinct"
-    ).reset_index()
+    san_mateo_matched = validate_crosswalk_merge(
+        san_mateo_with_crosswalk,
+        debug_prefix="san_mateo",
+        left_only_cols=["PrecinctID", "_merge"],
+        right_only_cols=["registration_precinct", "results_precinct", "_merge"],
+    )
+
+    san_mateo = san_mateo_matched.dissolve("results_precinct").reset_index()
 
     san_mateo = alter_df(
         df=san_mateo,
         county="San Mateo",
-        rename={"consolidated_precinct": "precinct_id"},
-        drop=["OBJECTID", "PrecinctID", "regular_precinct"],
+        rename={"results_precinct": "precinct_id"},
+        drop=["OBJECTID", "PrecinctID", "registration_precinct"],
     )
 
     san_mateo
@@ -1681,25 +1875,88 @@ def _(mo):
 
 
 @app.cell
-def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/santa_barbara/precincts/PrecinctsAug2025.json"
+def _(PROJECTED_CRS, gpd, pd):
+    _GIS_FP = "inputs/counties/santa_barbara/_REGPRECINCTS_20250905.zip"
+    _SANTA_BARBARA_CROSSWALK_FP = (
+        "inputs/counties/santa_barbara/ewmr008_votabsregpctxref.xls"
+    )
+    _SANTA_BARBARA_HEADER_N = 1
+    _SANTA_BARBARA_FOOTER_N = 2
     santa_barbara = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+    santa_barbara['geometry'] = santa_barbara['geometry'].make_valid()
 
+    santa_barbara_crosswalk = pd.read_excel(
+        _SANTA_BARBARA_CROSSWALK_FP,
+        skiprows=_SANTA_BARBARA_HEADER_N,
+        skipfooter=_SANTA_BARBARA_FOOTER_N,
+    )
+    santa_barbara_crosswalk['Voting Precinct'] = santa_barbara_crosswalk['Voting Precinct'].ffill()
+    santa_barbara_crosswalk['Regular Pct'] = santa_barbara_crosswalk['Regular Pct'].str.split(' ', expand=True)[0]
+
+    santa_barbara_with_crosswalk = santa_barbara.merge(
+        santa_barbara_crosswalk,
+        left_on="PrcID",
+        right_on="Regular Pct",
+        how="outer",
+        validate="m:1",
+        indicator=True,
+    )
+    santa_barbara_matched = validate_crosswalk_merge(
+        santa_barbara_with_crosswalk,
+        debug_prefix="santa_barbara",
+        left_only_cols=["PrcID", "_merge"],
+        right_only_cols=["Regular Pct", "Voting Precinct", "_merge"],
+    )
+
+    santa_barbara = santa_barbara_matched.dissolve("VBM Pct").reset_index()
     santa_barbara = alter_df(
         df=santa_barbara,
         county="Santa Barbara",
-        rename={"PRECINCTID": "precinct_id", "ABRV_NAME": "precinct_name"},
+        rename={"VBM Pct": "precinct_id"},
         drop=[
-            "PRECINCT_N",
-            "PRCNCT_PRT",
-            "OBJECTID",
-            "Shape__Area",
-            "Shape__Length",
+            "PrcID",
+            "Shape_Leng",
+            "Shape_Area",
+            "Voting Precinct",
+            "MB?",
+            "Regular Pct",
+            "Ballot Type",
+            "Voting Precinct.1",
+            "MB?.1",
+            "VBM Pct.1",
+            "Regular Pct.1",
+            "Ballot Type.1",
+            "_merge",
         ],
     )
 
-    santa_barbara.head()
+    santa_barbara
     return (santa_barbara,)
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## Santa Clara
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    _GIS_FP = "inputs/counties/santa_clara/Precinct Data Nov 2025 Election - Kimelman (CalMatters) 01292026.zip"
+
+    santa_clara = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+
+    santa_clara = alter_df(
+        df=santa_clara,
+        county="Santa Clara",
+        rename={"VPCT": "precinct_id"},
+        drop=["Shape_Leng", "Shape_Area"],
+    )
+
+    santa_clara
+    return (santa_clara,)
 
 
 @app.cell(hide_code=True)
@@ -1806,13 +2063,20 @@ def _(PROJECTED_CRS, gpd):
     _GIS_LAYER = "Sierra_County_Voter_Precincts_2021"
     sierra = gpd.read_file(_GIS_FP, layer=_GIS_LAYER).to_crs(PROJECTED_CRS)
 
+    # use "precinct_name" as the `precinct_id` because
+    # the precincts in sierra are unique based on their
+    # human readable name, which is also reported in
+    # the results data for the county.
     sierra = alter_df(
         df=sierra,
         county="Sierra",
-        rename={"PRECINCT": "precinct_id", "NAME": "precinct_name"},
+        rename={"NAME": "precinct_id", "PRECINCT": "precinct_name"},
     )
 
-    sierra.head()
+    # account for a subtle difference in the naming of two precincts: Sierra Brooks No 1 and Sierra Brooks No 2
+    sierra['precinct_id'] = sierra['precinct_id'].str.replace('No. ', 'No ')
+
+    sierra
     return (sierra,)
 
 
@@ -2026,7 +2290,10 @@ def _(re):
                 ):
                     row["registration_precinct"] = regular_precinct
                 else:
-                    breakpoint()
+                    print(
+                        f"Warning: Tulare crosswalk line has unexpected precinct format: {line!r}"
+                    )
+                    return None, last_seen_id
             else:
                 return None, last_seen_id
 
