@@ -16,9 +16,15 @@ with app.setup:
 
 
 @app.cell(hide_code=True)
-def _():
-    mo.md(r"""
+def _(counties):
+    mo.md(rf"""
     # Analyze demographics
+
+    We analyzed precinct-level election results for the 2025 election in {len(counties)} counties, representing 83% votes cast statewide. Our analysis of these counties shows Proposition 50 overperformed the 2024 Kamala Harris campaign across each major racial demographic group.
+
+    In these counties, we observed the largest change in majority-Latino precincts, with a +15% shift. This change in voter behavior could foreshadow a backlash against President Trump and Republicans in the coming midterm election after a headline-grabbing performance with voters of color in 2024.
+
+    The back-to-back partisan and nationalized elections represent a rare opportunity to analyze concrete voter behavior after the inauguration of a new president, especially when the Trump administration has singled out California for immigration enforcement, federal spending changes and political conflict.
     """)
     return
 
@@ -1201,7 +1207,8 @@ def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
 
     precinct_results_export.to_csv(_PARTNER_EXPORT_PATH, index=False)
     del precinct_results_export
-    
+    return
+
 
 @app.cell
 def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
