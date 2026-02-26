@@ -664,7 +664,7 @@ def _(
     block_interpolation_summary = evaluate_interpolation_accuracy(
         df=cvap_block_precinct_estimates,
         subgroup_columns=block_subgroup_est_columns,
-        total_column="CVAP_TOT23",
+        total_column="CVAP_TOT24",
         description="Blocks",
     )
 
