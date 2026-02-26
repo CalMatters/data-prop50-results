@@ -1019,6 +1019,26 @@ def _(mo):
 def _(PROJECTED_CRS, gpd, pd):
     _GIS_FP = "inputs/counties/kings/09022025/Export_Output_2.shp"
     _KINGS_CROSSWALK_FP = "inputs/counties/kings/EWMJ015_RegPctVotPctXref.txt"
+    _ZERO_VOTER_PRECINCTS = [
+        "19013",
+        "21001",
+        "21003",
+        "21005",
+        "21006",
+        "21008",
+        "21013",
+        "21020",
+        "24007",
+        "29001",
+        "29079",
+        "29082",
+        "32006",
+        "39071",
+        "41070",
+        "49018",
+        "49029",
+        "51095",
+    ]    
 
     kings = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
     kings_crosswalk = pd.read_csv(_KINGS_CROSSWALK_FP, sep="\t")
