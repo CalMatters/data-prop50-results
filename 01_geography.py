@@ -1061,7 +1061,7 @@ def _(PROJECTED_CRS, gpd, pd):
         right_only_cols=["PRECINCTID", "_merge"],
     )
 
-    kings = kings_with_crosswalk.dissolve("VOTINGPRECINCT").reset_index()
+    kings = kings_matched.dissolve("VOTINGPRECINCT").reset_index()
     kings['VOTINGPRECINCT'] = kings['VOTINGPRECINCT'].str.split(' ', expand=True)[0]
 
     kings = alter_df(
