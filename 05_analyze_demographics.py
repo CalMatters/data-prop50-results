@@ -679,6 +679,75 @@ def _(
     return
 
 
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    DEFAULT_MAJORITY_THRESHOLD,
+    GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    compute_vote_shift,
+    county_dropdown,
+    county_level_demo_analysis,
+):
+    def _build_county_memo_table(county):
+        """One table per county: Racial group, Swing, YES %, HARRIS %, NO %, TRUMP %."""
+        prop50_df = county_level_demo_analysis.get(PROP50_DATASET_ID)
+        pres2024_df = county_level_demo_analysis.get(PRES2024_DATASET_ID)
+        if (
+            prop50_df is None
+            or pres2024_df is None
+            or county not in prop50_df.index
+            or county not in pres2024_df.index
+        ):
+            return None
+        prop50_row = prop50_df.loc[county]
+        pres2024_row = pres2024_df.loc[county]
+        threshold = DEFAULT_MAJORITY_THRESHOLD
+        yes_suffix = f"_{threshold}_yes_pct"
+        no_suffix = f"_{threshold}_no_pct"
+        rows = []
+        for group_id in ANALYSIS_GROUPS:
+            yes_key = f"{group_id}{yes_suffix}"
+            no_key = f"{group_id}{no_suffix}"
+            if (
+                yes_key not in prop50_row.index
+                or yes_key not in pres2024_row.index
+            ):
+                continue
+            swing = compute_vote_shift(prop50_row, pres2024_row, group_id)
+            rows.append(
+                {
+                    "Racial group": GROUP_DISPLAY_LABELS[group_id],
+                    "Swing from Harris to Prop 50": swing
+                    if swing is not None
+                    else "",
+                    "YES on Prop. 50 - pct": prop50_row[yes_key],
+                    "HARRIS - pct": pres2024_row[yes_key],
+                    "NO on Prop. 50 - pct": prop50_row[no_key],
+                    "TRUMP - pct": pres2024_row[no_key],
+                }
+            )
+        return pd.DataFrame(rows) if rows else None
+
+
+    _county = county_dropdown.value
+    _memo_table = _build_county_memo_table(_county)
+    mo.vstack(
+        [
+            mo.md(
+                f"**{_county} County memo** — Prop 50 vs 2024 Presidential (Harris/Trump) by racial group"
+            ),
+            _memo_table
+            if _memo_table is not None
+            else mo.md(
+                "_Select both «Prop 50 (Blocks)» and «2024 Presidential (Blocks)» above to show this table._"
+            ),
+        ]
+    )
+    return
+
+
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
@@ -1201,7 +1270,8 @@ def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
 
     precinct_results_export.to_csv(_PARTNER_EXPORT_PATH, index=False)
     del precinct_results_export
-    
+    return
+
 
 @app.cell
 def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
