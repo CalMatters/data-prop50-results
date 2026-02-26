@@ -1028,7 +1028,7 @@ def _(PROJECTED_CRS, gpd, pd):
         kings_crosswalk,
         left_on="PRECINCT",
         right_on="PRECINCTID",
-        how="inner",
+        how="outer",
         validate="m:1",
         indicator=True,
     )
