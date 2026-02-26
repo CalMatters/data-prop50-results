@@ -1041,6 +1041,8 @@ def _(PROJECTED_CRS, gpd, pd):
     ]    
 
     kings = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+    kings = kings.dropna(how="all", axis=1)
+    kings = kings[~kings["PRECINCT"].isin(_ZERO_VOTER_PRECINCTS)]    
     kings_crosswalk = pd.read_csv(_KINGS_CROSSWALK_FP, sep="\t")
     kings_crosswalk["PRECINCTID"] = kings_crosswalk["PRECINCTID"].astype(str)
 
