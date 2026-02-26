@@ -71,10 +71,10 @@ def _():
     # Tracts GPKG: asian_alone_cvap_est_pct, black_or_african_american_alone_cvap_est_pct, ... (from 02_census)
     DEMOGRAPHIC_SOURCE_TO_STANDARD = {
         "blocks": {
-            "_cvap_api23_pct": "asian_pct",  # Asian+PI from 02b_census
-            "CVAP_BLK23_pct": "black_or_african_american_pct",
-            "CVAP_HSP23_pct": "hispanic_or_latino_pct",
-            "CVAP_WHT23_pct": "white_pct",
+            "_cvap_api24_pct": "asian_pct",  # Asian+PI from 02b_census
+            "CVAP_BLK24_pct": "black_or_african_american_pct",
+            "CVAP_HSP24_pct": "hispanic_or_latino_pct",
+            "CVAP_WHT24_pct": "white_pct",
         },
         "tracts": {
             "asian_alone_cvap_est_pct": "asian_pct",
