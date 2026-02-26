@@ -703,31 +703,34 @@ def _(
             return None
         prop50_row = prop50_df.loc[county]
         pres2024_row = pres2024_df.loc[county]
-        threshold = DEFAULT_MAJORITY_THRESHOLD
-        yes_suffix = f"_{threshold}_yes_pct"
-        no_suffix = f"_{threshold}_no_pct"
-        rows = []
-        for group_id in ANALYSIS_GROUPS:
+        yes_suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+        no_suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_no_pct"
+
+        def _memo_row(group_id):
             yes_key = f"{group_id}{yes_suffix}"
             no_key = f"{group_id}{no_suffix}"
             if (
                 yes_key not in prop50_row.index
                 or yes_key not in pres2024_row.index
             ):
-                continue
+                return None
             swing = compute_vote_shift(prop50_row, pres2024_row, group_id)
-            rows.append(
-                {
-                    "Racial group": GROUP_DISPLAY_LABELS[group_id],
-                    "Swing from Harris to Prop 50": swing
-                    if swing is not None
-                    else "",
-                    "YES on Prop. 50 - pct": prop50_row[yes_key],
-                    "HARRIS - pct": pres2024_row[yes_key],
-                    "NO on Prop. 50 - pct": prop50_row[no_key],
-                    "TRUMP - pct": pres2024_row[no_key],
-                }
-            )
+            return {
+                "Racial group": GROUP_DISPLAY_LABELS[group_id],
+                "Swing from Harris to Prop 50": (
+                    swing if swing is not None else ""
+                ),
+                "YES on Prop. 50 - pct": prop50_row[yes_key],
+                "HARRIS - pct": pres2024_row[yes_key],
+                "NO on Prop. 50 - pct": prop50_row[no_key],
+                "TRUMP - pct": pres2024_row[no_key],
+            }
+
+        rows = [
+            row
+            for group_id in ANALYSIS_GROUPS
+            if (row := _memo_row(group_id)) is not None
+        ]
         return pd.DataFrame(rows) if rows else None
 
 
