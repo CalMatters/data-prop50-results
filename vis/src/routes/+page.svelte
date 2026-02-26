@@ -53,6 +53,8 @@
 	let selectedPrecinctId = $state(null);
 	/** County name → list of precinct IDs (from /county_precincts.json) */
 	let countyPrecincts = $state(/** @type {Record<string, string[]>} */ ({}));
+	/** When true, show additional controls and features below the switch. */
+	let showAdvancedControls = $state(false);
 
 	onMount(async () => {
 		const res = await fetch('/county_precincts.json');
@@ -415,6 +417,24 @@
 		source="Election results and precinct geographies are compiled from county election administrators. Racial demographic data is Census American Community Survey Citizen Voting Age Population (CVAP) data."
 		note="No pixels were harmed in the creation of this example route."
 	/>
+
+	<div class="advanced-toggle">
+		<label for="advanced-controls-checkbox">
+			<input
+				id="advanced-controls-checkbox"
+				type="checkbox"
+				bind:checked={showAdvancedControls}
+				aria-label="Show additional controls"
+			/>
+			Show more options
+		</label>
+	</div>
+
+	{#if showAdvancedControls}
+		<section class="advanced-controls" aria-label="Additional controls">
+			<p class="advanced-controls-placeholder">Additional options will appear here.</p>
+		</section>
+	{/if}
 </main>
 
 <!-- pym likes to cut off the last 40 or so pixels -->
@@ -445,6 +465,44 @@
 			strong {
 				font-weight: 600;
 			}
+		}
+	}
+
+	.advanced-toggle {
+		padding-top: 12px;
+		margin-top: 12px;
+		border-top: 1px solid #ccc;
+		font-family: var(--font-family);
+		font-size: var(--footnote-size);
+		line-height: var(--footnote-height);
+		color: var(--gray_600);
+
+		label {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			cursor: pointer;
+		}
+
+		input[type='checkbox'] {
+			width: auto;
+			margin: 0;
+		}
+	}
+
+	.advanced-controls {
+		margin-top: 12px;
+		padding: 12px;
+		background-color: var(--aqua_100);
+		border-radius: 4px;
+		font-family: var(--font-family);
+		font-size: var(--footnote-size);
+		line-height: var(--footnote-height);
+		color: var(--gray_600);
+
+		.advanced-controls-placeholder {
+			margin: 0;
+			color: var(--gray_400);
 		}
 	}
 </style>
