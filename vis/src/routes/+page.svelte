@@ -414,6 +414,7 @@
 		credit="Mo A, CalMatters"
 		source="Election results and precinct geographies are compiled from county election administrators. Racial demographic data is Census American Community Survey Citizen Voting Age Population (CVAP) data."
 		note="No pixels were harmed in the creation of this example route."
+		allowEmbed={false}
 	/>
 </main>
 
