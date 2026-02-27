@@ -28,6 +28,14 @@ generate-all-data:
     just generate-analysis-exports
     mv outputs/county_precincts.json vis/static/
 
+update-election-data:
+    just generate-precincts-file
+    just generate-results-file
+    just merge-precinct-results
+    just interpolate-cvap
+    just generate-analysis-exports
+    mv outputs/county_precincts.json vis/static/
+
 generate-demographics-pmtiles:
     npx mapshaper outputs/precinct_results_plus_demographics_blocks.geojson -proj wgs84 init=EPSG:3310 -o format=geojson ndjson outputs/precinct_results_plus_demographics_blocks_nd.json
     tippecanoe -f -l precincts -o outputs/precinct_results_plus_demographics_blocks.pmtiles --maximum-zoom=14 --minimum-zoom=4 --read-parallel outputs/precinct_results_plus_demographics_blocks_nd.json
