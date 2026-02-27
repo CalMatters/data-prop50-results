@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.2"
 app = marimo.App(width="medium")
 
 
@@ -13,6 +13,7 @@ def _():
     import pandas as pd
     from shapely.geometry import Point
     import tobler
+
     return Point, glob, gpd, mo, pd, tobler
 
 
@@ -109,6 +110,7 @@ def _():
 
     def calculate_percentage(numerator, denominator, digits=TENTHS_PLACE_ROUNDING):
         return round((numerator / denominator) * 100, digits)
+
     return (calculate_percentage,)
 
 
@@ -173,6 +175,7 @@ def _(calculate_percentage, pd):
         )
 
         return df_copy
+
     return (join_pct_columns,)
 
 
@@ -255,6 +258,7 @@ def _(tobler):
         )
 
         return _temp_interpolated
+
     return (interpolate_and_calculate_percentages,)
 
 
@@ -302,6 +306,7 @@ def _(gpd):
         gdf = gpd.read_file(fp, **read_file_kwargs)
         print(f"COLUMNS: {list(gdf)}")
         return gdf
+
     return (read_gis_data,)
 
 
@@ -386,7 +391,7 @@ def _(mo):
     mo.md(r"""
     # Interpolate
 
-    [Tobler example Jupyter notebook interpolating tracts to voting precincts](https://pysal.org/tobler/notebooks/02_areal_interpolation_example.html).
+    [Tobler example Jupyter notebook interpolating tracts to voting precincts](https://github.com/pysal/tobler/blob/main/notebooks/02_areal_interpolation_example.ipynb).
     """)
     return
 
@@ -641,6 +646,7 @@ def _(calculate_percentage, pd):
         )
 
         return summary.round({"difference": 2, "percent_difference": 2})
+
     return (evaluate_interpolation_accuracy,)
 
 
