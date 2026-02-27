@@ -22,12 +22,10 @@ Component generates a simple container to structure how we inform readers who ma
 </script>
 
 <section class="credits">
-	{#if allowEmbed}
-		{#if isEmbedOpen}
-			<div class="embed-container">
-				<EmbedCode onclose={() => (isEmbedOpen = false)} />
-			</div>
-		{/if}
+	{#if isEmbedOpen}
+		<div class="embed-container">
+			<EmbedCode onclose={() => (isEmbedOpen = false)} />
+		</div>
 	{/if}
 
 	<ul>
@@ -43,11 +41,13 @@ Component generates a simple container to structure how we inform readers who ma
 			<li class="footnote"><strong>Credits:</strong> {@html credit}</li>
 		{/if}
 
-		<li class="footnote">
-			<button class="embed-button" onclick={() => (isEmbedOpen = true)}>
-				Embed this graphic
-			</button>
-		</li>
+		{#if allowEmbed}
+			<li class="footnote">
+				<button class="embed-button" onclick={() => (isEmbedOpen = true)}>
+					Embed this graphic
+				</button>
+			</li>
+		{/if}
 	</ul>
 </section>
 
