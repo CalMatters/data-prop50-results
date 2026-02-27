@@ -7,6 +7,7 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     from glob import glob
+    from pathlib import Path
 
     import geopandas as gpd
     import marimo as mo
@@ -14,7 +15,7 @@ def _():
     from shapely.geometry import Point
     import tobler
 
-    return Point, glob, gpd, mo, pd, tobler
+    return Path, Point, glob, gpd, mo, pd, tobler
 
 
 @app.cell(hide_code=True)
@@ -87,6 +88,14 @@ def _():
 def _():
     CVAP_BLOCKS_FP = "./outputs/cvap_blocks.gpkg"
     return (CVAP_BLOCKS_FP,)
+
+
+@app.cell
+def _():
+    EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP = (
+        "./outputs/precincts_2024_results_cvap_blocks.gpkg"
+    )
+    return (EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP,)
 
 
 @app.cell
@@ -511,29 +520,40 @@ def _(mo):
 
 @app.cell
 def _(
+    EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP,
     MERGE_KEYS,
+    Path,
     block_extensive_vars,
     block_subgroup_est_columns,
     cvap_block_gdf,
+    gpd,
     interpolate_and_calculate_percentages,
     join_pct_columns,
     pres_2024_results_gdf,
 ):
-    # Set index for target GeoDataFrame
-    _temp_target_gdf = pres_2024_results_gdf.set_index(MERGE_KEYS)
+    if Path(EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP).exists():
+        precincts_2024_results_cvap_block_merged = gpd.read_file(
+            EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP
+        )
+        print(
+            f"READ CVAP BLOCKS INTERPOLATION TO 2024 PRECINCTS FROM {EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP}. If you want to re-run the interpolation, delete the file."
+        )
+    else:
+        # Set index for target GeoDataFrame
+        _temp_target_gdf = pres_2024_results_gdf.set_index(MERGE_KEYS)
 
-    # Perform interpolation and calculate percentages
-    cvap_block_precinct_2024_estimates = interpolate_and_calculate_percentages(
-        source_gdf=cvap_block_gdf,
-        target_gdf=_temp_target_gdf,
-        extensive_variables=block_extensive_vars,
-        subgroup_columns=block_subgroup_est_columns,
-        join_pct_columns_func=join_pct_columns,
-    )
+        # Perform interpolation and calculate percentages
+        cvap_block_precinct_2024_estimates = interpolate_and_calculate_percentages(
+            source_gdf=cvap_block_gdf,
+            target_gdf=_temp_target_gdf,
+            extensive_variables=block_extensive_vars,
+            subgroup_columns=block_subgroup_est_columns,
+            join_pct_columns_func=join_pct_columns,
+        )
 
-    precincts_2024_results_cvap_block_merged = merge_interpolated_results(
-        pres_2024_results_gdf, cvap_block_precinct_2024_estimates, MERGE_KEYS
-    )
+        precincts_2024_results_cvap_block_merged = merge_interpolated_results(
+            pres_2024_results_gdf, cvap_block_precinct_2024_estimates, MERGE_KEYS
+        )
     return (precincts_2024_results_cvap_block_merged,)
 
 
@@ -701,6 +721,7 @@ def _(mo):
 
 @app.cell
 def _(
+    EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP,
     precincts_2024_results_cvap_block_merged,
     precincts_2025_cvap_and_2024_interpolated_merged,
     precincts_results_cvap_merged,
@@ -712,7 +733,7 @@ def _(
         "./outputs/precincts_results_cvap_blocks.gpkg", driver="GPKG"
     )
     precincts_2024_results_cvap_block_merged.to_file(
-        "./outputs/precincts_2024_results_cvap_blocks.gpkg", driver="GPKG"
+        EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP, driver="GPKG"
     )
     return
 
