@@ -18,6 +18,8 @@ generate-analysis-exports:
     uv run 05_analyze_demographics.py
 
 generate-all-data:
+    rm -rf outputs
+    mkdir -p outputs
     just generate-precincts-file
     just generate-results-file
     just merge-precinct-results
