@@ -10,12 +10,13 @@ def _():
     from pathlib import Path
 
     import geopandas as gpd
+    import matplotlib.pyplot as plt
     import marimo as mo
     import pandas as pd
     from shapely.geometry import Point
     import tobler
 
-    return Path, Point, glob, gpd, mo, pd, tobler
+    return Path, Point, glob, gpd, mo, pd, plt, tobler
 
 
 @app.cell(hide_code=True)
@@ -102,6 +103,12 @@ def _():
 def _():
     AUDIT_SUMMARY_FILE_PREFIX = "./debug/audit_summary_*"
     return (AUDIT_SUMMARY_FILE_PREFIX,)
+
+
+@app.cell
+def _():
+    STATE_G24_SR_BLK_MAP_FP = "./inputs/statewide_db/state_g24_sr_blk_map.csv"
+    return (STATE_G24_SR_BLK_MAP_FP,)
 
 
 @app.cell(hide_code=True)
@@ -1066,6 +1073,150 @@ def _(
     )
 
     _tract_summary_df, _block_summary_df
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Test 2024 interpolation
+
+    Backcheck: we compare our area-weighted Tobler interpolation of CVAP from blocks to 2024 precincts against a voter-weighted allocation using SWDB's block–precinct mapping. SWDB's weights (PCTBLK) are "share of precinct" based on registered voters in the block–precinct overlap, not polygon area, so agreement between the two methods reassures us that the area-based interpolation broadly aligns with a voter-based reference. [Source](https://statewidedatabase.org/faqsandterminology.html)
+    """)
+    return
+
+
+@app.cell
+def _(pres_2024_results_gdf):
+    pres_2024_results_gdf[["precinct_id", "county"]]
+    return
+
+
+@app.cell
+def _(
+    MERGE_KEYS,
+    STATE_G24_SR_BLK_MAP_FP,
+    block_extensive_vars,
+    cvap_block_gdf,
+    pd,
+    precincts_2024_results_cvap_block_merged,
+    pres_2024_results_gdf,
+):
+    # Build SWDB voter-weighted precinct CVAP from block map, then compare to Tobler interpolation.
+    swdb_suffix = "_swdb"
+
+    _block_precinct_map = pd.read_csv(
+        STATE_G24_SR_BLK_MAP_FP,
+        dtype={"BLOCK_KEY": str, "SRPREC_KEY": str},
+    )
+    _precinct_county = pres_2024_results_gdf[["precinct_id", "county"]]
+
+    _block_precinct_map = _block_precinct_map.merge(
+        _precinct_county,
+        left_on="SRPREC_KEY",
+        right_on="precinct_id",
+        how="inner",
+        validate="m:1",
+    )
+    _blocks = cvap_block_gdf[["GEOID20"] + block_extensive_vars].copy()
+
+    _block_precinct_map = _block_precinct_map.merge(
+        _blocks,
+        left_on="BLOCK_KEY",
+        right_on="GEOID20",
+        how="inner",
+    )
+
+    _weight = _block_precinct_map["PCTBLK"] / 100
+    _weighted = _block_precinct_map[block_extensive_vars].mul(_weight, axis=0)
+    backcheck_precinct_estimates_swdb = (
+        pd.concat([_block_precinct_map[MERGE_KEYS], _weighted], axis=1)
+        .groupby(MERGE_KEYS, as_index=True)[block_extensive_vars]
+        .sum()
+        .round()
+        .astype(int)
+    )
+    print(len(backcheck_precinct_estimates_swdb))
+
+    backcheck_compare_df = precincts_2024_results_cvap_block_merged[
+        MERGE_KEYS + block_extensive_vars
+    ].merge(
+        backcheck_precinct_estimates_swdb.reset_index(),
+        on=MERGE_KEYS,
+        suffixes=("", swdb_suffix),
+        validate="1:1",
+    )
+    _swdb_cols = [
+        c for c in backcheck_compare_df.columns if c.endswith(swdb_suffix)
+    ]
+    backcheck_precincts_matched = (
+        backcheck_compare_df[_swdb_cols[0]].notna().sum() if _swdb_cols else 0
+    )
+    backcheck_total_precincts = len(precincts_2024_results_cvap_block_merged)
+    backcheck_map_rows_matched = len(_block_precinct_map)
+
+    _tot24_diff = (
+        backcheck_compare_df["CVAP_TOT24"]
+        - backcheck_compare_df["CVAP_TOT24_swdb"]
+    ).dropna()
+    backcheck_cvap_tot24_mae = _tot24_diff.abs().mean()
+    backcheck_cvap_tot24_max_ae = _tot24_diff.abs().max()
+    backcheck_cvap_tot24_exact_pct = (_tot24_diff == 0).mean() * 100
+    return backcheck_compare_df, swdb_suffix
+
+
+@app.cell
+def _(backcheck_compare_df, block_subgroup_est_columns, pd, plt, swdb_suffix):
+    _tobler_groups = backcheck_compare_df[block_subgroup_est_columns]
+    _swdb_groups = backcheck_compare_df[
+        [f"{col}{swdb_suffix}" for col in block_subgroup_est_columns]
+    ]
+
+    _valid = _swdb_groups.notna().all(axis=1)
+    _tobler_majority = _tobler_groups[_valid].idxmax(axis=1)
+    _swdb_majority = (
+        _swdb_groups[_valid]
+        .idxmax(axis=1)
+        .str.replace(swdb_suffix, "", regex=False)
+    )
+
+    majority_crosstab = pd.crosstab(
+        _tobler_majority,
+        _swdb_majority,
+        rownames=["Tobler majority group"],
+        colnames=["SWDB-weighted majority group"],
+        dropna=False,
+    )
+    majority_crosstab_pct = (
+        majority_crosstab.div(majority_crosstab.sum(axis=1), axis=0) * 100
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    _pct = majority_crosstab_pct.values
+    im = ax.imshow(_pct, cmap="YlGn", vmin=0, vmax=100)
+
+    ax.set_xticks(range(len(majority_crosstab_pct.columns)))
+    ax.set_xticklabels(
+        majority_crosstab_pct.columns,
+        rotation=45,
+        ha="right",
+        rotation_mode="anchor",
+    )
+    ax.set_yticks(range(len(majority_crosstab_pct.index)))
+    ax.set_yticklabels(majority_crosstab_pct.index)
+    ax.set_xlabel("SWDB-weighted majority group")
+    ax.set_ylabel("Tobler majority group")
+    ax.set_title("Majority group: Tobler vs SWDB-weighted")
+
+    for i in range(majority_crosstab_pct.shape[0]):
+        for j in range(majority_crosstab_pct.shape[1]):
+            ax.text(
+                j, i, f"{_pct[i, j]:.1f}", ha="center", va="center", fontsize=8
+            )
+
+    _cbar = fig.colorbar(im, ax=ax, label="Percentage of precincts")
+    _cbar.set_ticks([0, 20, 40, 60, 80, 100])
+    fig
     return
 
 
