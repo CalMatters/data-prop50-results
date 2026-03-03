@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.2"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -33,6 +33,22 @@ def _():
 
 @app.cell
 def _():
+    DEFAULT_MAJORITY_THRESHOLD = 50
+    threshold_slider = mo.ui.slider(
+        start=0,
+        stop=100,
+        step=1,
+        value=DEFAULT_MAJORITY_THRESHOLD,
+        debounce=True,
+        include_input=True,
+        label="### Threshold for racial group categorization",
+    )
+    threshold_slider
+    return (threshold_slider,)
+
+
+@app.cell
+def _(threshold_slider):
     VOTE_STANDARD = ("yes_votes", "no_votes", "total_votes")
     DEMOGRAPHIC_STANDARD = (
         "asian_pct",
@@ -40,8 +56,8 @@ def _():
         "hispanic_or_latino_pct",
         "white_pct",
     )
-    DEFAULT_MAJORITY_THRESHOLD = 50
-    return DEFAULT_MAJORITY_THRESHOLD, VOTE_STANDARD
+    filter_threshold = threshold_slider.value
+    return VOTE_STANDARD, filter_threshold
 
 
 @app.cell
@@ -155,14 +171,6 @@ def _(display_options):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Filepaths
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
     # Helper functions
     """)
     return
@@ -192,6 +200,7 @@ def _(DEMOGRAPHIC_SOURCE_TO_STANDARD):
         mapping = DEMOGRAPHIC_SOURCE_TO_STANDARD[demographic_schema]
         rename_map = {k: v for k, v in mapping.items() if k in df.columns}
         return df.rename(columns=rename_map)
+
     return (
         read_gis_data,
         standardize_demographic_columns,
@@ -243,8 +252,8 @@ def calculate_yes_pct(precincts_df):
 
 
 @app.cell
-def _(ANALYSIS_GROUPS):
-    def get_majority_racial_group(row, threshold=50):
+def _(ANALYSIS_GROUPS, filter_threshold):
+    def get_majority_racial_group(row, threshold=filter_threshold):
         """Determine the majority racial group for a single precinct and return both group and percentage.
         If no group exceeds the threshold, return 'Multiracial' with the plurality group and its percentage."""
         demographic_groups = [g for g in ANALYSIS_GROUPS if g != "multiracial"]
@@ -266,6 +275,7 @@ def _(ANALYSIS_GROUPS):
         if max_percentage > threshold:
             return plurality_group_label, max_percentage
         return f"Multiracial ({plurality_group_label} plurality)", max_percentage
+
     return (get_majority_racial_group,)
 
 
@@ -286,6 +296,7 @@ def _(get_majority_racial_group):
             axis=1,
         )
         return df
+
     return add_majority_racial_group, prepare_precinct_results_df
 
 
@@ -418,7 +429,7 @@ def _():
 
 
 @app.cell
-def _(DEFAULT_MAJORITY_THRESHOLD):
+def _(filter_threshold):
     def _calculate_vote_stats(yes_votes, no_votes, total_votes=None):
         if total_votes is None:
             total_votes = yes_votes + no_votes
@@ -439,9 +450,7 @@ def _(DEFAULT_MAJORITY_THRESHOLD):
         return df[mask]
 
 
-    def analyze_by_group_state(
-        df, group_key, threshold=DEFAULT_MAJORITY_THRESHOLD
-    ):
+    def analyze_by_group_state(df, group_key, threshold=filter_threshold):
         """Analyze vote stats for a demographic group at state level. Returns dict."""
         majority_precincts = _get_majority_precincts(df, group_key)
         total_yes_votes = majority_precincts["yes_votes"].sum()
@@ -462,9 +471,7 @@ def _(DEFAULT_MAJORITY_THRESHOLD):
         }
 
 
-    def analyze_by_group_county(
-        df, group_key, threshold=DEFAULT_MAJORITY_THRESHOLD
-    ):
+    def analyze_by_group_county(df, group_key, threshold=filter_threshold):
         """Analyze vote stats for a demographic group by county. Returns DataFrame."""
         majority_precincts = _get_majority_precincts(df, group_key)
         if majority_precincts.empty:
@@ -498,12 +505,13 @@ def _(DEFAULT_MAJORITY_THRESHOLD):
 
 
     def analyze_by_group(
-        df, group_key, threshold=DEFAULT_MAJORITY_THRESHOLD, by_county=False
+        df, group_key, threshold=filter_threshold, by_county=False
     ):
         """Analyze vote stats for a demographic group. Returns dict (state) or DataFrame (county)."""
         if by_county:
             return analyze_by_group_county(df, group_key, threshold)
         return analyze_by_group_state(df, group_key, threshold)
+
     return (analyze_by_group,)
 
 
@@ -525,6 +533,7 @@ def _(ANALYSIS_GROUPS, GROUP_DISPLAY_LABELS, analyze_by_group):
             }
         )
         return _df
+
     return (build_majority_analysis_df,)
 
 
@@ -559,6 +568,7 @@ def _(dataset_config):
                 for _cfg in dataset_config
             ]
         )
+
     return (majority_analysis_display,)
 
 
@@ -586,9 +596,9 @@ def _(county_level_demo_analysis):
 @app.cell
 def _(
     ANALYSIS_GROUPS,
-    DEFAULT_MAJORITY_THRESHOLD,
     analyze_by_group,
     dataset_config,
+    filter_threshold,
     precinct_results,
 ):
     county_level_demo_analysis = {}
@@ -598,7 +608,7 @@ def _(
                 analyze_by_group(
                     precinct_results[_cfg["id"]],
                     group,
-                    threshold=DEFAULT_MAJORITY_THRESHOLD,
+                    threshold=filter_threshold,
                     by_county=True,
                 )
                 for group in ANALYSIS_GROUPS
@@ -616,13 +626,13 @@ def _(
 @app.cell
 def _(
     DATASET_CONFIG,
-    DEFAULT_MAJORITY_THRESHOLD,
     GROUP_DISPLAY_LABELS,
     county_dropdown,
     county_level_demo_analysis,
+    filter_threshold,
 ):
     def _transform_county_series_to_dataframe(
-        series, vote_display_labels, threshold=DEFAULT_MAJORITY_THRESHOLD
+        series, vote_display_labels, threshold=filter_threshold
     ):
         yes_pct_suffix = f"_{threshold}_yes_pct"
         yes_pct_cols = [
@@ -667,7 +677,7 @@ def _(
                         _transform_county_series_to_dataframe(
                             county_level_demo_analysis[_cfg["id"]].loc[_county],
                             _cfg["vote_display_labels"],
-                            threshold=DEFAULT_MAJORITY_THRESHOLD,
+                            threshold=filter_threshold,
                         ),
                     ]
                 )
@@ -682,13 +692,13 @@ def _(
 @app.cell
 def _(
     ANALYSIS_GROUPS,
-    DEFAULT_MAJORITY_THRESHOLD,
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
     compute_vote_shift,
     county_dropdown,
     county_level_demo_analysis,
+    filter_threshold,
 ):
     def _build_county_memo_table(county):
         """One table per county: Racial group, Swing, YES %, HARRIS %, NO %, TRUMP %."""
@@ -703,8 +713,8 @@ def _(
             return None
         prop50_row = prop50_df.loc[county]
         pres2024_row = pres2024_df.loc[county]
-        yes_suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
-        no_suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_no_pct"
+        yes_suffix = f"_{filter_threshold}_yes_pct"
+        no_suffix = f"_{filter_threshold}_no_pct"
 
         def _memo_row(group_id):
             yes_key = f"{group_id}{yes_suffix}"
@@ -760,10 +770,10 @@ def _():
 
 
 @app.cell
-def _(DEFAULT_MAJORITY_THRESHOLD):
+def _(filter_threshold):
     PROP50_DATASET_ID = "blocks"
     PRES2024_DATASET_ID = "blocks_2024"
-    YES_PCT_SUFFIX = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+    YES_PCT_SUFFIX = f"_{filter_threshold}_yes_pct"
 
 
     def compute_vote_shift(prop50_series, pres2024_series, group_id):
@@ -772,6 +782,7 @@ def _(DEFAULT_MAJORITY_THRESHOLD):
         if key not in prop50_series.index or key not in pres2024_series.index:
             return None
         return round(float(prop50_series[key] - pres2024_series[key]), 1)
+
     return PRES2024_DATASET_ID, PROP50_DATASET_ID, compute_vote_shift
 
 
