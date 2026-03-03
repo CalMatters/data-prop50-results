@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.2"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -192,6 +192,7 @@ def _(DEMOGRAPHIC_SOURCE_TO_STANDARD):
         mapping = DEMOGRAPHIC_SOURCE_TO_STANDARD[demographic_schema]
         rename_map = {k: v for k, v in mapping.items() if k in df.columns}
         return df.rename(columns=rename_map)
+
     return (
         read_gis_data,
         standardize_demographic_columns,
@@ -266,6 +267,7 @@ def _(ANALYSIS_GROUPS):
         if max_percentage > threshold:
             return plurality_group_label, max_percentage
         return f"Multiracial ({plurality_group_label} plurality)", max_percentage
+
     return (get_majority_racial_group,)
 
 
@@ -286,6 +288,7 @@ def _(get_majority_racial_group):
             axis=1,
         )
         return df
+
     return add_majority_racial_group, prepare_precinct_results_df
 
 
@@ -350,7 +353,7 @@ def _(
         precinct_2025_results["total_votes_2024"],
     )
     precinct_2025_results["rep_pct_2024"] = caclulate_pct(
-        precinct_2025_results["dem_votes"],
+        precinct_2025_results["rep_votes"],
         precinct_2025_results["total_votes_2024"],
     )
     precinct_2025_results["vote_shift"] = round(
@@ -504,6 +507,7 @@ def _(DEFAULT_MAJORITY_THRESHOLD):
         if by_county:
             return analyze_by_group_county(df, group_key, threshold)
         return analyze_by_group_state(df, group_key, threshold)
+
     return (analyze_by_group,)
 
 
@@ -525,6 +529,7 @@ def _(ANALYSIS_GROUPS, GROUP_DISPLAY_LABELS, analyze_by_group):
             }
         )
         return _df
+
     return (build_majority_analysis_df,)
 
 
@@ -559,6 +564,7 @@ def _(dataset_config):
                 for _cfg in dataset_config
             ]
         )
+
     return (majority_analysis_display,)
 
 
@@ -700,6 +706,7 @@ def _(DEFAULT_MAJORITY_THRESHOLD):
         if key not in prop50_series.index or key not in pres2024_series.index:
             return None
         return round(float(prop50_series[key] - pres2024_series[key]), 1)
+
     return PRES2024_DATASET_ID, PROP50_DATASET_ID, compute_vote_shift
 
 
@@ -1201,7 +1208,8 @@ def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
 
     precinct_results_export.to_csv(_PARTNER_EXPORT_PATH, index=False)
     del precinct_results_export
-    
+    return
+
 
 @app.cell
 def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
