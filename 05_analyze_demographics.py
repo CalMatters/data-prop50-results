@@ -152,7 +152,7 @@ def _(display_options):
     return (config_data_options_multiselect,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _():
     mo.md(r"""
     ## Filepaths
@@ -369,7 +369,7 @@ def _(
             .value_counts(),
         ]
     )
-    return (precinct_results,)
+    return precinct_2025_results, precinct_results
 
 
 @app.cell
@@ -840,6 +840,49 @@ def _(
 
     _county_subset_majority_display(county_multiselect.value)
     return
+
+
+@app.cell(hide_code=True)
+def _(
+    is_harris_win,
+    is_prop50_loss,
+    is_prop50_win,
+    is_trump_win,
+    precinct_2025_results,
+):
+    mo.md(rf"""
+    ## Partisan flip
+
+    **{(is_trump_win & is_prop50_win).sum():,} precincts in the {precinct_2025_results["county"].nunique()} counties where Prop. 50 won and Trump won.** There were {(is_harris_win & is_prop50_loss).sum():,} precincts where Harris won but Prop. 50 lost.
+
+    These findings should be used only for exploratory purposes. The 2024 results are interpolated to 2025 precincts. This introduces issues such as the faulty assumption that population is uniformly distributed and the modifiable areal unit problem. These limitation require us to place extra scrutiny on any findings we want to publish about partisan flip at the precinct-level.
+    """)
+    return
+
+
+@app.cell
+def _(precinct_2025_results):
+    is_trump_win = (
+        precinct_2025_results["rep_pct_2024"]
+        > precinct_2025_results["dem_pct_2024"]
+    )
+    is_harris_win = (
+        precinct_2025_results["rep_pct_2024"]
+        < precinct_2025_results["dem_pct_2024"]
+    )
+
+    is_prop50_win = (
+        precinct_2025_results["yes_pct"] > precinct_2025_results["no_pct"]
+    )
+    is_prop50_loss = (
+        precinct_2025_results["yes_pct"] < precinct_2025_results["no_pct"]
+    )
+
+    flipped_precincts = precinct_2025_results[
+        (is_trump_win & is_prop50_win) | (is_harris_win & is_prop50_loss)
+    ]
+    flipped_precincts
+    return is_harris_win, is_prop50_loss, is_prop50_win, is_trump_win
 
 
 @app.cell(hide_code=True)
