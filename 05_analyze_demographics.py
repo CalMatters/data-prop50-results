@@ -855,7 +855,9 @@ def _(
 
     **There are {(is_trump_win & is_prop50_win).sum():,} precincts in the {precinct_2025_results["county"].nunique()} counties where Prop. 50 won and Trump won.** There were {(is_harris_win & is_prop50_loss).sum():,} precincts where Harris won but Prop. 50 lost.
 
-    These findings should be used only for exploratory purposes. The 2024 results are interpolated to 2025 precincts. This introduces issues such as the faulty assumption of uniform population distribution and the modifiable areal unit problem. These limitation require extra scrutiny of any findings we want to publish about partisan flip at the precinct-level.
+    These findings should be used only for exploratory purposes. The 2024 results are interpolated to 2025 precincts. This introduces issues such as the faulty assumption of uniform population distribution and the modifiable areal unit problem. These limitations require extra scrutiny of any findings we want to publish about partisan flips at the precinct-level.
+
+
     """)
     return
 
