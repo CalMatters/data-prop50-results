@@ -321,18 +321,29 @@ def _(config_data_options_multiselect):
 
 
 @app.cell
+def _(DATASET_CONFIG, read_gis_data):
+    # Read all GIS datasets once; this cell does not depend on the multiselect
+    # or threshold slider, so it only re-runs when config or read_gis_data changes.
+    raw_gis_data_by_id = {
+        _cfg["id"]: read_gis_data(_cfg["filepath"], _cfg["id"])
+        for _cfg in DATASET_CONFIG
+    }
+    return (raw_gis_data_by_id,)
+
+
+@app.cell
 def _(
     VOTE_STANDARD,
     add_majority_racial_group,
     dataset_config,
     prepare_precinct_results_df,
-    read_gis_data,
+    raw_gis_data_by_id,
     standardize_demographic_columns,
     standardize_vote_columns,
 ):
     precinct_results = {}
     for _cfg in dataset_config:
-        df = read_gis_data(_cfg["filepath"], _cfg["id"])
+        df = raw_gis_data_by_id[_cfg["id"]].copy()
         df = standardize_vote_columns(df, _cfg["vote_source_to_standard"])
         df = standardize_demographic_columns(df, _cfg["demographic_schema"])
         df = prepare_precinct_results_df(df, list(VOTE_STANDARD))
@@ -689,7 +700,7 @@ def _(
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
