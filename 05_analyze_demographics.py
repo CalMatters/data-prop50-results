@@ -700,7 +700,7 @@ def _(
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(
     ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
