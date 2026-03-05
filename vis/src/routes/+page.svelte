@@ -45,13 +45,27 @@
 
 	// Shared vote_shift (and flipped) color stops
 	const VOTE_SHIFT_GROUP_COLORS = {
-		'White': { v0: '#E8F2FA', v1: '#9BC0E0', v2: RACIAL_GROUP_COLORS['White'] },
-		'Multiracial': { v0: '#F0E8F7', v1: '#C9A5E1', v2: RACIAL_GROUP_COLORS['Multiracial'] },
-		'Hispanic Or Latino': { v0: '#FBF0E5', v1: '#F2B872', v2: RACIAL_GROUP_COLORS['Hispanic Or Latino'] },
-		'Black Or African American': { v0: '#E8F5E3', v1: '#8DCC6F', v2: RACIAL_GROUP_COLORS['Black Or African American'] },
-		'Asian': { v0: '#FAE8E6', v1: '#E18A7F', v2: RACIAL_GROUP_COLORS['Asian'] }
+		White: { v0: '#E8F2FA', v1: '#9BC0E0', v2: RACIAL_GROUP_COLORS['White'] },
+		Multiracial: { v0: '#F0E8F7', v1: '#C9A5E1', v2: RACIAL_GROUP_COLORS['Multiracial'] },
+		'Hispanic Or Latino': {
+			v0: '#FBF0E5',
+			v1: '#F2B872',
+			v2: RACIAL_GROUP_COLORS['Hispanic Or Latino']
+		},
+		'Black Or African American': {
+			v0: '#E8F5E3',
+			v1: '#8DCC6F',
+			v2: RACIAL_GROUP_COLORS['Black Or African American']
+		},
+		Asian: { v0: '#FAE8E6', v1: '#E18A7F', v2: RACIAL_GROUP_COLORS['Asian'] }
 	};
-	const RACIAL_GROUP_ORDER = ['White', 'Multiracial', 'Hispanic Or Latino', 'Black Or African American', 'Asian'];
+	const RACIAL_GROUP_ORDER = [
+		'White',
+		'Multiracial',
+		'Hispanic Or Latino',
+		'Black Or African American',
+		'Asian'
+	];
 
 	/**
 	 * Build a MapLibre 'case' expression: for each racial group, output one color; default fallback last.
@@ -131,28 +145,86 @@
 		const value = isYesPct
 			? ['coalesce', ['get', 'yes_pct'], 0]
 			: ['coalesce', ['get', 'vote_shift'], 0];
-		const stops = isYesPct
-			? [0, 50, 100]
-			: [-15, 0, 15];
+		const stops = isYesPct ? [0, 50, 100] : [-15, 0, 15];
 
 		const branches = isYesPct
 			? [
 					['==', normalizedGroup, 'White'],
-					['interpolate', ['exponential', 1.5], value, stops[0], '#E8F2FA', stops[1], '#9BC0E0', stops[2], RACIAL_GROUP_COLORS['White']],
+					[
+						'interpolate',
+						['exponential', 1.5],
+						value,
+						stops[0],
+						'#E8F2FA',
+						stops[1],
+						'#9BC0E0',
+						stops[2],
+						RACIAL_GROUP_COLORS['White']
+					],
 					['==', normalizedGroup, 'Multiracial'],
-					['interpolate', ['exponential', 1.5], value, stops[0], '#F0E8F7', stops[1], '#C9A5E1', stops[2], RACIAL_GROUP_COLORS['Multiracial']],
+					[
+						'interpolate',
+						['exponential', 1.5],
+						value,
+						stops[0],
+						'#F0E8F7',
+						stops[1],
+						'#C9A5E1',
+						stops[2],
+						RACIAL_GROUP_COLORS['Multiracial']
+					],
 					['==', normalizedGroup, 'Hispanic Or Latino'],
-					['interpolate', ['exponential', 1.5], value, stops[0], '#FBF0E5', stops[1], '#F2B872', stops[2], RACIAL_GROUP_COLORS['Hispanic Or Latino']],
+					[
+						'interpolate',
+						['exponential', 1.5],
+						value,
+						stops[0],
+						'#FBF0E5',
+						stops[1],
+						'#F2B872',
+						stops[2],
+						RACIAL_GROUP_COLORS['Hispanic Or Latino']
+					],
 					['==', normalizedGroup, 'Black Or African American'],
-					['interpolate', ['exponential', 1.5], value, stops[0], '#E8F5E3', stops[1], '#8DCC6F', stops[2], RACIAL_GROUP_COLORS['Black Or African American']],
+					[
+						'interpolate',
+						['exponential', 1.5],
+						value,
+						stops[0],
+						'#E8F5E3',
+						stops[1],
+						'#8DCC6F',
+						stops[2],
+						RACIAL_GROUP_COLORS['Black Or African American']
+					],
 					['==', normalizedGroup, 'Asian'],
-					['interpolate', ['exponential', 1.5], value, stops[0], '#FAE8E6', stops[1], '#E18A7F', stops[2], RACIAL_GROUP_COLORS['Asian']]
+					[
+						'interpolate',
+						['exponential', 1.5],
+						value,
+						stops[0],
+						'#FAE8E6',
+						stops[1],
+						'#E18A7F',
+						stops[2],
+						RACIAL_GROUP_COLORS['Asian']
+					]
 				]
 			: RACIAL_GROUP_ORDER.flatMap((group) => {
 					const colors = VOTE_SHIFT_GROUP_COLORS[group];
 					return [
 						['==', normalizedGroup, group],
-						['interpolate', ['exponential', 1.5], value, stops[0], colors.v0, stops[1], colors.v1, stops[2], colors.v2]
+						[
+							'interpolate',
+							['exponential', 1.5],
+							value,
+							stops[0],
+							colors.v0,
+							stops[1],
+							colors.v1,
+							stops[2],
+							colors.v2
+						]
 					];
 				});
 
@@ -230,16 +302,13 @@
 	{#if selectedCounty}
 		<PrecinctSelect
 			precinctIds={countyPrecincts[selectedCounty.COUNTY_NAME] ?? []}
-			selectedPrecinctId={selectedPrecinctId}
+			{selectedPrecinctId}
 			onchange={(id) => (selectedPrecinctId = id)}
 			label="Selected precinct"
 		/>
 	{/if}
 
-	<RacialGroupLegend
-		saturationMetric={saturationMetric}
-		onSaturationMetricChange={(v) => (saturationMetric = v)}
-	/>
+	<RacialGroupLegend {saturationMetric} onSaturationMetricChange={(v) => (saturationMetric = v)} />
 
 	<section>
 		<MapLibreMap
@@ -379,9 +448,7 @@
 							majorityGroupPct != null ? Math.round(majorityGroupPct) : 'N/A';
 						const yesPctFormatted = yesPct != null ? Math.round(yesPct) : 'N/A';
 						const voteShiftFormatted =
-							voteShift != null
-								? `${voteShift >= 0 ? '+' : ''}${Math.round(voteShift)}`
-								: null;
+							voteShift != null ? `${voteShift >= 0 ? '+' : ''}${Math.round(voteShift)}` : null;
 
 						// Format the group label - for multiracial, move percentage into parentheses
 						let groupLabel;

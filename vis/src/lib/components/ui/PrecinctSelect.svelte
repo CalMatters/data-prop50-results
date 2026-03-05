@@ -105,61 +105,67 @@
 			<span>{label}</span>
 		</label>
 		<div class="combobox-wrapper" bind:this={wrapperEl}>
-		<input
-			id={inputId}
-			type="text"
-			role="combobox"
-			aria-expanded={open}
-			aria-controls={listId}
-			aria-autocomplete="list"
-			aria-activedescendant={highlightedOptionId}
-			value={displayValue}
-			oninput={(e) => (query = e.currentTarget.value)}
-			onfocus={() => (open = true)}
-			onkeydown={handleKeydown}
-			{disabled}
-			{placeholder}
-			class="combobox-input"
-		/>
-		{#if open}
-			<ul
-				id={listId}
-				role="listbox"
-				class="options-list"
-			>
-				<li
-					role="option"
-					id="option-clear"
-					class="option"
-					class:highlighted={highlightedIndex === -1 && open}
-					aria-selected={highlightedIndex === -1}
-					tabindex="-1"
-					onclick={() => clear()}
-					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); clear(); } }}
-					onmouseenter={() => (highlightedIndex = -1)}
-				>
-					—
-				</li>
-				{#each filteredPrecinctIds as precinctId, i}
+			<input
+				id={inputId}
+				type="text"
+				role="combobox"
+				aria-expanded={open}
+				aria-controls={listId}
+				aria-autocomplete="list"
+				aria-activedescendant={highlightedOptionId}
+				value={displayValue}
+				oninput={(e) => (query = e.currentTarget.value)}
+				onfocus={() => (open = true)}
+				onkeydown={handleKeydown}
+				{disabled}
+				{placeholder}
+				class="combobox-input"
+			/>
+			{#if open}
+				<ul id={listId} role="listbox" class="options-list">
 					<li
 						role="option"
-						id="option-{precinctId}"
+						id="option-clear"
 						class="option"
-						class:highlighted={highlightedIndex === i}
-						aria-selected={highlightedIndex === i}
+						class:highlighted={highlightedIndex === -1 && open}
+						aria-selected={highlightedIndex === -1}
 						tabindex="-1"
-						onclick={() => selectPrecinct(precinctId)}
-						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPrecinct(precinctId); } }}
-						onmouseenter={() => (highlightedIndex = i)}
+						onclick={() => clear()}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								clear();
+							}
+						}}
+						onmouseenter={() => (highlightedIndex = -1)}
 					>
-						{precinctId}
+						—
 					</li>
-				{/each}
-				{#if filteredPrecinctIds.length === 0 && query.trim() !== ''}
-					<li class="option option--empty">No matching precincts</li>
-				{/if}
-			</ul>
-		{/if}
+					{#each filteredPrecinctIds as precinctId, i}
+						<li
+							role="option"
+							id="option-{precinctId}"
+							class="option"
+							class:highlighted={highlightedIndex === i}
+							aria-selected={highlightedIndex === i}
+							tabindex="-1"
+							onclick={() => selectPrecinct(precinctId)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									selectPrecinct(precinctId);
+								}
+							}}
+							onmouseenter={() => (highlightedIndex = i)}
+						>
+							{precinctId}
+						</li>
+					{/each}
+					{#if filteredPrecinctIds.length === 0 && query.trim() !== ''}
+						<li class="option option--empty">No matching precincts</li>
+					{/if}
+				</ul>
+			{/if}
 		</div>
 	</div>
 	<div class="legend-item">
