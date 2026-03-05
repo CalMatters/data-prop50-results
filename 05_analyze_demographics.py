@@ -889,7 +889,9 @@ def _(
 
 @app.cell
 def _(precinct_2025_results):
-    flipped_precincts = precinct_2025_results[precinct_2025_results["flipped"].notnull()]
+    flipped_precincts = precinct_2025_results[
+        precinct_2025_results["flipped"].notnull()
+    ]
     flipped_precincts
     return
 
@@ -1151,6 +1153,7 @@ def _(precinct_results):
         "rep_votes",
         "total_votes_2024",
         "vote_shift",
+        "flipped",
         "majority_racial_group",
         "majority_racial_group_pct",
         "geometry",
