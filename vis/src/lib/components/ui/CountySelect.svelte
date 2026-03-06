@@ -6,7 +6,7 @@
 
 <script>
 	import countiesData from '$lib/ca-county-bounding-boxes.json';
-	const counties = countiesData.map(d => d.COUNTY_NAME).sort();
+	const counties = countiesData.map((d) => d.COUNTY_NAME).sort();
 
 	const { initialValue = undefined, label, onchange } = $props();
 

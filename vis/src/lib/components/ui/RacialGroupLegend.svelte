@@ -8,10 +8,7 @@
 <script>
 	import { RACIAL_GROUP_COLORS } from '$lib/racial-group-colors.js';
 
-	let {
-		saturationMetric = 'yes_pct',
-		onSaturationMetricChange = () => {}
-	} = $props();
+	let { saturationMetric = 'yes_pct', onSaturationMetricChange = () => {} } = $props();
 
 	const SATURATION_OPTIONS = [
 		{ value: 'yes_pct', label: 'Prop 50 yes %' },
@@ -29,11 +26,19 @@
 
 	// Colors for saturation gradient examples (matching the interpolation in +page.svelte)
 	const saturationExamples = {
-		'White': { light: '#E8F2FA', medium: '#9BC0E0', dark: RACIAL_GROUP_COLORS['White'] },
-		'Multiracial': { light: '#F0E8F7', medium: '#C9A5E1', dark: RACIAL_GROUP_COLORS['Multiracial'] },
-		'Hispanic Or Latino': { light: '#FBF0E5', medium: '#F2B872', dark: RACIAL_GROUP_COLORS['Hispanic Or Latino'] },
-		'Black Or African American': { light: '#E8F5E3', medium: '#8DCC6F', dark: RACIAL_GROUP_COLORS['Black Or African American'] },
-		'Asian': { light: '#FAE8E6', medium: '#E18A7F', dark: RACIAL_GROUP_COLORS['Asian'] }
+		White: { light: '#E8F2FA', medium: '#9BC0E0', dark: RACIAL_GROUP_COLORS['White'] },
+		Multiracial: { light: '#F0E8F7', medium: '#C9A5E1', dark: RACIAL_GROUP_COLORS['Multiracial'] },
+		'Hispanic Or Latino': {
+			light: '#FBF0E5',
+			medium: '#F2B872',
+			dark: RACIAL_GROUP_COLORS['Hispanic Or Latino']
+		},
+		'Black Or African American': {
+			light: '#E8F5E3',
+			medium: '#8DCC6F',
+			dark: RACIAL_GROUP_COLORS['Black Or African American']
+		},
+		Asian: { light: '#FAE8E6', medium: '#E18A7F', dark: RACIAL_GROUP_COLORS['Asian'] }
 	};
 </script>
 
@@ -47,7 +52,7 @@
 			</div>
 		{/each}
 	</div>
-	
+
 	<div class="saturation-note">
 		<p class="note-title">
 			Map view:
@@ -64,23 +69,28 @@
 		<p class="note-text">
 			{#if saturationMetric === 'yes_pct'}
 				The saturation of each color varies based on the percentage of "yes" votes in that precinct.
-				Darker, more saturated colors indicate higher percentages of "yes" votes, while lighter colors
-				indicate lower percentages.
+				Darker, more saturated colors indicate higher percentages of "yes" votes, while lighter
+				colors indicate lower percentages.
 			{:else if saturationMetric === 'flipped'}
-				Precincts that did not change partisan outcome (2024 presidential → 2025 Prop 50) are shown in grey.<br>
-				<strong>D</strong> = precinct flipped from Trump (R) to Prop 50 Yes (D);<br> <strong>R</strong> = precinct flipped from Harris (D) to Prop 50 No (R).<br>
-				Flipped precincts use the same color scale as "Vote shift vs Harris 2024" (lighter = R flip, darker = D flip).
+				Precincts that did not change partisan outcome (2024 presidential → 2025 Prop 50) are shown
+				in grey.<br />
+				<strong>D</strong> = precinct flipped from Trump (R) to Prop 50 Yes (D);<br />
+				<strong>R</strong>
+				= precinct flipped from Harris (D) to Prop 50 No (R).<br />
+				Flipped precincts use the same color scale as "Vote shift vs Harris 2024" (lighter = R flip,
+				darker = D flip).
 			{:else}
-				The saturation of each color varies based on the shift in support from Harris (2024) to Prop 50 (2025).
-				Darker colors indicate more shift toward Prop 50; lighter colors indicate less shift or shift away.
+				The saturation of each color varies based on the shift in support from Harris (2024) to Prop
+				50 (2025). Darker colors indicate more shift toward Prop 50; lighter colors indicate less
+				shift or shift away.
 			{/if}
 		</p>
 		<div class="saturation-example">
-			<div
-				class="gradient-bar"
-				class:invisible={saturationMetric === 'flipped'}
-			>
-				<div class="gradient-fill" style="background: linear-gradient(to right, #FFFFFF, #333333)"></div>
+			<div class="gradient-bar" class:invisible={saturationMetric === 'flipped'}>
+				<div
+					class="gradient-fill"
+					style="background: linear-gradient(to right, #FFFFFF, #333333)"
+				></div>
 				{#if saturationMetric !== 'flipped'}
 					<div
 						class="midpoint-indicator"
@@ -116,7 +126,7 @@
 		background-color: var(--aqua_100);
 		border-radius: 4px;
 		font-family: var(--font-family);
-		
+
 		@media screen and (max-width: 767px) {
 			padding: 12px;
 		}
@@ -135,7 +145,7 @@
 		flex-wrap: wrap;
 		gap: 16px;
 		margin-bottom: 20px;
-		
+
 		@media screen and (max-width: 767px) {
 			gap: 12px;
 		}
