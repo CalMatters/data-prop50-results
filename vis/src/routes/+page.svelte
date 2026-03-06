@@ -40,8 +40,36 @@
 	const SELECTED_COUNTY_STROKE_COLOR = '#212121';
 	const SELECTED_COUNTY_STROKE_WIDTH = 2;
 
-	/** Saturation metric for precinct fill: 'yes_pct' (0–100) or 'vote_shift' (±15%). */
+	/** Saturation metric for precinct fill: 'yes_pct' (0–100), 'vote_shift' (±15%), or 'flipped' (R/D vs no flip). */
 	let saturationMetric = $state('yes_pct');
+
+	// Shared vote_shift (and flipped) color stops
+	const VOTE_SHIFT_GROUP_COLORS = {
+		'White': { v0: '#E8F2FA', v1: '#9BC0E0', v2: RACIAL_GROUP_COLORS['White'] },
+		'Multiracial': { v0: '#F0E8F7', v1: '#C9A5E1', v2: RACIAL_GROUP_COLORS['Multiracial'] },
+		'Hispanic Or Latino': { v0: '#FBF0E5', v1: '#F2B872', v2: RACIAL_GROUP_COLORS['Hispanic Or Latino'] },
+		'Black Or African American': { v0: '#E8F5E3', v1: '#8DCC6F', v2: RACIAL_GROUP_COLORS['Black Or African American'] },
+		'Asian': { v0: '#FAE8E6', v1: '#E18A7F', v2: RACIAL_GROUP_COLORS['Asian'] }
+	};
+	const RACIAL_GROUP_ORDER = ['White', 'Multiracial', 'Hispanic Or Latino', 'Black Or African American', 'Asian'];
+
+	/**
+	 * Build a MapLibre 'case' expression: for each racial group, output one color; default fallback last.
+	 * Used by both vote_shift (interpolated) and flipped (discrete) so we stay DRY.
+	 * @param {Array} normalizedGroupExpr - MapLibre expression that evaluates to the group name
+	 * @param {'v0' | 'v1' | 'v2'} shade - Which shade from VOTE_SHIFT_GROUP_COLORS (v0=light, v2=dark)
+	 * @returns {Array} MapLibre expression
+	 */
+	function buildGroupToColorCase(normalizedGroupExpr, shade) {
+		return [
+			'case',
+			...RACIAL_GROUP_ORDER.flatMap((group) => [
+				['==', normalizedGroupExpr, group],
+				VOTE_SHIFT_GROUP_COLORS[group][shade]
+			]),
+			RACIAL_GROUP_COLORS[null]
+		];
+	}
 
 	let { data } = $props();
 	let { county } = data;
@@ -78,9 +106,27 @@
 
 	/**
 	 * Build MapLibre fill-color expression for precincts by metric.
-	 * @param {'yes_pct' | 'vote_shift'} metric
+	 * - yes_pct: interpolate 0–100% → light to dark by racial group.
+	 * - vote_shift: interpolate −15 to +15% → light to dark (same palette as flipped).
+	 * - flipped: grey when no flip; D flip = dark (v2), R flip = light (v0), by group.
+	 * @param {'yes_pct' | 'vote_shift' | 'flipped'} metric
 	 */
 	function buildPrecinctFillColorExpression(metric) {
+		// Flipped: three discrete outcomes; reuse vote_shift shades for consistency.
+		if (metric === 'flipped') {
+			const flippedProp = ['get', 'flipped'];
+			const isFlippedDOrR = ['in', ['coalesce', flippedProp, ''], ['literal', ['D', 'R']]];
+
+			return [
+				'case',
+				['!', isFlippedDOrR],
+				RACIAL_GROUP_COLORS[null],
+				['==', flippedProp, 'D'],
+				buildGroupToColorCase(normalizedGroup, 'v2'),
+				buildGroupToColorCase(normalizedGroup, 'v0')
+			];
+		}
+
 		const isYesPct = metric === 'yes_pct';
 		const value = isYesPct
 			? ['coalesce', ['get', 'yes_pct'], 0]
@@ -88,57 +134,29 @@
 		const stops = isYesPct
 			? [0, 50, 100]
 			: [-15, 0, 15];
-		const [v0, v1, v2] = stops;
 
-		return [
-			'case',
-			['==', normalizedGroup, 'White'],
-			[
-				'interpolate',
-				['exponential', 1.5],
-				value,
-				v0, '#E8F2FA',
-				v1, '#9BC0E0',
-				v2, RACIAL_GROUP_COLORS['White']
-			],
-			['==', normalizedGroup, 'Multiracial'],
-			[
-				'interpolate',
-				['exponential', 1.5],
-				value,
-				v0, '#F0E8F7',
-				v1, '#C9A5E1',
-				v2, RACIAL_GROUP_COLORS['Multiracial']
-			],
-			['==', normalizedGroup, 'Hispanic Or Latino'],
-			[
-				'interpolate',
-				['exponential', 1.5],
-				value,
-				v0, '#FBF0E5',
-				v1, '#F2B872',
-				v2, RACIAL_GROUP_COLORS['Hispanic Or Latino']
-			],
-			['==', normalizedGroup, 'Black Or African American'],
-			[
-				'interpolate',
-				['exponential', 1.5],
-				value,
-				v0, '#E8F5E3',
-				v1, '#8DCC6F',
-				v2, RACIAL_GROUP_COLORS['Black Or African American']
-			],
-			['==', normalizedGroup, 'Asian'],
-			[
-				'interpolate',
-				['exponential', 1.5],
-				value,
-				v0, '#FAE8E6',
-				v1, '#E18A7F',
-				v2, RACIAL_GROUP_COLORS['Asian']
-			],
-			RACIAL_GROUP_COLORS[null]
-		];
+		const branches = isYesPct
+			? [
+					['==', normalizedGroup, 'White'],
+					['interpolate', ['exponential', 1.5], value, stops[0], '#E8F2FA', stops[1], '#9BC0E0', stops[2], RACIAL_GROUP_COLORS['White']],
+					['==', normalizedGroup, 'Multiracial'],
+					['interpolate', ['exponential', 1.5], value, stops[0], '#F0E8F7', stops[1], '#C9A5E1', stops[2], RACIAL_GROUP_COLORS['Multiracial']],
+					['==', normalizedGroup, 'Hispanic Or Latino'],
+					['interpolate', ['exponential', 1.5], value, stops[0], '#FBF0E5', stops[1], '#F2B872', stops[2], RACIAL_GROUP_COLORS['Hispanic Or Latino']],
+					['==', normalizedGroup, 'Black Or African American'],
+					['interpolate', ['exponential', 1.5], value, stops[0], '#E8F5E3', stops[1], '#8DCC6F', stops[2], RACIAL_GROUP_COLORS['Black Or African American']],
+					['==', normalizedGroup, 'Asian'],
+					['interpolate', ['exponential', 1.5], value, stops[0], '#FAE8E6', stops[1], '#E18A7F', stops[2], RACIAL_GROUP_COLORS['Asian']]
+				]
+			: RACIAL_GROUP_ORDER.flatMap((group) => {
+					const colors = VOTE_SHIFT_GROUP_COLORS[group];
+					return [
+						['==', normalizedGroup, group],
+						['interpolate', ['exponential', 1.5], value, stops[0], colors.v0, stops[1], colors.v1, stops[2], colors.v2]
+					];
+				});
+
+		return ['case', ...branches, RACIAL_GROUP_COLORS[null]];
 	}
 
 	function zoomToAndHighlightSelectedCounty() {
@@ -354,6 +372,7 @@
 						const majorityGroupPct = feature.properties.majority_racial_group_pct;
 						const yesPct = feature.properties.yes_pct;
 						const voteShift = feature.properties.vote_shift;
+						const flipped = feature.properties.flipped;
 
 						// Format the percentage values
 						const groupPctFormatted =
@@ -379,6 +398,14 @@
 							groupLabel = `${majorityGroup || 'Unknown'} (${groupPctFormatted}%)`;
 						}
 
+						// Flip status line
+						const flipLine =
+							flipped === 'D'
+								? 'Flipped: Trump 2024 → Yes on Prop 50'
+								: flipped === 'R'
+									? 'Flipped: Harris 2024 → No on Prop 50'
+									: '';
+
 						// Create popup HTML content
 						const supportLine =
 							voteShiftFormatted != null
@@ -388,6 +415,7 @@
 							<div class="popup-content">
 								<p class="popup-line"><strong>${groupLabel}</strong> majority precinct</p>
 								<p class="popup-line">${supportLine}</p>
+								<p class="popup-line">${flipLine}</p>
 							</div>
 						`;
 

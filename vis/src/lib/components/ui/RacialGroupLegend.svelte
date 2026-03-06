@@ -3,7 +3,7 @@
  A legend for racial group colors with saturation variance explanation
 
  Shows each racial group with its color and explains how saturation
- varies based on the selected metric (yes_pct or vote_shift).
+ varies based on the selected metric (yes_pct, vote_shift, or flipped).
 -->
 <script>
 	import { RACIAL_GROUP_COLORS } from '$lib/racial-group-colors.js';
@@ -15,7 +15,8 @@
 
 	const SATURATION_OPTIONS = [
 		{ value: 'yes_pct', label: 'Prop 50 yes %' },
-		{ value: 'vote_shift', label: 'Vote shift vs Harris 2024' }
+		{ value: 'vote_shift', label: 'Vote shift vs Harris 2024' },
+		{ value: 'flipped', label: 'Partisan flip' }
 	];
 
 	const racialGroups = [
@@ -39,7 +40,7 @@
 <section class="legend">
 	<p class="legend-title">Racial Groups</p>
 	<div class="legend-items">
-		{#each racialGroups as group}
+		{#each racialGroups as group (group.label)}
 			<div class="legend-item">
 				<div class="color-box" style="background-color: {group.color}"></div>
 				<p class="label">{group.label}</p>
@@ -49,13 +50,13 @@
 	
 	<div class="saturation-note">
 		<p class="note-title">
-			Color Saturation:
+			Map view:
 			<select
 				value={saturationMetric}
 				onchange={(e) => onSaturationMetricChange(e.currentTarget.value)}
 				aria-label="Saturation metric"
 			>
-				{#each SATURATION_OPTIONS as opt}
+				{#each SATURATION_OPTIONS as opt (opt.value)}
 					<option value={opt.value}>{opt.label}</option>
 				{/each}
 			</select>
@@ -65,24 +66,39 @@
 				The saturation of each color varies based on the percentage of "yes" votes in that precinct.
 				Darker, more saturated colors indicate higher percentages of "yes" votes, while lighter colors
 				indicate lower percentages.
+			{:else if saturationMetric === 'flipped'}
+				Precincts that did not change partisan outcome (2024 presidential → 2025 Prop 50) are shown in grey.<br>
+				<strong>D</strong> = precinct flipped from Trump (R) to Prop 50 Yes (D);<br> <strong>R</strong> = precinct flipped from Harris (D) to Prop 50 No (R).<br>
+				Flipped precincts use the same color scale as "Vote shift vs Harris 2024" (lighter = R flip, darker = D flip).
 			{:else}
 				The saturation of each color varies based on the shift in support from Harris (2024) to Prop 50 (2025).
 				Darker colors indicate more shift toward Prop 50; lighter colors indicate less shift or shift away.
 			{/if}
 		</p>
 		<div class="saturation-example">
-			<div class="gradient-bar">
+			<div
+				class="gradient-bar"
+				class:invisible={saturationMetric === 'flipped'}
+			>
 				<div class="gradient-fill" style="background: linear-gradient(to right, #FFFFFF, #333333)"></div>
-				<div
-					class="midpoint-indicator"
-					title={saturationMetric === 'yes_pct' ? '50% - Yes wins above this line' : '0% - No shift'}
-				></div>
+				{#if saturationMetric !== 'flipped'}
+					<div
+						class="midpoint-indicator"
+						title={saturationMetric === 'yes_pct'
+							? '50% - Yes wins above this line'
+							: '0% - No shift'}
+					></div>
+				{/if}
 			</div>
 			<div class="gradient-labels">
 				{#if saturationMetric === 'yes_pct'}
 					<span>Yes losing</span>
 					<span class="midpoint-label">50%</span>
 					<span>Yes winning</span>
+				{:else if saturationMetric === 'flipped'}
+					<span>R flip (lighter)</span>
+					<span class="midpoint-label">No flip = grey</span>
+					<span>D flip (darker)</span>
 				{:else}
 					<span>−15%</span>
 					<span class="midpoint-label">0%</span>
@@ -186,6 +202,10 @@
 		overflow: visible;
 		margin-bottom: 6px;
 		border: 1px solid var(--gray_200);
+
+		&.invisible {
+			opacity: 0;
+		}
 	}
 
 	.gradient-fill {
