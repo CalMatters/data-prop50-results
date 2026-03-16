@@ -912,7 +912,7 @@ def _(pd, standardize_results_df):
     _DATA_FP = "./inputs/counties/imperial/c025_s25_sov_data_by_s25_srprec.csv"
 
     imperial = pd.read_csv(_DATA_FP)
-    standardize_results_df(
+    imperial = standardize_results_df(
         imperial,
         _COUNTY,
         rename_column_map={
