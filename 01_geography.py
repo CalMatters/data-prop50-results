@@ -800,6 +800,7 @@ def _(PROJECTED_CRS, gpd):
         df=imperial,
         county="Imperial",
         rename={"srprec": "precinct_id"},
+        drop=["COUNTY"],
     )
 
     imperial.head()
