@@ -113,6 +113,7 @@ def _(
     siskiyou,
     solano,
     sonoma,
+    stanislaus,
     sutter,
     tehama,
     tulare,
@@ -164,6 +165,7 @@ def _(
         siskiyou,
         solano,
         sonoma,
+        stanislaus,
         sutter,
         tehama,
         tulare,
@@ -2169,6 +2171,29 @@ def _(PROJECTED_CRS, gpd):
 
     sonoma.head()
     return (sonoma,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Stanislaus
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    _GIS_FP = "./inputs/counties/stanislaus/srprec_099_s25_v01.gpkg.zip"
+    stanislaus = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+
+    stanislaus = alter_df(
+        df=stanislaus,
+        county="Stanislaus",
+        rename={"srprec": "precinct_id"},
+        drop=["COUNTY"],
+    )
+    stanislaus.head()
+    return (stanislaus,)
 
 
 @app.cell(hide_code=True)
