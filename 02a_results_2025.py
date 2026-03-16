@@ -2398,48 +2398,27 @@ def _(mo):
 
 
 @app.cell
-def _(pd, pdfplumber, standardize_results_df):
+def _(pd, standardize_results_df):
     _COUNTY = "Stanislaus"
-    _PDF_FP = "inputs/counties/stanislaus/11-04-2025-sov.pdf"
-    _PROP50_PAGE_RANGE = (6, 8)
-    _PRECINCT_ID_PATTERN = r"\d{6}"
+    _DATA_FP = "./inputs/counties/stanislaus/c099_s25_sov_data_by_s25_srprec.csv"
 
-
-    def extract_stanislaus_pdf():
-        stanislaus = None
-        # extract the tables from the Prop 50 results pages in the PDF document
-        with pdfplumber.open(
-            _PDF_FP,
-        ) as pdf:
-            prop_50_pages = pdf.pages[
-                _PROP50_PAGE_RANGE[0] : _PROP50_PAGE_RANGE[1]
-            ]
-            extracted_pages = [
-                pd.DataFrame(page.extract_table()[1:]) for page in prop_50_pages
-            ]
-            stanislaus = pd.concat(extracted_pages)
-        return stanislaus
-
-
-    stanislaus = extract_stanislaus_pdf()
-
+    stanislaus = pd.read_csv(_DATA_FP)
     stanislaus = standardize_results_df(
         results_df=stanislaus,
         county=_COUNTY,
         rename_column_map={
-            0: "precinct_id",
-            1: "registered_voters",
-            # 2 is ballots cast
-            3: "turnout",
-            4: "yes_votes",
-            5: "no_votes",
+            "srprec": "precinct_id",
+            "TOTREG": "registered_voters",
+            "TOTVOTE": "total_votes",
+            "PR_50_N": "no_votes",
+            "PR_50_Y": "yes_votes",
         },
     )
 
-    stanislaus = stanislaus[
-        stanislaus["precinct_id"].str.match(_PRECINCT_ID_PATTERN)
-    ].reset_index(drop=True)
-    stanislaus.head()
+    is_aggregate_row = stanislaus["precinct_id"] == "CNTYTOT"
+    stanislaus = stanislaus[~is_aggregate_row].reset_index(drop=True)
+
+    stanislaus
     return (stanislaus,)
 
 
