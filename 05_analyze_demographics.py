@@ -756,20 +756,20 @@ def _(
 
 
     _county = county_dropdown.value
-    _memo_table = _build_county_memo_table(_county)
+    memo_table = _build_county_memo_table(_county)
     mo.vstack(
         [
             mo.md(
                 f"**{_county} County memo** — Prop 50 vs 2024 Presidential (Harris/Trump) by racial group"
             ),
-            _memo_table
-            if _memo_table is not None
+            memo_table
+            if memo_table is not None
             else mo.md(
                 "_Select both «Prop 50 (Blocks)» and «2024 Presidential (Blocks)» above to show this table._"
             ),
         ]
     )
-    return
+    return (memo_table,)
 
 
 @app.cell(hide_code=True)
@@ -926,6 +926,146 @@ def _(
 
 
     _county_subset_majority_display(county_multiselect.value)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Arrow plot
+    """)
+    return
+
+
+@app.cell
+def _(county_dropdown, memo_table):
+    """Arrow plot comparing Harris vs. Prop 50 support by racial group for the
+    selected county."""
+
+    _ARROW_COLOR = "#0077a3"
+    _ARROW_WIDTH = 3.5
+    _SWING_LABEL_DX = 0.6
+    _SWING_LABEL_DY = 0.03
+    _X_MIN, _X_MAX = 60, 100
+    _XTICK_STEP = 10
+    _X_GRID_ALPHA = 0.35
+    _Y_GRID_ALPHA = 0.15
+    _HEADER_Y_OFFSET = 0.75
+    _Y_MIN_PADDING = -0.6
+    _Y_MAX_PADDING = 1.1
+    _HEADER_TICK_COLOR = "gray"
+    _HEADER_TICK_ALPHA = 0.6
+    _HEADER_TICK_LW = 1.0
+    _HEADER_TICK_DY_TOP = 0.08
+    _HEADER_TICK_DY_BOTTOM = 0.35
+
+    _df = memo_table[memo_table["Swing from Harris to Prop 50"] != ""].copy()
+    _df["Swing from Harris to Prop 50"] = _df[
+        "Swing from Harris to Prop 50"
+    ].astype(float)
+    _df = _df.sort_values("Swing from Harris to Prop 50", ascending=False)
+
+    _y_positions = list(range(len(_df)))[::-1]
+
+    _harris_col = "HARRIS - pct"
+    _prop50_col = "YES on Prop. 50 - pct"
+
+    _fig, _ax = plt.subplots(figsize=(8.5, 2.8))
+
+    for _y, (_, _row) in zip(_y_positions, _df.iterrows()):
+        _harris = _row[_harris_col]
+        _prop50 = _row[_prop50_col]
+        _swing = _row["Swing from Harris to Prop 50"]
+
+        # Draw arrow from Harris to Prop 50 for each racial group.
+        _ax.annotate(
+            "",
+            xy=(_prop50, _y),
+            xytext=(_harris, _y),
+            arrowprops=dict(
+                arrowstyle="->",
+                color=_ARROW_COLOR,
+                lw=_ARROW_WIDTH,
+            ),
+        )
+
+        # Label the swing at the arrow tip, e.g. +7.4
+        _sign = "+" if _swing >= 0 else "-" if _swing < 0 else ""
+        _ax.text(
+            _prop50 + _SWING_LABEL_DX,
+            _y + _SWING_LABEL_DY,
+            f"{_sign}{_swing:.1f}",
+            va="center",
+            ha="left",
+            fontsize=9,
+            color=_ARROW_COLOR,
+        )
+
+    _ax.set_yticks(_y_positions)
+    # Add trailing dashes to group labels to mimic the reference design.
+    _ax.set_yticklabels([f"{g} -" for g in _df["Racial group"]])
+    _ax.tick_params(axis="y", which="both", length=0)
+
+    _ax.set_xlim(_X_MIN, _X_MAX)
+    _ax.set_title(
+        f"{county_dropdown.value} County vote shift from Harris to Prop. 50",
+        pad=12,
+    )
+    _ax.set_axisbelow(True)
+
+    # Vertical gridlines on x-axis, slightly more visible.
+    _ax.set_xticks(np.arange(_X_MIN, _X_MAX + 1, _XTICK_STEP))
+    _ax.grid(axis="x", alpha=_X_GRID_ALPHA, color="gray")
+
+    # Horizontal gridlines to aid row tracking.
+    _ax.grid(axis="y", alpha=_Y_GRID_ALPHA, color="gray")
+
+    # Align labels to the start/end of the top arrow (first row after sorting),
+    # matching the reference graphic.
+    _top_row = _df.iloc[0]
+    _harris_center = float(_top_row[_harris_col])
+    _prop50_center = float(_top_row[_prop50_col])
+    _label_y = max(_y_positions) + _HEADER_Y_OFFSET
+    _ax.set_ylim(_Y_MIN_PADDING, max(_y_positions) + _Y_MAX_PADDING)
+    _ax.text(
+        _harris_center,
+        _label_y,
+        "HARRIS",
+        ha="right",
+        va="bottom",
+        fontsize=9,
+        color="gray",
+    )
+    _ax.text(
+        _prop50_center,
+        _label_y,
+        "Prop. 50",
+        ha="left",
+        va="bottom",
+        fontsize=9,
+        color="gray",
+    )
+
+    # Add small tick marks under the top labels for clarity.
+    _tick_top = _label_y - _HEADER_TICK_DY_TOP
+    _tick_bottom = _label_y - _HEADER_TICK_DY_BOTTOM
+    _ax.vlines(
+        [_harris_center, _prop50_center],
+        _tick_bottom,
+        _tick_top,
+        colors=_HEADER_TICK_COLOR,
+        alpha=_HEADER_TICK_ALPHA,
+        linewidth=_HEADER_TICK_LW,
+    )
+
+    # Style tweaks to better match the reference.
+    _ax.spines["top"].set_visible(False)
+    _ax.spines["right"].set_visible(False)
+    _ax.spines["left"].set_visible(False)
+    _ax.spines["bottom"].set_visible(False)
+
+    _fig.tight_layout()
+    _fig
     return
 
 
