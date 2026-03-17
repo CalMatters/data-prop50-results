@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.2"
 app = marimo.App(width="medium")
 
 
@@ -32,6 +32,7 @@ def _():
     import numpy as np
     import pandas as pd
     import pdfplumber
+
     return EsriDumper, Path, json, mo, pd, pdfplumber, re, warnings
 
 
@@ -182,6 +183,7 @@ def _(REDACTED_PLACEHOLDER_REGEX, pd):
                 )
 
         return numeric_series
+
     return (to_numeric_with_warning,)
 
 
@@ -253,6 +255,7 @@ def _(
         ]
 
         return results_df[keep_columns].copy()
+
     return (standardize_results_df,)
 
 
@@ -260,6 +263,7 @@ def _(
 def _(pd):
     def calculate_total_votes(df_clean: pd.DataFrame) -> pd.Series:
         return df_clean["yes_votes"] + df_clean["no_votes"]
+
     return (calculate_total_votes,)
 
 
@@ -270,6 +274,7 @@ def _(pd):
     ) -> pd.Series:
         registered_voter_count = registered_voter_count.replace(0, 1)
         return round((votes_cast / registered_voter_count) * 100, 1)
+
     return (calculate_turnout,)
 
 
@@ -279,6 +284,7 @@ def _(pd):
         """Backfill NaN values without triggering FutureWarning on object dtype downcasting."""
         with pd.option_context("future.no_silent_downcasting", True):
             return df.bfill().infer_objects(copy=False)
+
     return (bfill_without_downcast_warning,)
 
 
@@ -903,46 +909,25 @@ def _(mo):
 @app.cell
 def _(pd, standardize_results_df):
     _COUNTY = "Imperial"
-    _DATA_FP = "inputs/counties/imperial/Precincts_4.csv"
-    _SKIP_HEADER_ROWS = 2
+    _DATA_FP = "./inputs/counties/imperial/c025_s25_sov_data_by_s25_srprec.csv"
 
+    imperial = pd.read_csv(_DATA_FP)
+    imperial = standardize_results_df(
+        imperial,
+        _COUNTY,
+        rename_column_map={
+            "srprec": "precinct_id",
+            "TOTREG": "registered_voters",
+            "TOTVOTE": "total_votes",
+            "PR_50_N": "no_votes",
+            "PR_50_Y": "yes_votes",
+        },
+    )
 
-    def imperial_df():
-        csv = pd.read_csv(_DATA_FP, skiprows=_SKIP_HEADER_ROWS)
-        prop_50 = csv[csv["Contest Name"] == "PROPOSITION 50"]
+    is_aggregate_row = imperial["precinct_id"] == "CNTYTOT"
+    imperial = imperial[~is_aggregate_row].reset_index(drop=True)
 
-        pt = prop_50.pivot_table(
-            index="Precinct",
-            columns="Candidate Name",
-            values="Votes",
-            aggfunc="sum",
-        )
-
-        turnout = prop_50.groupby("Precinct")["Voter Turnout"].max()
-
-        prop_50_altered = pt.merge(turnout, on="Precinct")
-        prop_50_altered = prop_50_altered.reset_index()
-        prop_50_altered = standardize_results_df(
-            results_df=prop_50_altered,
-            county=_COUNTY,
-            rename_column_map={
-                "Precinct": "precinct_id",
-                "Voter Turnout": "turnout",
-                "YES": "yes_votes",
-                "NO": "no_votes",
-            },
-        )
-
-        prop_50_altered["precinct_id"] = (
-            prop_50_altered["precinct_id"].str.replace("MB", "").str.strip()
-        )
-
-        return prop_50_altered
-
-
-    imperial = imperial_df()
-
-    imperial.head()
+    imperial
     return (imperial,)
 
 
@@ -1948,6 +1933,7 @@ def _(pd, pdfplumber):
 
             san_joaquin = pd.concat(extracted_pages)
         return san_joaquin
+
     return (extract_san_joaquin_pdf,)
 
 
