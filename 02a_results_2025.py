@@ -924,8 +924,8 @@ def _(pd, standardize_results_df):
         },
     )
 
-    is_aggregate_row = imperial["precinct_id"] == "CNTYTOT"
-    imperial = imperial[~is_aggregate_row].reset_index(drop=True)
+    _is_aggregate_row = imperial["precinct_id"] == "CNTYTOT"
+    imperial = imperial[~_is_aggregate_row].reset_index(drop=True)
 
     imperial
     return (imperial,)
@@ -2415,8 +2415,8 @@ def _(pd, standardize_results_df):
         },
     )
 
-    is_aggregate_row = stanislaus["precinct_id"] == "CNTYTOT"
-    stanislaus = stanislaus[~is_aggregate_row].reset_index(drop=True)
+    _is_aggregate_row = stanislaus["precinct_id"] == "CNTYTOT"
+    stanislaus = stanislaus[~_is_aggregate_row].reset_index(drop=True)
 
     stanislaus
     return (stanislaus,)
