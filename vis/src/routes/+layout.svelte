@@ -6,19 +6,17 @@
 
 	loadCSS();
 
-	async function loadCSS(){
-		if ( embed ){
-			await import( '../styles/cms.css' ); 
-			console.log( 'Loaded CSS files for embedding' );
-		}
-		else if ( !embed && dev ){
-			await import( '../styles/cms.css' ); 
-			console.log( 'Loaded CSS files for injection' );
+	async function loadCSS() {
+		if (embed) {
+			await import('../styles/cms.css');
+			console.log('Loaded CSS files for embedding');
+		} else if (!embed && dev) {
+			await import('../styles/cms.css');
+			console.log('Loaded CSS files for injection');
 		}
 
-		await import( '../styles/guide.scss' ); 
+		await import('../styles/guide.scss');
 	}
-
 </script>
 
 <slot />

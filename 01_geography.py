@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.2"
 app = marimo.App(width="medium")
 
 
@@ -26,6 +26,7 @@ def _():
     import marimo as mo
     import pandas as pd
     import pdfplumber
+
     return gpd, mo, pd, pdfplumber, re
 
 
@@ -112,6 +113,7 @@ def _(
     siskiyou,
     solano,
     sonoma,
+    stanislaus,
     sutter,
     tehama,
     tulare,
@@ -163,6 +165,7 @@ def _(
         siskiyou,
         solano,
         sonoma,
+        stanislaus,
         sutter,
         tehama,
         tulare,
@@ -607,6 +610,7 @@ def _():
                 page_rows.append(row)
 
         return page_rows, last_seen_results_precinct_id
+
     return (extract_fresno_crosswalk_pdf_page,)
 
 
@@ -791,13 +795,14 @@ def _(mo):
 
 @app.cell
 def _(PROJECTED_CRS, gpd):
-    _GIS_FP = "inputs/counties/imperial/precincts/Voting_Precincts.shp"
+    _GIS_FP = "inputs/counties/imperial/srprec_025_s25_v01.gpkg.zip"
     imperial = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
 
     imperial = alter_df(
         df=imperial,
         county="Imperial",
-        rename={"precinctid": "precinct_id", "name": "precinct_name"},
+        rename={"srprec": "precinct_id"},
+        drop=["COUNTY"],
     )
 
     imperial.head()
@@ -882,6 +887,7 @@ def _(pd):
         df = df.reset_index(drop=True)
 
         return df
+
     return (process_kern_crosswalk_section,)
 
 
@@ -1883,15 +1889,19 @@ def _(PROJECTED_CRS, gpd, pd):
     _SANTA_BARBARA_HEADER_N = 1
     _SANTA_BARBARA_FOOTER_N = 2
     santa_barbara = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
-    santa_barbara['geometry'] = santa_barbara['geometry'].make_valid()
+    santa_barbara["geometry"] = santa_barbara["geometry"].make_valid()
 
     santa_barbara_crosswalk = pd.read_excel(
         _SANTA_BARBARA_CROSSWALK_FP,
         skiprows=_SANTA_BARBARA_HEADER_N,
         skipfooter=_SANTA_BARBARA_FOOTER_N,
     )
-    santa_barbara_crosswalk['Voting Precinct'] = santa_barbara_crosswalk['Voting Precinct'].ffill()
-    santa_barbara_crosswalk['Regular Pct'] = santa_barbara_crosswalk['Regular Pct'].str.split(' ', expand=True)[0]
+    santa_barbara_crosswalk["Voting Precinct"] = santa_barbara_crosswalk[
+        "Voting Precinct"
+    ].ffill()
+    santa_barbara_crosswalk["Regular Pct"] = santa_barbara_crosswalk[
+        "Regular Pct"
+    ].str.split(" ", expand=True)[0]
 
     santa_barbara_with_crosswalk = santa_barbara.merge(
         santa_barbara_crosswalk,
@@ -2074,7 +2084,7 @@ def _(PROJECTED_CRS, gpd):
     )
 
     # account for a subtle difference in the naming of two precincts: Sierra Brooks No 1 and Sierra Brooks No 2
-    sierra['precinct_id'] = sierra['precinct_id'].str.replace('No. ', 'No ')
+    sierra["precinct_id"] = sierra["precinct_id"].str.replace("No. ", "No ")
 
     sierra
     return (sierra,)
@@ -2161,6 +2171,29 @@ def _(PROJECTED_CRS, gpd):
 
     sonoma.head()
     return (sonoma,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Stanislaus
+    """)
+    return
+
+
+@app.cell
+def _(PROJECTED_CRS, gpd):
+    _GIS_FP = "./inputs/counties/stanislaus/srprec_099_s25_v01.gpkg.zip"
+    stanislaus = gpd.read_file(_GIS_FP).to_crs(PROJECTED_CRS)
+
+    stanislaus = alter_df(
+        df=stanislaus,
+        county="Stanislaus",
+        rename={"srprec": "precinct_id"},
+        drop=["COUNTY"],
+    )
+    stanislaus.head()
+    return (stanislaus,)
 
 
 @app.cell(hide_code=True)
@@ -2308,6 +2341,7 @@ def _(re):
                 page_rows.append(row)
 
         return page_rows
+
     return (extract_tulare_crosswalk_pdf_page,)
 
 

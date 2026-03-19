@@ -14,10 +14,13 @@
 
 <section class="legend">
 	<p class="legend-title">Election Results</p>
-	
+
 	<div class="gradient-section">
 		<div class="gradient-bar">
-			<div class="gradient-fill" style="background: linear-gradient(to right, {RED_COLOR}, {MIDPOINT_COLOR} 50%, {BLUE_COLOR})"></div>
+			<div
+				class="gradient-fill"
+				style="background: linear-gradient(to right, {RED_COLOR}, {MIDPOINT_COLOR} 50%, {BLUE_COLOR})"
+			></div>
 			<div class="midpoint-indicator" title="50% - Yes wins above this line"></div>
 		</div>
 		<div class="gradient-labels">
@@ -26,10 +29,10 @@
 			<span>Yes</span>
 		</div>
 	</div>
-	
+
 	<p class="note-text">
-		Colors represent the percentage of "yes" votes in each precinct. 
-		Blue indicates higher support for Prop 50, while red indicates lower support.
+		Colors represent the percentage of "yes" votes in each precinct. Blue indicates higher support
+		for Prop 50, while red indicates lower support.
 	</p>
 </section>
 
@@ -40,7 +43,7 @@
 		background-color: var(--aqua_100);
 		border-radius: 4px;
 		font-family: var(--font-family);
-		
+
 		@media screen and (max-width: 767px) {
 			padding: 12px;
 		}

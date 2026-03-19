@@ -57,7 +57,7 @@
 		background-color: var(--aqua_100);
 		border-radius: 4px;
 		font-family: var(--font-family);
-		
+
 		@media screen and (max-width: 767px) {
 			padding: 12px;
 		}
@@ -75,7 +75,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 16px;
-		
+
 		@media screen and (max-width: 767px) {
 			gap: 12px;
 		}
@@ -89,15 +89,15 @@
 		font-size: var(--footnote-size);
 		line-height: var(--footnote-height);
 		color: var(--gray_600);
-		
-		input[type="radio"] {
+
+		input[type='radio'] {
 			margin: 0;
 			cursor: pointer;
 			width: 16px;
 			height: 16px;
 			accent-color: var(--aqua_500);
 		}
-		
+
 		&:hover {
 			color: var(--gray_600);
 		}
