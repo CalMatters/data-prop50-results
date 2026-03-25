@@ -796,7 +796,7 @@ def _(
             ),
         ]
     )
-    return (memo_table,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -992,14 +992,17 @@ def _():
 
 
 @app.cell
-def _(county_dropdown):
+def _():
+    FIG_SIZE = (8.5, 2.8)
     ARROW_COLOR = "#0077a3"
     # CalMatters "red_500" token for decreasing states.
     DECREASE_COLOR = "#D35F4F"
     ARROW_WIDTH_DEFAULT = 3
+    FONT_SIZE = 9
     TITLE_PADDING = 12
     SWING_LABEL_DX = 0.6
     SWING_LABEL_DY = 0.03
+    X_AXIS_ROUNDING_STEP = 5
     XTICK_STEP = 10
     X_GRID_ALPHA = 0.35
     Y_GRID_ALPHA = 0.15
@@ -1015,17 +1018,19 @@ def _(county_dropdown):
     HARRIS_TICK_LABEL = "Harris"
     PROP_50_TICK_LABEL = "Prop. 50"
 
-    arrow_plot_title = (
-        f"{county_dropdown.value} County vote shift from Harris to Prop. 50"
+    arrow_plot_mode_dropdown = mo.ui.dropdown(
+        options=["County", "Statewide"],
+        value="County",
+        label="Arrow plot view:",
     )
-
     arrow_width_slider = mo.ui.slider(
         0, 10, 0.5, ARROW_WIDTH_DEFAULT, show_value=True, label="Arrow width:"
     )
-    mo.vstack([county_dropdown, arrow_width_slider])
     return (
         ARROW_COLOR,
         DECREASE_COLOR,
+        FIG_SIZE,
+        FONT_SIZE,
         HARRIS_TICK_LABEL,
         HEADER_TICK_ALPHA,
         HEADER_TICK_COLOR,
@@ -1038,19 +1043,130 @@ def _(county_dropdown):
         SWING_LABEL_DY,
         TITLE_PADDING,
         XTICK_STEP,
+        X_AXIS_ROUNDING_STEP,
         X_GRID_ALPHA,
         Y_GRID_ALPHA,
         Y_MAX_PADDING,
         Y_MIN_PADDING,
-        arrow_plot_title,
+        arrow_plot_mode_dropdown,
         arrow_width_slider,
     )
+
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    compute_vote_shift,
+    county_level_demo_analysis,
+    filter_threshold,
+):
+    def _build_arrow_table_from_rows(
+        prop50_row, pres2024_row, yes_suffix, no_suffix
+    ):
+        def _arrow_row(group_id):
+            yes_key = f"{group_id}{yes_suffix}"
+            no_key = f"{group_id}{no_suffix}"
+
+            swing = compute_vote_shift(prop50_row, pres2024_row, group_id)
+            return {
+                "Racial group": GROUP_DISPLAY_LABELS[group_id],
+                "Swing from Harris to Prop 50": (
+                    swing if swing is not None else ""
+                ),
+                "YES on Prop. 50 - pct": prop50_row[yes_key],
+                "HARRIS - pct": pres2024_row[yes_key],
+                "NO on Prop. 50 - pct": prop50_row[no_key],
+                "TRUMP - pct": pres2024_row[no_key],
+            }
+
+        rows = [
+            row
+            for group_id in ANALYSIS_GROUPS
+            if (row := _arrow_row(group_id)) is not None
+        ]
+        return pd.DataFrame(rows) if rows else None
+
+
+    def build_county_arrow_table(county):
+        prop50_df = county_level_demo_analysis.get(PROP50_DATASET_ID)
+        pres2024_df = county_level_demo_analysis.get(PRES2024_DATASET_ID)
+
+        yes_suffix = f"_{filter_threshold}_yes_pct"
+        no_suffix = f"_{filter_threshold}_no_pct"
+        return _build_arrow_table_from_rows(
+            prop50_df.loc[county],
+            pres2024_df.loc[county],
+            yes_suffix,
+            no_suffix,
+        )
+
+    return (build_county_arrow_table,)
+
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    majority_analysis,
+):
+    def build_statewide_arrow_table():
+        prop50_statewide = majority_analysis.get(PROP50_DATASET_ID)
+        pres2024_statewide = majority_analysis.get(PRES2024_DATASET_ID)
+
+        rows = []
+        for group_id in ANALYSIS_GROUPS:
+            label = GROUP_DISPLAY_LABELS[group_id]
+            prop50_row = prop50_statewide.loc[label]
+            pres2024_row = pres2024_statewide.loc[label]
+
+            # Recreate in expected memo table format
+            rows.append(
+                {
+                    "Racial group": label,
+                    "Swing from Harris to Prop 50": round(
+                        float(prop50_row["Yes %"] - pres2024_row["Democrat %"]),
+                        1,
+                    ),
+                    "YES on Prop. 50 - pct": prop50_row["Yes %"],
+                    "HARRIS - pct": pres2024_row["Democrat %"],
+                    "NO on Prop. 50 - pct": prop50_row["No %"],
+                    "TRUMP - pct": pres2024_row["Republican %"],
+                }
+            )
+        return pd.DataFrame(rows) if rows else None
+
+    return (build_statewide_arrow_table,)
+
+
+@app.cell
+def _(
+    arrow_plot_mode_dropdown,
+    build_county_arrow_table,
+    build_statewide_arrow_table,
+    county_dropdown,
+):
+    if arrow_plot_mode_dropdown.value == "Statewide":
+        arrow_plot_title = "Vote shift from Harris to Prop. 50"
+        arrow_plot_table = build_statewide_arrow_table()
+    else:
+        arrow_plot_title = (
+            f"{county_dropdown.value} County vote shift from Harris to Prop. 50"
+        )
+        arrow_plot_table = build_county_arrow_table(county_dropdown.value)
+    return arrow_plot_table, arrow_plot_title
 
 
 @app.cell(hide_code=True)
 def _(
     ARROW_COLOR,
     DECREASE_COLOR,
+    FIG_SIZE,
+    FONT_SIZE,
     HARRIS_TICK_LABEL,
     HEADER_TICK_ALPHA,
     HEADER_TICK_COLOR,
@@ -1063,30 +1179,33 @@ def _(
     SWING_LABEL_DY,
     TITLE_PADDING,
     XTICK_STEP,
+    X_AXIS_ROUNDING_STEP,
     X_GRID_ALPHA,
     Y_GRID_ALPHA,
     Y_MAX_PADDING,
     Y_MIN_PADDING,
+    arrow_plot_mode_dropdown,
+    arrow_plot_table,
     arrow_plot_title,
     arrow_width_slider,
-    memo_table,
+    county_dropdown,
 ):
-    """Arrow plot comparing Harris vs. Prop 50 support by racial group for the
-    selected county."""
+    """Arrow plot comparing Harris vs. Prop 50 support by racial group."""
 
     _harris_col = "HARRIS - pct"
     _prop50_col = "YES on Prop. 50 - pct"
 
-    _df = memo_table[memo_table["Swing from Harris to Prop 50"].notnull()].copy()
+    _df = arrow_plot_table[
+        arrow_plot_table["Swing from Harris to Prop 50"].notnull()
+    ].copy()
     _df["Swing from Harris to Prop 50"] = _df[
         "Swing from Harris to Prop 50"
     ].astype(float)
-    _df = _df.sort_values("Swing from Harris to Prop 50", ascending=False)
+    _df = _df.sort_values(_prop50_col, ascending=False)
 
     _y_positions = list(range(len(_df)))[::-1]
 
     # Dynamically scale x-axis to the observed Harris/Prop. 50 values.
-    # Round down/up to the nearest multiple of 5 for clean tick marks.
     _observed_min = (
         min(
             float(_df[_harris_col].min()),
@@ -1101,13 +1220,19 @@ def _(
         )
         + SWING_LABEL_DX
     )
-    _x_min = int(5 * np.floor(_observed_min / 5))
-    _x_max = int(5 * np.ceil(_observed_max / 5))
-    if _x_min == _x_max:
-        _x_min -= 5
-        _x_max += 5
 
-    _fig, _ax = plt.subplots(figsize=(8.5, 2.8))
+    # Round down/up to the nearest multiple of 5 for clean tick marks.
+    _x_min = int(
+        X_AXIS_ROUNDING_STEP * np.floor(_observed_min / X_AXIS_ROUNDING_STEP)
+    )
+    _x_max = int(
+        X_AXIS_ROUNDING_STEP * np.ceil(_observed_max / X_AXIS_ROUNDING_STEP)
+    )
+    if _x_min == _x_max:
+        _x_min -= X_AXIS_ROUNDING_STEP
+        _x_max += X_AXIS_ROUNDING_STEP
+
+    _fig, _ax = plt.subplots(figsize=FIG_SIZE)
 
     # plot arrows
     for _y, (_, _row) in zip(_y_positions, _df.iterrows()):
@@ -1135,14 +1260,14 @@ def _(
         )
 
         # Label the swing at the arrow tip, e.g. +7.4
-        _sign = "+" if _swing >= 0 else "-" if _swing < 0 else ""
+        _sign = "+" if _swing >= 0 else ""
         _ax.text(
             _label_x,
             _y + SWING_LABEL_DY,
             f"{_sign}{_swing:.1f}",
             va="center",
             ha=_label_ha,
-            fontsize=9,
+            fontsize=FONT_SIZE,
             color=_arrow_color,
         )
 
@@ -1158,38 +1283,41 @@ def _(
     _ax.set_axisbelow(True)
 
     # Vertical gridlines on x-axis, slightly more visible.
-    _xticks = np.arange(_x_min, _x_max + 1, XTICK_STEP)
-    if len(_xticks) == 0 or not np.isclose(_xticks[-1], _x_max):
-        _xticks = np.append(_xticks, _x_max)
-    _ax.set_xticks(_xticks)
+    _xticks_with_max = np.arange(_x_min, _x_max + 1, XTICK_STEP)
+    # Ensure the axis upper bound is always labeled, even if the step misses it.
+    if len(_xticks_with_max) == 0 or not np.isclose(
+        _xticks_with_max[-1], _x_max
+    ):
+        _xticks_with_max = np.append(_xticks_with_max, _x_max)
+    _ax.set_xticks(_xticks_with_max)
     _ax.grid(axis="x", alpha=X_GRID_ALPHA, color="gray")
 
-    # Horizontal gridlines to aid row tracking.
+    # Horizontal gridlines
     _ax.grid(axis="y", alpha=Y_GRID_ALPHA, color="gray")
 
-    # Align labels to the start/end of the top arrow (first row after sorting),
-    # matching the reference graphic.
+    # Align labels to the start/end of the top arrow (first row after sorting)
     _top_row = _df.iloc[0]
-    _harris_center = float(_top_row[_harris_col])
-    _prop50_center = float(_top_row[_prop50_col])
+    _harris_point = float(_top_row[_harris_col])
+    _prop50_point = float(_top_row[_prop50_col])
     _label_y = max(_y_positions) + HEADER_Y_OFFSET
+    # add padding to the y-axis for the annotation labels
     _ax.set_ylim(Y_MIN_PADDING, max(_y_positions) + Y_MAX_PADDING)
     _ax.text(
-        _harris_center,
+        _harris_point,
         _label_y,
         HARRIS_TICK_LABEL,
         ha="right",
         va="bottom",
-        fontsize=9,
+        fontsize=FONT_SIZE,
         color="gray",
     )
     _ax.text(
-        _prop50_center,
+        _prop50_point,
         _label_y,
         PROP_50_TICK_LABEL,
         ha="left",
         va="bottom",
-        fontsize=9,
+        fontsize=FONT_SIZE,
         color="gray",
     )
 
@@ -1197,7 +1325,7 @@ def _(
     _tick_top = _label_y - HEADER_TICK_DY_TOP
     _tick_bottom = _label_y - HEADER_TICK_DY_BOTTOM
     _ax.vlines(
-        [_harris_center, _prop50_center],
+        [_harris_point, _prop50_point],
         _tick_bottom,
         _tick_top,
         colors=HEADER_TICK_COLOR,
@@ -1212,7 +1340,19 @@ def _(
     _ax.spines["bottom"].set_visible(False)
 
     _fig.tight_layout()
-    _fig
+    _arrow_plot_output = _fig
+
+    _county_dropdown = (
+        county_dropdown if arrow_plot_mode_dropdown.value == "County" else "\n"
+    )
+    mo.vstack(
+        [
+            arrow_plot_mode_dropdown,
+            _county_dropdown,
+            arrow_width_slider,
+            _arrow_plot_output,
+        ]
+    )
     return
 
 
