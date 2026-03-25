@@ -1285,9 +1285,7 @@ def _(
     # Vertical gridlines on x-axis, slightly more visible.
     _xticks_with_max = np.arange(_x_min, _x_max + 1, XTICK_STEP)
     # Ensure the axis upper bound is always labeled, even if the step misses it.
-    if len(_xticks_with_max) == 0 or not np.isclose(
-        _xticks_with_max[-1], _x_max
-    ):
+    if len(_xticks_with_max) == 0 or not np.isclose(_xticks_with_max[-1], _x_max):
         _xticks_with_max = np.append(_xticks_with_max, _x_max)
     _ax.set_xticks(_xticks_with_max)
     _ax.grid(axis="x", alpha=X_GRID_ALPHA, color="gray")
