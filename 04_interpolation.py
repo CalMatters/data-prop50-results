@@ -1,19 +1,21 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.2"
 app = marimo.App(width="medium")
 
 
 @app.cell
 def _():
     from glob import glob
+    from pathlib import Path
 
     import geopandas as gpd
     import marimo as mo
     import pandas as pd
     from shapely.geometry import Point
     import tobler
-    return Point, glob, gpd, mo, pd, tobler
+
+    return Path, Point, glob, gpd, mo, pd, tobler
 
 
 @app.cell(hide_code=True)
@@ -27,14 +29,13 @@ def _(mo):
 @app.cell
 def _():
     # counties where the audit found a mismatch of 2 or fewer precincts
-    # an exception was made for OC due to many unpopulated precincts
-    # existing in the GIS file and not in the results
     ADDTNL_COUNTIES_PASSING_AUIDIT = [
         "Los Angeles",
+        "Imperial",  # 14 entries from the results file without a match record zero registered voters:
         "Inyo",
         "Marin",
         "Merced",
-        "Orange",
+        "Orange",  # exception was made for OC due to many unpopulated precincts in GIS file and not in the results
         "Shasta",
         "Tulare",
     ]
@@ -90,6 +91,14 @@ def _():
 
 @app.cell
 def _():
+    EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP = (
+        "./outputs/precincts_2024_results_cvap_blocks.gpkg"
+    )
+    return (EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP,)
+
+
+@app.cell
+def _():
     AUDIT_SUMMARY_FILE_PREFIX = "./debug/audit_summary_*"
     return (AUDIT_SUMMARY_FILE_PREFIX,)
 
@@ -109,6 +118,7 @@ def _():
 
     def calculate_percentage(numerator, denominator, digits=TENTHS_PLACE_ROUNDING):
         return round((numerator / denominator) * 100, digits)
+
     return (calculate_percentage,)
 
 
@@ -173,6 +183,7 @@ def _(calculate_percentage, pd):
         )
 
         return df_copy
+
     return (join_pct_columns,)
 
 
@@ -255,6 +266,7 @@ def _(tobler):
         )
 
         return _temp_interpolated
+
     return (interpolate_and_calculate_percentages,)
 
 
@@ -302,6 +314,7 @@ def _(gpd):
         gdf = gpd.read_file(fp, **read_file_kwargs)
         print(f"COLUMNS: {list(gdf)}")
         return gdf
+
     return (read_gis_data,)
 
 
@@ -386,7 +399,7 @@ def _(mo):
     mo.md(r"""
     # Interpolate
 
-    [Tobler example Jupyter notebook interpolating tracts to voting precincts](https://pysal.org/tobler/notebooks/02_areal_interpolation_example.html).
+    [Tobler example Jupyter notebook interpolating tracts to voting precincts](https://github.com/pysal/tobler/blob/main/notebooks/02_areal_interpolation_example.ipynb).
     """)
     return
 
@@ -506,29 +519,40 @@ def _(mo):
 
 @app.cell
 def _(
+    EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP,
     MERGE_KEYS,
+    Path,
     block_extensive_vars,
     block_subgroup_est_columns,
     cvap_block_gdf,
+    gpd,
     interpolate_and_calculate_percentages,
     join_pct_columns,
     pres_2024_results_gdf,
 ):
-    # Set index for target GeoDataFrame
-    _temp_target_gdf = pres_2024_results_gdf.set_index(MERGE_KEYS)
+    if Path(EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP).exists():
+        precincts_2024_results_cvap_block_merged = gpd.read_file(
+            EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP
+        )
+        print(
+            f"READ CVAP BLOCKS INTERPOLATION TO 2024 PRECINCTS FROM {EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP}. If you want to re-run the interpolation, delete the file."
+        )
+    else:
+        # Set index for target GeoDataFrame
+        _temp_target_gdf = pres_2024_results_gdf.set_index(MERGE_KEYS)
 
-    # Perform interpolation and calculate percentages
-    cvap_block_precinct_2024_estimates = interpolate_and_calculate_percentages(
-        source_gdf=cvap_block_gdf,
-        target_gdf=_temp_target_gdf,
-        extensive_variables=block_extensive_vars,
-        subgroup_columns=block_subgroup_est_columns,
-        join_pct_columns_func=join_pct_columns,
-    )
+        # Perform interpolation and calculate percentages
+        cvap_block_precinct_2024_estimates = interpolate_and_calculate_percentages(
+            source_gdf=cvap_block_gdf,
+            target_gdf=_temp_target_gdf,
+            extensive_variables=block_extensive_vars,
+            subgroup_columns=block_subgroup_est_columns,
+            join_pct_columns_func=join_pct_columns,
+        )
 
-    precincts_2024_results_cvap_block_merged = merge_interpolated_results(
-        pres_2024_results_gdf, cvap_block_precinct_2024_estimates, MERGE_KEYS
-    )
+        precincts_2024_results_cvap_block_merged = merge_interpolated_results(
+            pres_2024_results_gdf, cvap_block_precinct_2024_estimates, MERGE_KEYS
+        )
     return (precincts_2024_results_cvap_block_merged,)
 
 
@@ -641,6 +665,7 @@ def _(calculate_percentage, pd):
         )
 
         return summary.round({"difference": 2, "percent_difference": 2})
+
     return (evaluate_interpolation_accuracy,)
 
 
@@ -664,7 +689,7 @@ def _(
     block_interpolation_summary = evaluate_interpolation_accuracy(
         df=cvap_block_precinct_estimates,
         subgroup_columns=block_subgroup_est_columns,
-        total_column="CVAP_TOT23",
+        total_column="CVAP_TOT24",
         description="Blocks",
     )
 
@@ -695,6 +720,7 @@ def _(mo):
 
 @app.cell
 def _(
+    EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP,
     precincts_2024_results_cvap_block_merged,
     precincts_2025_cvap_and_2024_interpolated_merged,
     precincts_results_cvap_merged,
@@ -706,7 +732,7 @@ def _(
         "./outputs/precincts_results_cvap_blocks.gpkg", driver="GPKG"
     )
     precincts_2024_results_cvap_block_merged.to_file(
-        "./outputs/precincts_2024_results_cvap_blocks.gpkg", driver="GPKG"
+        EXPORT_PRECINCTS_2024_CVAP_BLOCKS_FP, driver="GPKG"
     )
     return
 

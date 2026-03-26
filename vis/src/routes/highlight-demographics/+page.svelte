@@ -47,7 +47,7 @@
 			console.warn('Map not available for updateOutlineLayer');
 			return;
 		}
-		
+
 		if (!map.getLayer('precincts-outline-highlight')) {
 			console.warn('precincts-outline-highlight layer not available');
 			return;
@@ -63,12 +63,12 @@
 		} else {
 			// Show the highlight layer and set filter to match selected group
 			map.setLayoutProperty('precincts-outline-highlight', 'visibility', 'visible');
-			
+
 			// Reduce white border opacity to make black borders stand out more
 			if (map.getLayer('precincts-outline')) {
 				map.setPaintProperty('precincts-outline', 'line-opacity', 0.3);
 			}
-			
+
 			// Create filter expression to only show matching precincts
 			let filterExpression;
 
@@ -133,7 +133,9 @@
 						});
 					}
 
-					const insertBeforeLayerId = map.getStyle()?.layers?.find((l) => l.id === ADDRESS_LABEL_LAYER_NAME)?.id;
+					const insertBeforeLayerId = map
+						.getStyle()
+						?.layers?.find((l) => l.id === ADDRESS_LABEL_LAYER_NAME)?.id;
 
 					if (!map.getLayer('precincts-fill')) {
 						// Linear diverging gradient based on yes_pct
@@ -142,9 +144,12 @@
 							'interpolate',
 							['linear'],
 							['coalesce', ['get', 'yes_pct'], 50], // Default to 50% (neutral) if missing
-							0, '#D35F4F',   // Red at 0% (no votes) --red_500
-							50, '#EEEEEE',  // Light gray at 50% (neutral) --gray_100
-							100, '#5B92CE'  // Blue at 100% (yes votes) --blue_500
+							0,
+							'#D35F4F', // Red at 0% (no votes) --red_500
+							50,
+							'#EEEEEE', // Light gray at 50% (neutral) --gray_100
+							100,
+							'#5B92CE' // Blue at 100% (yes votes) --blue_500
 						];
 
 						map.addLayer(
@@ -266,12 +271,9 @@
 						const yesPct = feature.properties.yes_pct;
 
 						// Format the percentage values
-						const groupPctFormatted = majorityGroupPct != null 
-							? Math.round(majorityGroupPct) 
-							: 'N/A';
-						const yesPctFormatted = yesPct != null 
-							? Math.round(yesPct) 
-							: 'N/A';
+						const groupPctFormatted =
+							majorityGroupPct != null ? Math.round(majorityGroupPct) : 'N/A';
+						const yesPctFormatted = yesPct != null ? Math.round(yesPct) : 'N/A';
 
 						// Format the group label - for multiracial, move percentage into parentheses
 						let groupLabel;
@@ -296,10 +298,7 @@
 							</div>
 						`;
 
-						popup
-							.setLngLat(e.lngLat)
-							.setHTML(popupContent)
-							.addTo(map);
+						popup.setLngLat(e.lngLat).setHTML(popupContent).addTo(map);
 					});
 
 					// Change cursor on hover
@@ -322,6 +321,7 @@
 		credit="Mo A, CalMatters"
 		source="Election results and precinct geographies are compiled from county election administrators. Racial demographic data is Census American Community Survey Citizen Voting Age Population (CVAP) data."
 		note="No pixels were harmed in the creation of this example route."
+		allowEmbed={false}
 	/>
 </main>
 

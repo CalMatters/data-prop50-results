@@ -13,7 +13,7 @@ def _(mo):
 
     1. **County bounds** – California county boundaries from the 2020 Census, reprojected to NAD83/California Albers and written to `outputs/county_bounds.geojson`.
     2. **CVAP by tract** – [Citizen Voting Age Population](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) (CVAP) by census tract: reads CVAP data, transforms to wide format, merges with tract geography, and exports to `outputs/cvap_tracts.gpkg`.
-    3. **CVAP by block** – CVAP by block from the [Redistricting Hub](https://redistrictingdatahub.org/dataset/california-cvap-data-disaggregated-to-the-2020-block-level-2023/), joined to block geography and exported to `outputs/cvap_blocks.gpkg`.
+    3. **CVAP by block** – CVAP by block from the [Redistricting Hub](https://redistrictingdatahub.org/dataset/california-cvap-data-disaggregated-to-the-2020-block-level-2024/), joined to block geography and exported to `outputs/cvap_blocks.gpkg`.
 
     All three outputs use the same CRS: EPSG:3310 (NAD83 / California Albers).
     """)
@@ -413,21 +413,21 @@ def _():
     READ_DTYPE = {"GEOID20": str}
     CVAP_COLUMN_PREFIX = "CVAP"
     GIS_REQUIRED_COLUMNS = ["GEOID20", "geometry"]
-    # RDH 2023 CVAP block-level estimates (ACS 2019–2023). Retain OMB-aligned categories as-is.
+    # RDH 2024 CVAP block-level estimates (ACS 2020–2024). Retain OMB-aligned categories as-is.
     COLUMNS_TO_RETAIN_AS_IS = [
-        "CVAP_TOT23",  # CVAP estimate for total
-        "CVAP_HSP23",  # Hispanic or Latino
-        "CVAP_WHT23",  # White alone
-        "CVAP_BLK23",  # Black or African American alone or in combination
-        "CVAP_2OM23",  # Remainder of two or more race responses
+        "CVAP_TOT24",  # CVAP estimate for total
+        "CVAP_HSP24",  # Hispanic or Latino
+        "CVAP_WHT24",  # White alone
+        "CVAP_BLK24",  # Black or African American alone or in combination
+        "CVAP_2OM24",  # Remainder of two or more race responses
     ]
     # Composite columns we derive to and avoid double-counting.
     NEW_COMPOSITE_COLUMNS = [
-        "_cvap_api23",  # Asian and Pacific Islander: CVAP_ASN23 + CVAP_NHP23
-        "_cvap_amw23",  # American Indian / Alaska Native (non-Hispanic): CVAP_AIA23 - CVAP_AIB23 to avoid double count with Black
+        "_cvap_api24",  # Asian and Pacific Islander: CVAP_ASN24 + CVAP_NHP24
+        "_cvap_amw24",  # American Indian / Alaska Native (non-Hispanic): CVAP_AIA24 - CVAP_AIB24 to avoid double count with Black
     ]
 
-    RDH_CVAP_DATA_FP = "./inputs/rdh/ca_cvap_2023_2020_b.csv"
+    RDH_CVAP_DATA_FP = "./inputs/rdh/ca_cvap_2024_2020_b_csv/ca_cvap_2024_2020_b.csv"
     CA_CENSUS_BLOCKS_FILE_PATH = "./inputs/census/tl_2020_06_tabblock20.zip"
     CA_CENSUS_BLOCKS_URL = "https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/tl_2020_06_tabblock20.zip"
     CVAP_BLOCKS_OUTPUT_FP = "./outputs/cvap_blocks.gpkg"
@@ -481,14 +481,14 @@ def _(COLUMNS_TO_RETAIN_AS_IS, NEW_COMPOSITE_COLUMNS, rh_cvap_df):
     transformed_rh_cvap_df = rh_cvap_df.copy()
 
     # AAPI column produced by adding asian and native hawaiin, pacific islander
-    transformed_rh_cvap_df["_cvap_api23"] = (
-        transformed_rh_cvap_df["CVAP_ASN23"] + transformed_rh_cvap_df["CVAP_NHP23"]
+    transformed_rh_cvap_df["_cvap_api24"] = (
+        transformed_rh_cvap_df["CVAP_ASN24"] + transformed_rh_cvap_df["CVAP_NHP24"]
     )
 
     # (american indian - american indian and black) to avoid double counting in the black
     # CVAP columns
-    transformed_rh_cvap_df["_cvap_amw23"] = (
-        transformed_rh_cvap_df["CVAP_AIA23"] - transformed_rh_cvap_df["CVAP_AIB23"]
+    transformed_rh_cvap_df["_cvap_amw24"] = (
+        transformed_rh_cvap_df["CVAP_AIA24"] - transformed_rh_cvap_df["CVAP_AIB24"]
     )
 
     transformed_rh_cvap_df = transformed_rh_cvap_df[
@@ -531,22 +531,22 @@ def _(mo):
     mo.md(r"""
     ## CVAP by block – data fields
 
-    - CVAP_TOT23 CVAP Estimate for Total
-    - CVAP_NHS23 CVAP Estimate for Not Hispanic or Latino
-    - CVAP_AMI23 CVAP Estimate for American Indian or Alaska Native Alone
-    - CVAP_ASI23 CVAP Estimate for Asian Alone
-    - CVAP_BLA23 CVAP Estimate for Black or African American Alone
-    - CVAP_NHP23 CVAP Estimate for Native Hawaiian or Other Pacific Islander Alone
-    - CVAP_WHT23 CVAP Estimate for White Alone
-    - CVAP_AIW23 CVAP Estimate for American Indian or Alaska Native and White
-    - CVAP_ASW23 CVAP Estimate for Asian and White
-    - CVAP_BLW23 CVAP Estimate for Black or African American and White
-    - CVAP_AIB23 CVAP Estimate for American Indian or Alaska Native and Black or African American
-    - CVAP_2OM23 CVAP Estimate for Remainder of Two or More Race Responses
-    - CVAP_HSP23 CVAP Estimate for Hispanic or Latino
-    - CVAP_AIA23 CVAP Estimate for American Indian or Alaska Native Alone or In Combination
-    - CVAP_ASN23 CVAP Estimate for Asian Alone or In Combination
-    - CVAP_BLK23 CVAP Estimate for Black or African American Alone or In Combination
+    - CVAP_TOT24 CVAP Estimate for Total
+    - CVAP_NHS24 CVAP Estimate for Not Hispanic or Latino
+    - CVAP_AMI24 CVAP Estimate for American Indian or Alaska Native Alone
+    - CVAP_ASI24 CVAP Estimate for Asian Alone
+    - CVAP_BLA24 CVAP Estimate for Black or African American Alone
+    - CVAP_NHP24 CVAP Estimate for Native Hawaiian or Other Pacific Islander Alone
+    - CVAP_WHT24 CVAP Estimate for White Alone
+    - CVAP_AIW24 CVAP Estimate for American Indian or Alaska Native and White
+    - CVAP_ASW24 CVAP Estimate for Asian and White
+    - CVAP_BLW24 CVAP Estimate for Black or African American and White
+    - CVAP_AIB24 CVAP Estimate for American Indian or Alaska Native and Black or African American
+    - CVAP_2OM24 CVAP Estimate for Remainder of Two or More Race Responses
+    - CVAP_HSP24 CVAP Estimate for Hispanic or Latino
+    - CVAP_AIA24 CVAP Estimate for American Indian or Alaska Native Alone or In Combination
+    - CVAP_ASN24 CVAP Estimate for Asian Alone or In Combination
+    - CVAP_BLK24 CVAP Estimate for Black or African American Alone or In Combination
     """)
     return
 
@@ -556,22 +556,22 @@ def _(mo):
     mo.md(r"""
     ## CVAP field corresponding PL field(s)
 
-    - CVAP_TOT23 = P0040001
-    - CVAP_NHS23 = P0040003
-    - CVAP_AMI23 = P0040007
-    - CVAP_ASI23 = P0040008
-    - CVAP_BLA23 = P0040006
-    - CVAP_NHP23 = P0040009
-    - CVAP_WHT23 = P0040005
-    - CVAP_AIW23 = P0040014
-    - CVAP_ASW23 = P0040015
-    - CVAP_BLW23 = P0040013
-    - CVAP_AIB23 = P0040018
-    - CVAP_2OM23 = P0040011 - P0040018 - P0040014 - P0040013 - P0040015
-    - CVAP_HSP23 = P0040002
-    - CVAP_AIA23 = P0040007 + P0040018 + P0040014
-    - CVAP_ASN23 = P0040008 + P0040015
-    - CVAP_BLK23 = P0040006 + P0040013 + P0040018
+    - CVAP_TOT24 = P0040001
+    - CVAP_NHS24 = P0040003
+    - CVAP_AMI24 = P0040007
+    - CVAP_ASI24 = P0040008
+    - CVAP_BLA24 = P0040006
+    - CVAP_NHP24 = P0040009
+    - CVAP_WHT24 = P0040005
+    - CVAP_AIW24 = P0040014
+    - CVAP_ASW24 = P0040015
+    - CVAP_BLW24 = P0040013
+    - CVAP_AIB24 = P0040018
+    - CVAP_2OM24 = P0040011 - P0040018 - P0040014 - P0040013 - P0040015
+    - CVAP_HSP24 = P0040002
+    - CVAP_AIA24 = P0040007 + P0040018 + P0040014
+    - CVAP_ASN24 = P0040008 + P0040015
+    - CVAP_BLK24 = P0040006 + P0040013 + P0040018
     """)
     return
 

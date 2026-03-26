@@ -1,469 +1,469 @@
 [
-  {
-    "COUNTY_NAME": "Alameda",
-    "xmin": -122.373782,
-    "ymin": 37.454186,
-    "xmax": -121.469214,
-    "ymax": 37.905824,
-    "GEOID": "06001"
-  },
-  {
-    "COUNTY_NAME": "Alpine",
-    "xmin": -120.073331,
-    "ymin": 38.32688,
-    "xmax": -119.542332,
-    "ymax": 38.933324,
-    "GEOID": "06003"
-  },
-  {
-    "COUNTY_NAME": "Amador",
-    "xmin": -121.02771,
-    "ymin": 38.217951,
-    "xmax": -120.072333,
-    "ymax": 38.709029,
-    "GEOID": "06005"
-  },
-  {
-    "COUNTY_NAME": "Butte",
-    "xmin": -122.069431,
-    "ymin": 39.295621,
-    "xmax": -121.076695,
-    "ymax": 40.152024,
-    "GEOID": "06007"
-  },
-  {
-    "COUNTY_NAME": "Calaveras",
-    "xmin": -120.9955,
-    "ymin": 37.831858,
-    "xmax": -120.019951,
-    "ymax": 38.509869,
-    "GEOID": "06009"
-  },
-  {
-    "COUNTY_NAME": "Colusa",
-    "xmin": -122.78509,
-    "ymin": 38.92384,
-    "xmax": -121.795318,
-    "ymax": 39.414593,
-    "GEOID": "06011"
-  },
-  {
-    "COUNTY_NAME": "Contra Costa",
-    "xmin": -122.441584,
-    "ymin": 37.718531,
-    "xmax": -121.534102,
-    "ymax": 38.099878,
-    "GEOID": "06013"
-  },
-  {
-    "COUNTY_NAME": "Del Norte",
-    "xmin": -124.440707,
-    "ymin": 41.380776,
-    "xmax": -123.517911,
-    "ymax": 42.000787,
-    "GEOID": "06015"
-  },
-  {
-    "COUNTY_NAME": "El Dorado",
-    "xmin": -121.141595,
-    "ymin": 38.502349,
-    "xmax": -119.877248,
-    "ymax": 39.067489,
-    "GEOID": "06017"
-  },
-  {
-    "COUNTY_NAME": "Fresno",
-    "xmin": -120.918731,
-    "ymin": 35.906914,
-    "xmax": -118.360586,
-    "ymax": 37.585837,
-    "GEOID": "06019"
-  },
-  {
-    "COUNTY_NAME": "Glenn",
-    "xmin": -122.938413,
-    "ymin": 39.382946,
-    "xmax": -121.856381,
-    "ymax": 39.800561,
-    "GEOID": "06021"
-  },
-  {
-    "COUNTY_NAME": "Humboldt",
-    "xmin": -124.482003,
-    "ymin": 40.001248,
-    "xmax": -123.40604,
-    "ymax": 41.465846,
-    "GEOID": "06023"
-  },
-  {
-    "COUNTY_NAME": "Imperial",
-    "xmin": -116.106272,
-    "ymin": 32.61848,
-    "xmax": -114.46289,
-    "ymax": 33.433814,
-    "GEOID": "06025"
-  },
-  {
-    "COUNTY_NAME": "Inyo",
-    "xmin": -118.790031,
-    "ymin": 35.786579,
-    "xmax": -115.648357,
-    "ymax": 37.465238,
-    "GEOID": "06027"
-  },
-  {
-    "COUNTY_NAME": "Kern",
-    "xmin": -120.194369,
-    "ymin": 34.788655,
-    "xmax": -117.616517,
-    "ymax": 35.798392,
-    "GEOID": "06029"
-  },
-  {
-    "COUNTY_NAME": "Kings",
-    "xmin": -120.315068,
-    "ymin": 35.78858,
-    "xmax": -119.474354,
-    "ymax": 36.488962,
-    "GEOID": "06031"
-  },
-  {
-    "COUNTY_NAME": "Lake",
-    "xmin": -123.094216,
-    "ymin": 38.667506,
-    "xmax": -122.340172,
-    "ymax": 39.5814,
-    "GEOID": "06033"
-  },
-  {
-    "COUNTY_NAME": "Lassen",
-    "NAMELSAD": "Lassen County",
-    "xmin": -121.332338,
-    "ymin": 39.707658,
-    "xmax": -119.995598,
-    "ymax": 41.184514,
-    "GEOID": "06035",
-    "STATEFP": "06",
-    "COUNTYFP": "035"
-  },
-  {
-    "COUNTY_NAME": "Los Angeles",
-    "xmin": -118.951721,
-    "ymin": 32.75004,
-    "xmax": -117.646374,
-    "ymax": 34.823302,
-    "GEOID": "06037"
-  },
-  {
-    "COUNTY_NAME": "Madera",
-    "xmin": -120.545536,
-    "ymin": 36.763047,
-    "xmax": -119.022363,
-    "ymax": 37.777986,
-    "GEOID": "06039"
-  },
-  {
-    "COUNTY_NAME": "Marin",
-    "xmin": -123.134523,
-    "ymin": 37.815102,
-    "xmax": -122.347454,
-    "ymax": 38.321227,
-    "GEOID": "06041"
-  },
-  {
-    "COUNTY_NAME": "Mariposa",
-    "xmin": -120.395441,
-    "ymin": 37.183108,
-    "xmax": -119.307284,
-    "ymax": 37.904122,
-    "GEOID": "06043"
-  },
-  {
-    "COUNTY_NAME": "Mendocino",
-    "xmin": -124.134889,
-    "ymin": 38.758119,
-    "xmax": -122.821355,
-    "ymax": 40.00247,
-    "GEOID": "06045"
-  },
-  {
-    "COUNTY_NAME": "Merced",
-    "xmin": -121.248647,
-    "ymin": 36.740381,
-    "xmax": -120.052055,
-    "ymax": 37.633364,
-    "GEOID": "06047"
-  },
-  {
-    "COUNTY_NAME": "Modoc",
-    "xmin": -121.457213,
-    "ymin": 41.183484,
-    "xmax": -119.998287,
-    "ymax": 41.997465,
-    "GEOID": "06049"
-  },
-  {
-    "COUNTY_NAME": "Mono",
-    "xmin": -119.651509,
-    "ymin": 37.462588,
-    "xmax": -117.832726,
-    "ymax": 38.713212,
-    "GEOID": "06051"
-  },
-  {
-    "COUNTY_NAME": "Monterey",
-    "xmin": -122.051878,
-    "ymin": 35.788977,
-    "xmax": -120.213979,
-    "ymax": 36.919683,
-    "GEOID": "06053"
-  },
-  {
-    "COUNTY_NAME": "Napa",
-    "xmin": -122.646421,
-    "ymin": 38.154933,
-    "xmax": -122.061379,
-    "ymax": 38.864245,
-    "GEOID": "06055"
-  },
-  {
-    "COUNTY_NAME": "Nevada",
-    "xmin": -121.279784,
-    "ymin": 39.00516,
-    "xmax": -120.003773,
-    "ymax": 39.52692,
-    "GEOID": "06057"
-  },
-  {
-    "COUNTY_NAME": "Orange",
-    "xmin": -118.147806,
-    "ymin": 33.333992,
-    "xmax": -117.412987,
-    "ymax": 33.947636,
-    "GEOID": "06059"
-  },
-  {
-    "COUNTY_NAME": "Placer",
-    "xmin": -121.484442,
-    "ymin": 38.711395,
-    "xmax": -120.002461,
-    "ymax": 39.316496,
-    "GEOID": "06061"
-  },
-  {
-    "COUNTY_NAME": "Plumas",
-    "xmin": -121.49788,
-    "ymin": 39.597264,
-    "xmax": -120.099339,
-    "ymax": 40.449715,
-    "GEOID": "06063"
-  },
-  {
-    "COUNTY_NAME": "Riverside",
-    "xmin": -117.676684,
-    "ymin": 33.425888,
-    "xmax": -114.434949,
-    "ymax": 34.079884,
-    "GEOID": "06065"
-  },
-  {
-    "COUNTY_NAME": "Sacramento",
-    "xmin": -121.862622,
-    "ymin": 38.018421,
-    "xmax": -121.027084,
-    "ymax": 38.736405,
-    "GEOID": "06067"
-  },
-  {
-    "COUNTY_NAME": "San Benito",
-    "xmin": -121.644001,
-    "ymin": 36.196848,
-    "xmax": -120.596562,
-    "ymax": 36.988944,
-    "GEOID": "06069"
-  },
-  {
-    "COUNTY_NAME": "San Bernardino",
-    "xmin": -117.802539,
-    "ymin": 33.87089,
-    "xmax": -114.131211,
-    "ymax": 35.809236,
-    "GEOID": "06071"
-  },
-  {
-    "COUNTY_NAME": "San Diego",
-    "xmin": -117.611081,
-    "ymin": 32.528832,
-    "xmax": -116.08094,
-    "ymax": 33.505025,
-    "GEOID": "06073"
-  },
-  {
-    "COUNTY_NAME": "San Francisco",
-    "xmin": -123.173825,
-    "ymin": 37.63983,
-    "xmax": -122.28178,
-    "ymax": 37.929824,
-    "GEOID": "06075"
-  },
-  {
-    "COUNTY_NAME": "San Joaquin",
-    "xmin": -121.585078,
-    "ymin": 37.481783,
-    "xmax": -120.917007,
-    "ymax": 38.300252,
-    "GEOID": "06077"
-  },
-  {
-    "COUNTY_NAME": "San Luis Obispo",
-    "xmin": -121.438176,
-    "ymin": 34.897475,
-    "xmax": -119.472489,
-    "ymax": 35.796655,
-    "GEOID": "06079"
-  },
-  {
-    "COUNTY_NAME": "San Mateo",
-    "xmin": -122.588177,
-    "ymin": 37.053858,
-    "xmax": -122.081473,
-    "ymax": 37.708617,
-    "GEOID": "06081"
-  },
-  {
-    "COUNTY_NAME": "Santa Barbara",
-    "xmin": -120.734382,
-    "ymin": 33.411024,
-    "xmax": -118.962728,
-    "ymax": 35.114678,
-    "GEOID": "06083"
-  },
-  {
-    "COUNTY_NAME": "Santa Clara",
-    "xmin": -122.202653,
-    "ymin": 36.892976,
-    "xmax": -121.208178,
-    "ymax": 37.484637,
-    "GEOID": "06085"
-  },
-  {
-    "COUNTY_NAME": "Santa Cruz",
-    "xmin": -122.317682,
-    "ymin": 36.8196,
-    "xmax": -121.581154,
-    "ymax": 37.286055,
-    "GEOID": "06087"
-  },
-  {
-    "COUNTY_NAME": "Shasta",
-    "xmin": -123.068838,
-    "ymin": 40.285375,
-    "xmax": -121.319976,
-    "ymax": 41.184978,
-    "GEOID": "06089"
-  },
-  {
-    "COUNTY_NAME": "Sierra",
-    "xmin": -121.058203,
-    "ymin": 39.391558,
-    "xmax": -120.00082,
-    "ymax": 39.776877,
-    "GEOID": "06091"
-  },
-  {
-    "COUNTY_NAME": "Siskiyou",
-    "xmin": -123.719174,
-    "ymin": 40.992193,
-    "xmax": -121.445994,
-    "ymax": 42.009503,
-    "GEOID": "06093"
-  },
-  {
-    "COUNTY_NAME": "Solano",
-    "xmin": -122.40697,
-    "ymin": 38.031721,
-    "xmax": -121.593273,
-    "ymax": 38.53905,
-    "GEOID": "06095"
-  },
-  {
-    "COUNTY_NAME": "Sonoma",
-    "xmin": -123.632497,
-    "ymin": 38.07326,
-    "xmax": -122.347454,
-    "ymax": 38.852916,
-    "GEOID": "06097"
-  },
-  {
-    "COUNTY_NAME": "Stanislaus",
-    "xmin": -121.486775,
-    "ymin": 37.134774,
-    "xmax": -120.387329,
-    "ymax": 38.077421,
-    "GEOID": "06099"
-  },
-  {
-    "COUNTY_NAME": "Sutter",
-    "xmin": -121.948294,
-    "ymin": 38.734598,
-    "xmax": -121.414375,
-    "ymax": 39.305668,
-    "GEOID": "06101"
-  },
-  {
-    "COUNTY_NAME": "Tehama",
-    "xmin": -123.066009,
-    "ymin": 39.797385,
-    "xmax": -121.342264,
-    "ymax": 40.453133,
-    "GEOID": "06103"
-  },
-  {
-    "COUNTY_NAME": "Trinity",
-    "xmin": -123.623891,
-    "ymin": 39.977015,
-    "xmax": -122.445453,
-    "ymax": 41.368139,
-    "GEOID": "06105"
-  },
-  {
-    "COUNTY_NAME": "Tulare",
-    "xmin": -119.573194,
-    "ymin": 35.788935,
-    "xmax": -117.980761,
-    "ymax": 36.744816,
-    "GEOID": "06107"
-  },
-  {
-    "COUNTY_NAME": "Tuolumne",
-    "xmin": -120.653274,
-    "ymin": 37.633704,
-    "xmax": -119.196182,
-    "ymax": 38.433521,
-    "GEOID": "06109"
-  },
-  {
-    "COUNTY_NAME": "Ventura",
-    "xmin": -119.636302,
-    "ymin": 33.163493,
-    "xmax": -118.632494,
-    "ymax": 34.901171,
-    "GEOID": "06111"
-  },
-  {
-    "COUNTY_NAME": "Yolo",
-    "xmin": -122.422048,
-    "ymin": 38.313048,
-    "xmax": -121.501017,
-    "ymax": 38.92593,
-    "GEOID": "06113"
-  },
-  {
-    "COUNTY_NAME": "Yuba",
-    "xmin": -121.636368,
-    "ymin": 38.918348,
-    "xmax": -121.009477,
-    "ymax": 39.639459,
-    "GEOID": "06115"
-  }
+	{
+		"COUNTY_NAME": "Alameda",
+		"xmin": -122.373782,
+		"ymin": 37.454186,
+		"xmax": -121.469214,
+		"ymax": 37.905824,
+		"GEOID": "06001"
+	},
+	{
+		"COUNTY_NAME": "Alpine",
+		"xmin": -120.073331,
+		"ymin": 38.32688,
+		"xmax": -119.542332,
+		"ymax": 38.933324,
+		"GEOID": "06003"
+	},
+	{
+		"COUNTY_NAME": "Amador",
+		"xmin": -121.02771,
+		"ymin": 38.217951,
+		"xmax": -120.072333,
+		"ymax": 38.709029,
+		"GEOID": "06005"
+	},
+	{
+		"COUNTY_NAME": "Butte",
+		"xmin": -122.069431,
+		"ymin": 39.295621,
+		"xmax": -121.076695,
+		"ymax": 40.152024,
+		"GEOID": "06007"
+	},
+	{
+		"COUNTY_NAME": "Calaveras",
+		"xmin": -120.9955,
+		"ymin": 37.831858,
+		"xmax": -120.019951,
+		"ymax": 38.509869,
+		"GEOID": "06009"
+	},
+	{
+		"COUNTY_NAME": "Colusa",
+		"xmin": -122.78509,
+		"ymin": 38.92384,
+		"xmax": -121.795318,
+		"ymax": 39.414593,
+		"GEOID": "06011"
+	},
+	{
+		"COUNTY_NAME": "Contra Costa",
+		"xmin": -122.441584,
+		"ymin": 37.718531,
+		"xmax": -121.534102,
+		"ymax": 38.099878,
+		"GEOID": "06013"
+	},
+	{
+		"COUNTY_NAME": "Del Norte",
+		"xmin": -124.440707,
+		"ymin": 41.380776,
+		"xmax": -123.517911,
+		"ymax": 42.000787,
+		"GEOID": "06015"
+	},
+	{
+		"COUNTY_NAME": "El Dorado",
+		"xmin": -121.141595,
+		"ymin": 38.502349,
+		"xmax": -119.877248,
+		"ymax": 39.067489,
+		"GEOID": "06017"
+	},
+	{
+		"COUNTY_NAME": "Fresno",
+		"xmin": -120.918731,
+		"ymin": 35.906914,
+		"xmax": -118.360586,
+		"ymax": 37.585837,
+		"GEOID": "06019"
+	},
+	{
+		"COUNTY_NAME": "Glenn",
+		"xmin": -122.938413,
+		"ymin": 39.382946,
+		"xmax": -121.856381,
+		"ymax": 39.800561,
+		"GEOID": "06021"
+	},
+	{
+		"COUNTY_NAME": "Humboldt",
+		"xmin": -124.482003,
+		"ymin": 40.001248,
+		"xmax": -123.40604,
+		"ymax": 41.465846,
+		"GEOID": "06023"
+	},
+	{
+		"COUNTY_NAME": "Imperial",
+		"xmin": -116.106272,
+		"ymin": 32.61848,
+		"xmax": -114.46289,
+		"ymax": 33.433814,
+		"GEOID": "06025"
+	},
+	{
+		"COUNTY_NAME": "Inyo",
+		"xmin": -118.790031,
+		"ymin": 35.786579,
+		"xmax": -115.648357,
+		"ymax": 37.465238,
+		"GEOID": "06027"
+	},
+	{
+		"COUNTY_NAME": "Kern",
+		"xmin": -120.194369,
+		"ymin": 34.788655,
+		"xmax": -117.616517,
+		"ymax": 35.798392,
+		"GEOID": "06029"
+	},
+	{
+		"COUNTY_NAME": "Kings",
+		"xmin": -120.315068,
+		"ymin": 35.78858,
+		"xmax": -119.474354,
+		"ymax": 36.488962,
+		"GEOID": "06031"
+	},
+	{
+		"COUNTY_NAME": "Lake",
+		"xmin": -123.094216,
+		"ymin": 38.667506,
+		"xmax": -122.340172,
+		"ymax": 39.5814,
+		"GEOID": "06033"
+	},
+	{
+		"COUNTY_NAME": "Lassen",
+		"NAMELSAD": "Lassen County",
+		"xmin": -121.332338,
+		"ymin": 39.707658,
+		"xmax": -119.995598,
+		"ymax": 41.184514,
+		"GEOID": "06035",
+		"STATEFP": "06",
+		"COUNTYFP": "035"
+	},
+	{
+		"COUNTY_NAME": "Los Angeles",
+		"xmin": -118.951721,
+		"ymin": 32.75004,
+		"xmax": -117.646374,
+		"ymax": 34.823302,
+		"GEOID": "06037"
+	},
+	{
+		"COUNTY_NAME": "Madera",
+		"xmin": -120.545536,
+		"ymin": 36.763047,
+		"xmax": -119.022363,
+		"ymax": 37.777986,
+		"GEOID": "06039"
+	},
+	{
+		"COUNTY_NAME": "Marin",
+		"xmin": -123.134523,
+		"ymin": 37.815102,
+		"xmax": -122.347454,
+		"ymax": 38.321227,
+		"GEOID": "06041"
+	},
+	{
+		"COUNTY_NAME": "Mariposa",
+		"xmin": -120.395441,
+		"ymin": 37.183108,
+		"xmax": -119.307284,
+		"ymax": 37.904122,
+		"GEOID": "06043"
+	},
+	{
+		"COUNTY_NAME": "Mendocino",
+		"xmin": -124.134889,
+		"ymin": 38.758119,
+		"xmax": -122.821355,
+		"ymax": 40.00247,
+		"GEOID": "06045"
+	},
+	{
+		"COUNTY_NAME": "Merced",
+		"xmin": -121.248647,
+		"ymin": 36.740381,
+		"xmax": -120.052055,
+		"ymax": 37.633364,
+		"GEOID": "06047"
+	},
+	{
+		"COUNTY_NAME": "Modoc",
+		"xmin": -121.457213,
+		"ymin": 41.183484,
+		"xmax": -119.998287,
+		"ymax": 41.997465,
+		"GEOID": "06049"
+	},
+	{
+		"COUNTY_NAME": "Mono",
+		"xmin": -119.651509,
+		"ymin": 37.462588,
+		"xmax": -117.832726,
+		"ymax": 38.713212,
+		"GEOID": "06051"
+	},
+	{
+		"COUNTY_NAME": "Monterey",
+		"xmin": -122.051878,
+		"ymin": 35.788977,
+		"xmax": -120.213979,
+		"ymax": 36.919683,
+		"GEOID": "06053"
+	},
+	{
+		"COUNTY_NAME": "Napa",
+		"xmin": -122.646421,
+		"ymin": 38.154933,
+		"xmax": -122.061379,
+		"ymax": 38.864245,
+		"GEOID": "06055"
+	},
+	{
+		"COUNTY_NAME": "Nevada",
+		"xmin": -121.279784,
+		"ymin": 39.00516,
+		"xmax": -120.003773,
+		"ymax": 39.52692,
+		"GEOID": "06057"
+	},
+	{
+		"COUNTY_NAME": "Orange",
+		"xmin": -118.147806,
+		"ymin": 33.333992,
+		"xmax": -117.412987,
+		"ymax": 33.947636,
+		"GEOID": "06059"
+	},
+	{
+		"COUNTY_NAME": "Placer",
+		"xmin": -121.484442,
+		"ymin": 38.711395,
+		"xmax": -120.002461,
+		"ymax": 39.316496,
+		"GEOID": "06061"
+	},
+	{
+		"COUNTY_NAME": "Plumas",
+		"xmin": -121.49788,
+		"ymin": 39.597264,
+		"xmax": -120.099339,
+		"ymax": 40.449715,
+		"GEOID": "06063"
+	},
+	{
+		"COUNTY_NAME": "Riverside",
+		"xmin": -117.676684,
+		"ymin": 33.425888,
+		"xmax": -114.434949,
+		"ymax": 34.079884,
+		"GEOID": "06065"
+	},
+	{
+		"COUNTY_NAME": "Sacramento",
+		"xmin": -121.862622,
+		"ymin": 38.018421,
+		"xmax": -121.027084,
+		"ymax": 38.736405,
+		"GEOID": "06067"
+	},
+	{
+		"COUNTY_NAME": "San Benito",
+		"xmin": -121.644001,
+		"ymin": 36.196848,
+		"xmax": -120.596562,
+		"ymax": 36.988944,
+		"GEOID": "06069"
+	},
+	{
+		"COUNTY_NAME": "San Bernardino",
+		"xmin": -117.802539,
+		"ymin": 33.87089,
+		"xmax": -114.131211,
+		"ymax": 35.809236,
+		"GEOID": "06071"
+	},
+	{
+		"COUNTY_NAME": "San Diego",
+		"xmin": -117.611081,
+		"ymin": 32.528832,
+		"xmax": -116.08094,
+		"ymax": 33.505025,
+		"GEOID": "06073"
+	},
+	{
+		"COUNTY_NAME": "San Francisco",
+		"xmin": -123.173825,
+		"ymin": 37.63983,
+		"xmax": -122.28178,
+		"ymax": 37.929824,
+		"GEOID": "06075"
+	},
+	{
+		"COUNTY_NAME": "San Joaquin",
+		"xmin": -121.585078,
+		"ymin": 37.481783,
+		"xmax": -120.917007,
+		"ymax": 38.300252,
+		"GEOID": "06077"
+	},
+	{
+		"COUNTY_NAME": "San Luis Obispo",
+		"xmin": -121.438176,
+		"ymin": 34.897475,
+		"xmax": -119.472489,
+		"ymax": 35.796655,
+		"GEOID": "06079"
+	},
+	{
+		"COUNTY_NAME": "San Mateo",
+		"xmin": -122.588177,
+		"ymin": 37.053858,
+		"xmax": -122.081473,
+		"ymax": 37.708617,
+		"GEOID": "06081"
+	},
+	{
+		"COUNTY_NAME": "Santa Barbara",
+		"xmin": -120.734382,
+		"ymin": 33.411024,
+		"xmax": -118.962728,
+		"ymax": 35.114678,
+		"GEOID": "06083"
+	},
+	{
+		"COUNTY_NAME": "Santa Clara",
+		"xmin": -122.202653,
+		"ymin": 36.892976,
+		"xmax": -121.208178,
+		"ymax": 37.484637,
+		"GEOID": "06085"
+	},
+	{
+		"COUNTY_NAME": "Santa Cruz",
+		"xmin": -122.317682,
+		"ymin": 36.8196,
+		"xmax": -121.581154,
+		"ymax": 37.286055,
+		"GEOID": "06087"
+	},
+	{
+		"COUNTY_NAME": "Shasta",
+		"xmin": -123.068838,
+		"ymin": 40.285375,
+		"xmax": -121.319976,
+		"ymax": 41.184978,
+		"GEOID": "06089"
+	},
+	{
+		"COUNTY_NAME": "Sierra",
+		"xmin": -121.058203,
+		"ymin": 39.391558,
+		"xmax": -120.00082,
+		"ymax": 39.776877,
+		"GEOID": "06091"
+	},
+	{
+		"COUNTY_NAME": "Siskiyou",
+		"xmin": -123.719174,
+		"ymin": 40.992193,
+		"xmax": -121.445994,
+		"ymax": 42.009503,
+		"GEOID": "06093"
+	},
+	{
+		"COUNTY_NAME": "Solano",
+		"xmin": -122.40697,
+		"ymin": 38.031721,
+		"xmax": -121.593273,
+		"ymax": 38.53905,
+		"GEOID": "06095"
+	},
+	{
+		"COUNTY_NAME": "Sonoma",
+		"xmin": -123.632497,
+		"ymin": 38.07326,
+		"xmax": -122.347454,
+		"ymax": 38.852916,
+		"GEOID": "06097"
+	},
+	{
+		"COUNTY_NAME": "Stanislaus",
+		"xmin": -121.486775,
+		"ymin": 37.134774,
+		"xmax": -120.387329,
+		"ymax": 38.077421,
+		"GEOID": "06099"
+	},
+	{
+		"COUNTY_NAME": "Sutter",
+		"xmin": -121.948294,
+		"ymin": 38.734598,
+		"xmax": -121.414375,
+		"ymax": 39.305668,
+		"GEOID": "06101"
+	},
+	{
+		"COUNTY_NAME": "Tehama",
+		"xmin": -123.066009,
+		"ymin": 39.797385,
+		"xmax": -121.342264,
+		"ymax": 40.453133,
+		"GEOID": "06103"
+	},
+	{
+		"COUNTY_NAME": "Trinity",
+		"xmin": -123.623891,
+		"ymin": 39.977015,
+		"xmax": -122.445453,
+		"ymax": 41.368139,
+		"GEOID": "06105"
+	},
+	{
+		"COUNTY_NAME": "Tulare",
+		"xmin": -119.573194,
+		"ymin": 35.788935,
+		"xmax": -117.980761,
+		"ymax": 36.744816,
+		"GEOID": "06107"
+	},
+	{
+		"COUNTY_NAME": "Tuolumne",
+		"xmin": -120.653274,
+		"ymin": 37.633704,
+		"xmax": -119.196182,
+		"ymax": 38.433521,
+		"GEOID": "06109"
+	},
+	{
+		"COUNTY_NAME": "Ventura",
+		"xmin": -119.636302,
+		"ymin": 33.163493,
+		"xmax": -118.632494,
+		"ymax": 34.901171,
+		"GEOID": "06111"
+	},
+	{
+		"COUNTY_NAME": "Yolo",
+		"xmin": -122.422048,
+		"ymin": 38.313048,
+		"xmax": -121.501017,
+		"ymax": 38.92593,
+		"GEOID": "06113"
+	},
+	{
+		"COUNTY_NAME": "Yuba",
+		"xmin": -121.636368,
+		"ymin": 38.918348,
+		"xmax": -121.009477,
+		"ymax": 39.639459,
+		"GEOID": "06115"
+	}
 ]

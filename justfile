@@ -18,10 +18,20 @@ generate-analysis-exports:
     uv run 05_analyze_demographics.py
 
 generate-all-data:
+    rm -rf outputs
+    mkdir -p outputs
     just generate-precincts-file
     just generate-results-file
     just merge-precinct-results
     just generate-cvap-file
+    just interpolate-cvap
+    just generate-analysis-exports
+    mv outputs/county_precincts.json vis/static/
+
+update-election-data:
+    just generate-precincts-file
+    just generate-results-file
+    just merge-precinct-results
     just interpolate-cvap
     just generate-analysis-exports
     mv outputs/county_precincts.json vis/static/

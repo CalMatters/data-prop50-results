@@ -38,7 +38,7 @@
 <div class="embed">
 	{#if onclose}
 		<div class="close-button-container">
-      <div></div>
+			<div></div>
 			<button class="close-button" onclick={onclose}>Close</button>
 		</div>
 	{/if}
@@ -60,16 +60,16 @@
 		box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
 	}
 	.close-button-container {
-    display: grid;
-    grid-template-columns: 1fr 40px;
-    margin-bottom: 4px;
+		display: grid;
+		grid-template-columns: 1fr 40px;
+		margin-bottom: 4px;
 	}
 	.close-button {
 		background-color: transparent;
 		color: #212121;
 		display: inline-block;
-    margin: 0;
-    padding: 0;
+		margin: 0;
+		padding: 0;
 		text-align: right;
 	}
 	.close-button:hover,
@@ -81,7 +81,7 @@
 		font-size: 12px;
 		margin-bottom: 8px;
 		resize: none;
-		background: #EEEEEE;
+		background: #eeeeee;
 	}
 	button {
 		margin-bottom: 0 !important;
