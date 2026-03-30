@@ -802,6 +802,48 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    #### Population data
+    """)
+    return
+
+
+@app.cell
+def _(precinct_results):
+    POP_TOTAL_COLUMNS = [
+        "CVAP_TOT24",
+        "CVAP_HSP24",
+        "CVAP_WHT24",
+        "CVAP_BLK24",
+        "CVAP_2OM24",
+        "_cvap_api24",
+        "_cvap_amw24",
+    ]
+    precinct_results["blocks"].groupby("county")[POP_TOTAL_COLUMNS].sum()
+    return
+
+
+@app.cell
+def _(precinct_results):
+    def get_group_precinct_counts_by_county(df_precincts):
+        df = df_precincts.copy()
+        df["majority_racial_group"] = (
+            df["majority_racial_group"].str.split("(").str[0]
+        )
+        return df.pivot_table(
+            index="county",
+            columns="majority_racial_group",
+            aggfunc="size",
+            fill_value=0,
+        )
+
+
+    get_group_precinct_counts_by_county(precinct_results["blocks"])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     ### Vote shift
     """)
     return
