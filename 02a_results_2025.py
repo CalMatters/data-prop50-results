@@ -231,6 +231,10 @@ def _(
         if rename_column_map:
             results_df = results_df.rename(columns=rename_column_map)
 
+        bool_mask = results_df[["yes_votes", "no_votes"]].isnull().any(axis=1)
+        if bool_mask.any():
+            print(f"{county} has null vote tallies before the numeric conversion")
+
         for numeric_column in NUMERIC_COLUMNS:
             if numeric_column in list(results_df):
                 results_df[numeric_column] = to_numeric_with_warning(
