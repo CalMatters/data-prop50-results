@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.23.0"
 app = marimo.App(width="medium")
 
 
@@ -38,6 +38,7 @@ def _():
     import marimo as mo
     import pandas as pd
     import requests
+
     return Path, gpd, mo, pd, requests
 
 
@@ -67,9 +68,18 @@ def _():
         "PRSPAF01",
         *MAJOR_PARTY_CAND_COLUMNS,
     ]
+    LATINO_COLUMNS = [
+        "HISPDEM",
+        "HISPREP",
+        "HISPDCL",
+        "HISPOTH",
+    ]
+    MAJORITY_THRESHOLD = 0.500
     TOTAL_REGISTRATION_COLUMN = "TOTREG"
     return (
         INDEX_COLUMNS,
+        LATINO_COLUMNS,
+        MAJORITY_THRESHOLD,
         MAJOR_PARTY_CAND_COLUMNS,
         PRES_RACE_CAND_COLUMNS,
         TOTAL_REGISTRATION_COLUMN,
@@ -114,15 +124,58 @@ def _():
         "./inputs/statewide_db/state_g24_sov_data_by_g24_srprec.zip"
     )
 
+    PRECINCTS_VOTERS_FP = (
+        "./inputs/statewide_db/state_g24_voters_by_g24_srprec.zip"
+    )
+
     PRECINCTS_2024_FP = "./inputs/statewide_db/srprec_state_g24_v01_shp.zip"
     PRECINCTS_2024_URL_PATH = "https://statewidedatabase.org/pub/data/G24/state/srprec_state_g24_v01_shp.zip"
     USER_AGENT = {"User-Agent": "Mozilla/5.0"}
     return (
         PRECINCTS_2024_FP,
         PRECINCTS_2024_URL_PATH,
+        PRECINCTS_VOTERS_FP,
         RESULTS_DATA_SRPREC_FP,
         USER_AGENT,
     )
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Votes cast by Latino voters
+    """)
+    return
+
+
+@app.cell
+def _(
+    INDEX_COLUMNS,
+    LATINO_COLUMNS,
+    MAJORITY_THRESHOLD,
+    PRECINCTS_VOTERS_FP,
+    pd,
+):
+    VOTERS_COLUMNS = [
+        *INDEX_COLUMNS,
+        "ELECTION",
+        "GEO_TYPE",
+        "TOTREG_R",
+        *LATINO_COLUMNS,
+    ]
+
+    df_voters = pd.read_csv(
+        PRECINCTS_VOTERS_FP, dtype={col: str for col in INDEX_COLUMNS}
+    )[VOTERS_COLUMNS].copy()
+    df_voters[["TOTREG_R", *LATINO_COLUMNS]] = df_voters[
+        ["TOTREG_R", *LATINO_COLUMNS]
+    ].apply(pd.to_numeric, errors="coerce")
+    df_voters["_latino_voters"] = df_voters[LATINO_COLUMNS].sum(axis=1)
+    df_voters["_is_maj_latino"] = (
+        df_voters["_latino_voters"] / df_voters["TOTREG_R"]
+    ).round(3) > MAJORITY_THRESHOLD
+    df_voters[["SRPREC_KEY", "_is_maj_latino"]]
+    return (df_voters,)
 
 
 @app.cell(hide_code=True)
@@ -144,6 +197,7 @@ def _():
         "PRSDEM01",
         "PRSREP01",
         "total_votes",
+        "_is_maj_latino",
         "geometry",
     ]
     EXPORT_COLUMN_RENAMES = {
@@ -308,6 +362,7 @@ def _(
     EXPORT_DRIVER,
     EXPORT_FP,
     df_results,
+    df_voters,
     gdf_precincts,
 ):
     gdf_precinct_results = gdf_precincts.merge(
@@ -324,6 +379,13 @@ def _(
     gdf_precinct_results = gdf_precinct_results[
         gdf_precinct_results["_merge"] == "both"
     ].copy()
+
+    gdf_precinct_results = gdf_precinct_results.merge(
+        df_voters[["SRPREC_KEY", "_is_maj_latino"]],
+        on=["SRPREC_KEY"],
+        validate="1:1",
+        how="left",
+    )
 
     _gdf_export = gdf_precinct_results[EXPORT_COLUMNS].copy()
     _gdf_export = _gdf_export.rename(columns=EXPORT_COLUMN_RENAMES)
