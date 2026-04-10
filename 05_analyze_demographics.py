@@ -449,15 +449,7 @@ def _(precinct_results):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Analysis
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Majority group precincts
+    # Majority group precincts
 
     - Groupby the results by the majority racial demographic group in each precinct
 
@@ -587,7 +579,7 @@ def _(build_majority_analysis_df, dataset_config, precinct_results):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### Aggregate
+    # Aggregate
     """)
     return
 
@@ -619,7 +611,57 @@ def _(majority_analysis, majority_analysis_display):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### County
+    # County
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Population data
+    """)
+    return
+
+
+@app.cell
+def _(precinct_results):
+    POP_TOTAL_COLUMNS = [
+        "CVAP_TOT24",
+        "CVAP_HSP24",
+        "CVAP_WHT24",
+        "CVAP_BLK24",
+        "CVAP_2OM24",
+        "_cvap_api24",
+        "_cvap_amw24",
+    ]
+    precinct_results["blocks"].groupby("county")[POP_TOTAL_COLUMNS].sum()
+    return
+
+
+@app.cell
+def _(precinct_results):
+    def get_group_precinct_counts_by_county(df_precincts):
+        df = df_precincts.copy()
+        df["majority_racial_group"] = (
+            df["majority_racial_group"].str.split("(").str[0]
+        )
+        return df.pivot_table(
+            index="county",
+            columns="majority_racial_group",
+            aggfunc="size",
+            fill_value=0,
+        )
+
+
+    get_group_precinct_counts_by_county(precinct_results["blocks"])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Results
     """)
     return
 
@@ -704,7 +746,6 @@ def _(
         return df
 
 
-    _county = county_dropdown.value
     mo.vstack(
         [
             county_dropdown,
@@ -713,14 +754,17 @@ def _(
                     [
                         mo.md(f"**{_cfg['display_name']}**"),
                         _transform_county_series_to_dataframe(
-                            county_level_demo_analysis[_cfg["id"]].loc[_county],
+                            county_level_demo_analysis[_cfg["id"]].loc[
+                                county_dropdown.value
+                            ],
                             _cfg["vote_display_labels"],
                             threshold=filter_threshold,
                         ),
                     ]
                 )
                 for _cfg in DATASET_CONFIG
-                if _county in county_level_demo_analysis[_cfg["id"]].index
+                if county_dropdown.value
+                in county_level_demo_analysis[_cfg["id"]].index
             ],
         ]
     )
@@ -782,12 +826,11 @@ def _(
         return pd.DataFrame(rows) if rows else None
 
 
-    _county = county_dropdown.value
-    memo_table = _build_county_memo_table(_county)
+    memo_table = _build_county_memo_table(county_dropdown.value)
     mo.vstack(
         [
             mo.md(
-                f"**{_county} County memo** — Prop 50 vs 2024 Presidential (Harris/Trump) by racial group"
+                f"**{county_dropdown.value} County memo** — Prop 50 vs 2024 Presidential (Harris/Trump) by racial group"
             ),
             memo_table
             if memo_table is not None
@@ -802,49 +845,7 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    #### Population data
-    """)
-    return
-
-
-@app.cell
-def _(precinct_results):
-    POP_TOTAL_COLUMNS = [
-        "CVAP_TOT24",
-        "CVAP_HSP24",
-        "CVAP_WHT24",
-        "CVAP_BLK24",
-        "CVAP_2OM24",
-        "_cvap_api24",
-        "_cvap_amw24",
-    ]
-    precinct_results["blocks"].groupby("county")[POP_TOTAL_COLUMNS].sum()
-    return
-
-
-@app.cell
-def _(precinct_results):
-    def get_group_precinct_counts_by_county(df_precincts):
-        df = df_precincts.copy()
-        df["majority_racial_group"] = (
-            df["majority_racial_group"].str.split("(").str[0]
-        )
-        return df.pivot_table(
-            index="county",
-            columns="majority_racial_group",
-            aggfunc="size",
-            fill_value=0,
-        )
-
-
-    get_group_precinct_counts_by_county(precinct_results["blocks"])
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ### Vote shift
+    ## Vote shift
     """)
     return
 
@@ -952,7 +953,7 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### County multiselect
+    ## County multiselect
     """)
     return
 
@@ -1033,7 +1034,7 @@ def _():
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
     FIG_SIZE = (8.5, 2.8)
     ARROW_COLOR = "#0077a3"
@@ -1095,7 +1096,7 @@ def _():
     )
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
@@ -1148,7 +1149,7 @@ def _(
     return (build_county_arrow_table,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
@@ -1185,7 +1186,7 @@ def _(
     return (build_statewide_arrow_table,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     arrow_plot_mode_dropdown,
     build_county_arrow_table,
