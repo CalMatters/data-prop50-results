@@ -69,9 +69,24 @@ def _(INDEX_COLUMNS):
 
 
 @app.cell
-def _():
-    MAJORITY_THRESHOLD = 0.500
-    return (MAJORITY_THRESHOLD,)
+def _(mo):
+    MAJORITY_THRESHOLD_SLIDER = mo.ui.slider(
+        start=0.0,
+        stop=1.0,
+        step=0.001,
+        value=0.500,
+        debounce=False,
+        show_value=True,
+        label="Group categorization threshold",
+        include_input=True,
+    )
+    return (MAJORITY_THRESHOLD_SLIDER,)
+
+
+@app.cell
+def _(MAJORITY_THRESHOLD_SLIDER):
+    majority_threshold = MAJORITY_THRESHOLD_SLIDER.value
+    return (majority_threshold,)
 
 
 @app.cell
@@ -139,7 +154,7 @@ def _(CA_FIPS, COUNTIES_FP, gpd):
 @app.cell
 def _(ca_counties_dict, mo):
     data_scope_dropdown = mo.ui.dropdown(
-        options=["county", "statewide"], value="county", label="## Data scope:"
+        options=["county", "statewide"], value="statewide", label="## Data scope:"
     )
     county_selection_dropdown = mo.ui.dropdown(
         ca_counties_dict.keys(), value="Alameda", label="County:"
@@ -214,9 +229,9 @@ def _(build_county_meta, download_file, pd):
 @app.cell
 def _(
     LATINO_VOTER_COLUMNS,
-    MAJORITY_THRESHOLD,
     RESULTS_COLUMNS,
     VOTERS_COLUMNS,
+    majority_threshold,
     pd,
 ):
     def transform_voters(voters_raw_df):
@@ -224,7 +239,7 @@ def _(
         _df["_latino_voters"] = _df[LATINO_VOTER_COLUMNS].sum(axis=1)
         _df["_is_maj_latino"] = (
             _df["_latino_voters"] / _df["totreg_r"]
-        ) > MAJORITY_THRESHOLD
+        ) > majority_threshold
         return _df
 
 
@@ -299,6 +314,12 @@ def _(merged_df, mo, selected_counties, skipped_counties):
 
 
 @app.cell
+def _(MAJORITY_THRESHOLD_SLIDER):
+    MAJORITY_THRESHOLD_SLIDER
+    return
+
+
+@app.cell
 def _(merged_df):
     merged_df
     return
@@ -309,22 +330,38 @@ def _(merged_df):
     maj_latino_turnout = merged_df[
         merged_df["_is_maj_latino"].notnull() & merged_df["_is_maj_latino"]
     ]
-    calculate_pct(
+    yes_pct = calculate_pct(
         maj_latino_turnout["PR_50_Y"].sum(), maj_latino_turnout["TOTVOTE"].sum()
     )
-    return
+    no_pct = calculate_pct(
+        maj_latino_turnout["PR_50_N"].sum(), maj_latino_turnout["TOTVOTE"].sum()
+    )
+    return no_pct, yes_pct
 
 
 @app.cell
-def _(gpd):
+def _(gpd, merged_df):
     results_2024 = gpd.read_file("./outputs/precinct_results_2024.gpkg")
     _maj_latino_results_2024 = results_2024[
-        results_2024["_is_maj_latino"].notnull() & results_2024["_is_maj_latino"]
+        results_2024["_is_maj_latino"].notnull()
+        & results_2024["_is_maj_latino"]
+        & (results_2024["county"].isin(merged_df["county"].unique()))
     ]
-    calculate_pct(
+    dem_pct = calculate_pct(
         _maj_latino_results_2024["dem_votes"].sum(),
         _maj_latino_results_2024["total_votes"].sum(),
     )
+    rep_pct = calculate_pct(
+        _maj_latino_results_2024["rep_votes"].sum(),
+        _maj_latino_results_2024["total_votes"].sum(),
+    )
+    return dem_pct, rep_pct
+
+
+@app.cell
+def _(dem_pct, mo, no_pct, rep_pct, yes_pct):
+    net_shift = round((yes_pct - no_pct) - (dem_pct - rep_pct), 1)
+    mo.md(f"NET DEMOCRACTIC SHIFT: {net_shift:+}")
     return
 
 
