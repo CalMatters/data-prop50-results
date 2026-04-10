@@ -18,7 +18,11 @@ with app.setup:
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Analyze demographics
+    # Demographics and precinct-level vote patterns (Prop 50 and 2024 presidential)
+
+    This notebook explores how [Census CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) race and ethnicity shares line up with precinct results. It reads merged GeoPackages produced upstream (notably `04_interpolation.py`): **Prop 50** and **2024 presidential** vote totals joined to block- or tract-level CVAP estimates (`outputs/precincts_results_cvap_blocks.gpkg`, `outputs/precincts_results_cvap_tracts.gpkg`, and `outputs/precincts_2024_results_cvap_blocks.gpkg`).
+
+    You can compare **block- vs tract-based** demographics, tune a **threshold** for calling a precinct “majority” one racial/ethnic group (otherwise labeled multiracial plurality), and review **statewide**, **county**, and **multi-county** aggregates. The notebook also measures **vote shift** (Prop 50 Yes % minus 2024 Democratic presidential %) by group and county, and flags **partisan flip** patterns where 2024 and Prop 50 majorities disagree—treated as exploratory given interpolation from 2024 votes onto 2025 precinct geography.
     """)
     return
 
@@ -168,7 +172,7 @@ def _(display_options):
     return (config_data_options_multiselect,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
     mo.md(r"""
     # Helper functions
@@ -209,7 +213,7 @@ def _(DEMOGRAPHIC_SOURCE_TO_STANDARD):
 
 
 @app.function
-def caclulate_pct(numerator, denominator, precision=1):
+def calculate_pct(numerator, denominator, precision=1):
     return round((numerator / denominator) * 100, precision)
 
 
@@ -240,11 +244,11 @@ def calculate_yes_pct(precincts_df):
 
     # Calculate yes_pct and no_pct only where total votes are > 0
     valid_total_mask = total_votes > 0
-    df.loc[valid_total_mask, "yes_pct"] = caclulate_pct(
+    df.loc[valid_total_mask, "yes_pct"] = calculate_pct(
         df.loc[valid_total_mask, "yes_votes"], total_votes[valid_total_mask]
     )
     df["no_pct"] = np.nan
-    df.loc[valid_total_mask, "no_pct"] = caclulate_pct(
+    df.loc[valid_total_mask, "no_pct"] = calculate_pct(
         df.loc[valid_total_mask, "no_votes"], total_votes[valid_total_mask]
     )
 
@@ -367,11 +371,11 @@ def _(
 
     # Calculate vote shift from Harris to YES on Prop. 50
     precinct_2025_results = precinct_results["blocks"]
-    precinct_2025_results["dem_pct_2024"] = caclulate_pct(
+    precinct_2025_results["dem_pct_2024"] = calculate_pct(
         precinct_2025_results["dem_votes"],
         precinct_2025_results["total_votes_2024"],
     )
-    precinct_2025_results["rep_pct_2024"] = caclulate_pct(
+    precinct_2025_results["rep_pct_2024"] = calculate_pct(
         precinct_2025_results["rep_votes"],
         precinct_2025_results["total_votes_2024"],
     )
@@ -463,8 +467,8 @@ def _(filter_threshold):
     def _calculate_vote_stats(yes_votes, no_votes, total_votes=None):
         if total_votes is None:
             total_votes = yes_votes + no_votes
-        yes_pct = caclulate_pct(yes_votes, total_votes)
-        no_pct = caclulate_pct(no_votes, total_votes)
+        yes_pct = calculate_pct(yes_votes, total_votes)
+        no_pct = calculate_pct(no_votes, total_votes)
         return total_votes, yes_pct, no_pct
 
 
@@ -579,7 +583,9 @@ def _(build_majority_analysis_df, dataset_config, precinct_results):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Aggregate
+    # Running Statewide majority-group
+
+    We only have a subset of counties but it includes the vast majority of votes cast.
     """)
     return
 
@@ -611,7 +617,7 @@ def _(majority_analysis, majority_analysis_display):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # County
+    # County-level breakdowns
     """)
     return
 
@@ -740,7 +746,7 @@ def _(
             for col in yes_pct_cols
         ]
         df = pd.DataFrame(data, index=display_labels)
-        df["total_votes_pct"] = caclulate_pct(
+        df["total_votes_pct"] = calculate_pct(
             df["total_votes"], df["total_votes"].sum()
         )
         return df
