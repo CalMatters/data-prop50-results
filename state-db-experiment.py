@@ -307,12 +307,23 @@ def _(merged_df):
 @app.cell
 def _(merged_df):
     maj_latino_turnout = merged_df[
-        merged_df["_is_maj_latino"].notnull()
-        & merged_df["_is_maj_latino"]
-        & (merged_df["county"] == "Los Angeles")
+        merged_df["_is_maj_latino"].notnull() & merged_df["_is_maj_latino"]
     ]
     calculate_pct(
         maj_latino_turnout["PR_50_Y"].sum(), maj_latino_turnout["TOTVOTE"].sum()
+    )
+    return
+
+
+@app.cell
+def _(gpd):
+    results_2024 = gpd.read_file("./outputs/precinct_results_2024.gpkg")
+    _maj_latino_results_2024 = results_2024[
+        results_2024["_is_maj_latino"].notnull() & results_2024["_is_maj_latino"]
+    ]
+    calculate_pct(
+        _maj_latino_results_2024["dem_votes"].sum(),
+        _maj_latino_results_2024["total_votes"].sum(),
     )
     return
 
