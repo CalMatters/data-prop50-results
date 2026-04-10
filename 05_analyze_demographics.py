@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.20.2"
+__generated_with = "0.23.0"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -1527,60 +1527,6 @@ def _(DATASET_CONFIG, demo_group_dropdown, precinct_results):
             ],
         ]
     )
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Hypothesis testing
-
-    For both of the following hypothesis, we are looking at how specific demographic groups voted. I first output how precincts where the majority of voting-age citizens belong to that racial demographic group, then I output a scatter plot with a linear regression plotted.
-
-    The linear regression is an exploration tool, not a thorough analysis of the relation between racial demographics and support for Prop 50.
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ### Hypothesis #1:
-
-    > The more Hispanic or Latino voters (%) there are in a precinct, the higher the vote share for "Yes" on Prop. 50
-    """)
-    return
-
-
-@app.cell
-def _():
-    # what were the results in majority hispanic or latino precincts?
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ### Hypothesis #2:
-
-    > If there are more white voters in a precinct, then there will be a higher vote share for "No" on Prop. 50
-    """)
-    return
-
-
-@app.cell
-def _():
-    # what were the results in majority white precincts?
-    return
-
-
-@app.cell
-def _():
     return
 
 
