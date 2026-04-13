@@ -39,6 +39,33 @@ def _():
 
 @app.cell
 def _(INDEX_COLUMNS):
+    ASIAN_VOTER_COLUMNS = [
+        "kordem",
+        "korrep",
+        "kordcl",
+        "koroth",
+        "jpndem",
+        "jpnrep",
+        "jpndcl",
+        "jpnoth",
+        "chidem",
+        "chirep",
+        "chidcl",
+        "chioth",
+        "inddem",
+        "indrep",
+        "inddcl",
+        "indoth",
+        "vietdem",
+        "vietrep",
+        "vietdcl",
+        "vietoth",
+        "fildem",
+        "filrep",
+        "fildcl",
+        "filoth",
+    ]
+
     LATINO_VOTER_COLUMNS = [
         "hispdem",
         "hisprep",
@@ -52,8 +79,9 @@ def _(INDEX_COLUMNS):
         "type",
         "totreg_r",
         *LATINO_VOTER_COLUMNS,
+        *ASIAN_VOTER_COLUMNS,
     ]
-    return LATINO_VOTER_COLUMNS, VOTERS_COLUMNS
+    return ASIAN_VOTER_COLUMNS, LATINO_VOTER_COLUMNS, VOTERS_COLUMNS
 
 
 @app.cell
@@ -228,6 +256,7 @@ def _(build_county_meta, download_file, pd):
 
 @app.cell
 def _(
+    ASIAN_VOTER_COLUMNS,
     LATINO_VOTER_COLUMNS,
     RESULTS_COLUMNS,
     VOTERS_COLUMNS,
@@ -237,8 +266,12 @@ def _(
     def transform_voters(voters_raw_df):
         _df = voters_raw_df[VOTERS_COLUMNS].copy()
         _df["_latino_voters"] = _df[LATINO_VOTER_COLUMNS].sum(axis=1)
-        _df["_is_maj_latino"] = (
+        _df["_asian_voters"] = _df[ASIAN_VOTER_COLUMNS].sum(axis=1)
+        _df["_is_maj_latino_turnout"] = (
             _df["_latino_voters"] / _df["totreg_r"]
+        ) > majority_threshold
+        _df["_is_maj_asian_turnout"] = (
+            _df["_asian_voters"] / _df["totreg_r"]
         ) > majority_threshold
         return _df
 
@@ -281,7 +314,35 @@ def _(
 
 
 @app.cell
-def _(INDEX_COLUMNS, RESULTS_COLUMNS, VOTERS_COLUMNS, merged_frames, pd):
+def _():
+    COLUMNS_DICT = {
+        "county": "county",  # The county containing the precinct
+        "srprec": "precinct_id",  # Unique ID for the precinct
+        "PR_50_Y": "yes_votes",  # the number of votes for "Yes" on Prop. 50 in the precinct
+        "PR_50_N": "no_votes",  # the number of votes for "No" on Prop. 50 in the precinct
+        "no_pct": "no_pct",
+        "yes_pct": "yes_pct",
+        "TOTVOTE": "total_votes",
+        "TOTREG": "registered_voters",
+        "turnout": "turnout",  # the percent of the voters who cast a ballot in the precinct
+        "election": "election",
+        "_latino_voters": "_latino_voters",
+        "_asian_voters": "_asian_voters",
+        "_is_maj_latino_turnout": "_is_maj_latino_turnout",
+        "_is_maj_asian_turnout": "_is_maj_asian_turnout",
+    }
+    return (COLUMNS_DICT,)
+
+
+@app.cell
+def _(
+    COLUMNS_DICT,
+    INDEX_COLUMNS,
+    RESULTS_COLUMNS,
+    VOTERS_COLUMNS,
+    merged_frames,
+    pd,
+):
     expected_columns = list(
         dict.fromkeys(
             RESULTS_COLUMNS
@@ -295,6 +356,12 @@ def _(INDEX_COLUMNS, RESULTS_COLUMNS, VOTERS_COLUMNS, merged_frames, pd):
         if merged_frames
         else pd.DataFrame(columns=expected_columns)
     )
+    merged_df = merged_df.rename(columns=COLUMNS_DICT)
+    merged_df["turnout"] = calculate_pct(
+        merged_df["total_votes"], merged_df["registered_voters"]
+    )
+    merged_df = merged_df[COLUMNS_DICT.values()].copy()
+    merged_df
     return (merged_df,)
 
 
@@ -328,13 +395,16 @@ def _(merged_df):
 @app.cell
 def _(merged_df):
     maj_latino_turnout = merged_df[
-        merged_df["_is_maj_latino"].notnull() & merged_df["_is_maj_latino"]
+        merged_df["_is_maj_latino_turnout"].notnull()
+        & merged_df["_is_maj_latino_turnout"]
     ]
     yes_pct = calculate_pct(
-        maj_latino_turnout["PR_50_Y"].sum(), maj_latino_turnout["TOTVOTE"].sum()
+        maj_latino_turnout["yes_votes"].sum(),
+        maj_latino_turnout["total_votes"].sum(),
     )
     no_pct = calculate_pct(
-        maj_latino_turnout["PR_50_N"].sum(), maj_latino_turnout["TOTVOTE"].sum()
+        maj_latino_turnout["no_votes"].sum(),
+        maj_latino_turnout["total_votes"].sum(),
     )
     return no_pct, yes_pct
 
