@@ -4,6 +4,14 @@ __generated_with = "0.23.0"
 app = marimo.App(width="medium")
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Prop. 50 Election
+    """)
+    return
+
+
 @app.cell
 def _():
     import time
@@ -27,6 +35,14 @@ def _(Path):
 
 @app.cell
 def _():
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    return (PROJECTED_CRS,)
+
+
+@app.cell
+def _():
     USER_AGENT = {"User-Agent": "Mozilla/5.0"}
     return (USER_AGENT,)
 
@@ -35,6 +51,34 @@ def _():
 def _():
     INDEX_COLUMNS = ["county", "srprec"]
     return (INDEX_COLUMNS,)
+
+
+@app.cell
+def _():
+    COUNTY_AGG_RESULTS_ID = "CNTYTOT"
+    return (COUNTY_AGG_RESULTS_ID,)
+
+
+@app.cell
+def _():
+    COLUMNS_DICT = {
+        "county": "county",  # The county containing the precinct
+        "srprec": "precinct_id",  # Unique ID for the precinct
+        "PR_50_Y": "yes_votes",  # the number of votes for "Yes" on Prop. 50 in the precinct
+        "PR_50_N": "no_votes",  # the number of votes for "No" on Prop. 50 in the precinct
+        "no_pct": "no_pct",
+        "yes_pct": "yes_pct",
+        "TOTVOTE": "total_votes",
+        "TOTREG": "registered_voters",
+        "turnout": "turnout",  # the percent of the voters who cast a ballot in the precinct
+        "election": "election",
+        "_latino_voters": "_latino_voters",
+        "_asian_voters": "_asian_voters",
+        "_is_maj_latino_turnout": "_is_maj_latino_turnout",
+        "_is_maj_asian_turnout": "_is_maj_asian_turnout",
+        "geometry": "geometry",
+    }
+    return (COLUMNS_DICT,)
 
 
 @app.cell
@@ -128,6 +172,10 @@ def _(Path, USER_AGENT, requests, time):
         return f"https://statewidedatabase.org/pub/data/S25/c{county_fips}/c{county_fips}_s25_voters_by_s25_srprec.csv"
 
 
+    def get_gis_url(county_fips: str):
+        return f"https://statewidedatabase.org/pub/data/S25/c{county_fips}/srprec_{county_fips}_s25_v01.gpkg.zip"
+
+
     def snake_case(_in: str):
         return _in.replace(" ", "_").lower()
 
@@ -141,7 +189,13 @@ def _(Path, USER_AGENT, requests, time):
         print(f"Saved {url} to {save_path}")
         return response.ok
 
-    return download_file, get_results_url, get_voters_url, snake_case
+    return (
+        download_file,
+        get_gis_url,
+        get_results_url,
+        get_voters_url,
+        snake_case,
+    )
 
 
 @app.function
@@ -152,14 +206,8 @@ def calculate_pct(numerator, denominator, rounding_place=1):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # Prop. 50 Election
-    """)
-    return
+    # Read and prepare data
 
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
     Read California county names and fips from Census to build data download urls
     """)
     return
@@ -172,20 +220,23 @@ def _(CA_FIPS, COUNTIES_FP, gpd):
     ca_counties_gdf = counties_gdf[is_ca_county].copy()
     del counties_gdf
     ca_counties_gdf = ca_counties_gdf.sort_values("NAME")
-    ca_counties_dict = dict(
+    county_name_to_fips = dict(
         zip(ca_counties_gdf["NAME"], ca_counties_gdf["COUNTYFP"])
     )
+    county_fips_to_name = {
+        fips: name for name, fips in county_name_to_fips.items()
+    }
     del ca_counties_gdf
-    return (ca_counties_dict,)
+    return county_fips_to_name, county_name_to_fips
 
 
 @app.cell
-def _(ca_counties_dict, mo):
+def _(county_name_to_fips, mo):
     data_scope_dropdown = mo.ui.dropdown(
         options=["county", "statewide"], value="statewide", label="## Data scope:"
     )
     county_selection_dropdown = mo.ui.dropdown(
-        ca_counties_dict.keys(), value="Alameda", label="County:"
+        county_name_to_fips.keys(), value="Alameda", label="County:"
     )
     return county_selection_dropdown, data_scope_dropdown
 
@@ -202,14 +253,14 @@ def _(county_selection_dropdown, data_scope_dropdown, mo):
 
 
 @app.cell
-def _(ca_counties_dict, county_selection_dropdown, data_scope_dropdown):
+def _(county_name_to_fips, county_selection_dropdown, data_scope_dropdown):
     selected_counties = (
-        list(ca_counties_dict.items())
+        list(county_name_to_fips.items())
         if data_scope_dropdown.value == "statewide"
         else [
             (
                 county_selection_dropdown.value,
-                ca_counties_dict[county_selection_dropdown.value],
+                county_name_to_fips[county_selection_dropdown.value],
             )
         ]
     )
@@ -217,10 +268,18 @@ def _(ca_counties_dict, county_selection_dropdown, data_scope_dropdown):
 
 
 @app.cell
-def _(ELECTION_DATA_DIR, Path, get_results_url, get_voters_url, snake_case):
+def _(
+    ELECTION_DATA_DIR,
+    Path,
+    get_gis_url,
+    get_results_url,
+    get_voters_url,
+    snake_case,
+):
     def build_county_meta(county: str, county_fips: str):
         results_url = get_results_url(county_fips)
         voters_url = get_voters_url(county_fips)
+        gis_url = get_gis_url(county_fips)
         county_dir = ELECTION_DATA_DIR / snake_case(county)
         return {
             "results": {
@@ -230,6 +289,10 @@ def _(ELECTION_DATA_DIR, Path, get_results_url, get_voters_url, snake_case):
             "voters": {
                 "url": voters_url,
                 "fp": county_dir / Path(voters_url).name,
+            },
+            "gis": {
+                "url": gis_url,
+                "fp": county_dir / Path(gis_url).name,
             },
         }
 
@@ -244,6 +307,10 @@ def _(build_county_meta, download_file, pd):
         for key, meta in county_meta.items():
             if not meta["fp"].exists():
                 download_file(str(meta["url"]), meta["fp"])
+            if key == "gis":
+                county_raw[key] = meta["fp"]
+                continue
+
             county_df = pd.read_csv(
                 meta["fp"], dtype={"srprec": str, "county": str}
             )
@@ -257,6 +324,7 @@ def _(build_county_meta, download_file, pd):
 @app.cell
 def _(
     ASIAN_VOTER_COLUMNS,
+    COUNTY_AGG_RESULTS_ID,
     LATINO_VOTER_COLUMNS,
     RESULTS_COLUMNS,
     VOTERS_COLUMNS,
@@ -273,11 +341,13 @@ def _(
         _df["_is_maj_asian_turnout"] = (
             _df["_asian_voters"] / _df["totreg_r"]
         ) > majority_threshold
+        _df["_is_maj_latino_turnout"] = _df["_is_maj_latino_turnout"].fillna(False)
         return _df
 
 
     def transform_results(results_raw_df):
         _df = results_raw_df[RESULTS_COLUMNS].copy()
+        _df = _df[_df["srprec"] != COUNTY_AGG_RESULTS_ID].copy()
         _df["PR_50_Y"] = pd.to_numeric(_df["PR_50_Y"], errors="coerce")
         _df["PR_50_N"] = pd.to_numeric(_df["PR_50_N"], errors="coerce")
         _df["yes_pct"] = calculate_pct(_df["PR_50_Y"], _df["TOTVOTE"])
@@ -290,7 +360,9 @@ def _(
 @app.cell
 def _(
     INDEX_COLUMNS,
+    county_fips_to_name,
     download_and_read_county_data,
+    gpd,
     selected_counties,
     transform_results,
     transform_voters,
@@ -305,7 +377,19 @@ def _(
             county_merged_df = transformed_results.merge(
                 transformed_voters, on=INDEX_COLUMNS, how="left", validate="1:1"
             )
-            merged_frames.append(county_merged_df)
+            precincts_gdf = gpd.read_file(county_raw["gis"])
+            precincts_gdf["county"] = precincts_gdf["COUNTY"].map(
+                county_fips_to_name
+            )
+            if len(county_merged_df) != len(precincts_gdf):
+                print(
+                    f"Row count mismatch for county '{county}': merged frame has {len(county_merged_df)} rows, GIS frame has {len(precincts_gdf)} rows."
+                )
+
+            precincts_gdf = precincts_gdf.merge(
+                county_merged_df, on=INDEX_COLUMNS, how="outer", validate="1:1"
+            )
+            merged_frames.append(precincts_gdf)
         except Exception as error:
             skipped_counties.append(
                 {"county": county, "county_fips": county_fips, "error": str(error)}
@@ -314,30 +398,10 @@ def _(
 
 
 @app.cell
-def _():
-    COLUMNS_DICT = {
-        "county": "county",  # The county containing the precinct
-        "srprec": "precinct_id",  # Unique ID for the precinct
-        "PR_50_Y": "yes_votes",  # the number of votes for "Yes" on Prop. 50 in the precinct
-        "PR_50_N": "no_votes",  # the number of votes for "No" on Prop. 50 in the precinct
-        "no_pct": "no_pct",
-        "yes_pct": "yes_pct",
-        "TOTVOTE": "total_votes",
-        "TOTREG": "registered_voters",
-        "turnout": "turnout",  # the percent of the voters who cast a ballot in the precinct
-        "election": "election",
-        "_latino_voters": "_latino_voters",
-        "_asian_voters": "_asian_voters",
-        "_is_maj_latino_turnout": "_is_maj_latino_turnout",
-        "_is_maj_asian_turnout": "_is_maj_asian_turnout",
-    }
-    return (COLUMNS_DICT,)
-
-
-@app.cell
 def _(
     COLUMNS_DICT,
     INDEX_COLUMNS,
+    PROJECTED_CRS,
     RESULTS_COLUMNS,
     VOTERS_COLUMNS,
     merged_frames,
@@ -361,6 +425,7 @@ def _(
         merged_df["total_votes"], merged_df["registered_voters"]
     )
     merged_df = merged_df[COLUMNS_DICT.values()].copy()
+    merged_df = merged_df.to_crs(PROJECTED_CRS)
     merged_df
     return (merged_df,)
 
@@ -380,15 +445,17 @@ def _(merged_df, mo, selected_counties, skipped_counties):
     return
 
 
-@app.cell
-def _(MAJORITY_THRESHOLD_SLIDER):
-    MAJORITY_THRESHOLD_SLIDER
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Calculate net shift
+    """)
     return
 
 
 @app.cell
-def _(merged_df):
-    merged_df
+def _(MAJORITY_THRESHOLD_SLIDER):
+    MAJORITY_THRESHOLD_SLIDER
     return
 
 
@@ -398,6 +465,7 @@ def _(merged_df):
         merged_df["_is_maj_latino_turnout"].notnull()
         & merged_df["_is_maj_latino_turnout"]
     ]
+    latino_precincts_2025 = int(merged_df["_is_maj_latino_turnout"].sum())
     yes_pct = calculate_pct(
         maj_latino_turnout["yes_votes"].sum(),
         maj_latino_turnout["total_votes"].sum(),
@@ -406,7 +474,7 @@ def _(merged_df):
         maj_latino_turnout["no_votes"].sum(),
         maj_latino_turnout["total_votes"].sum(),
     )
-    return no_pct, yes_pct
+    return latino_precincts_2025, no_pct, yes_pct
 
 
 @app.cell
@@ -417,6 +485,7 @@ def _(gpd, merged_df):
         & results_2024["_is_maj_latino"]
         & (results_2024["county"].isin(merged_df["county"].unique()))
     ]
+    latino_precincts_2024 = len(_maj_latino_results_2024)
     dem_pct = calculate_pct(
         _maj_latino_results_2024["dem_votes"].sum(),
         _maj_latino_results_2024["total_votes"].sum(),
@@ -425,13 +494,50 @@ def _(gpd, merged_df):
         _maj_latino_results_2024["rep_votes"].sum(),
         _maj_latino_results_2024["total_votes"].sum(),
     )
-    return dem_pct, rep_pct
+    return dem_pct, latino_precincts_2024, rep_pct
 
 
 @app.cell
-def _(dem_pct, mo, no_pct, rep_pct, yes_pct):
+def _(
+    dem_pct,
+    latino_precincts_2024,
+    latino_precincts_2025,
+    mo,
+    no_pct,
+    rep_pct,
+    yes_pct,
+):
     net_shift = round((yes_pct - no_pct) - (dem_pct - rep_pct), 1)
-    mo.md(f"NET DEMOCRACTIC SHIFT: {net_shift:+}")
+    mo.md(
+        f"NET DEMOCRACTIC SHIFT: {net_shift:+} ({latino_precincts_2024:,} in 2024, {latino_precincts_2025:,} in 2025)"
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Merge and export
+
+    - Merge counties that statewide db doesn't have but we do and export
+    """)
+    return
+
+
+@app.cell
+def _(gpd, merged_df, pd):
+    results_gdf = gpd.read_file("./outputs/precinct_results.gpkg")
+    missing_county_names = set(results_gdf["county"]) - set(merged_df["county"])
+    print(
+        f"Counties in results_gdf but not in merged_df: {sorted(missing_county_names)}"
+    )
+    missing_county_results_gdf = results_gdf[
+        results_gdf["county"].isin(missing_county_names)
+    ]
+    export_gdf = pd.concat(
+        [merged_df, missing_county_results_gdf], ignore_index=True
+    )
+    # export_gdf.to_file("./outputs/precinct_results_latest.gpkg", driver="GPKG")
     return
 
 
