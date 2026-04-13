@@ -214,6 +214,12 @@ def _(mo):
 
 
 @app.cell
+def _(gpd):
+    RESULTS_2024 = gpd.read_file("./outputs/precinct_results_2024.gpkg")
+    return (RESULTS_2024,)
+
+
+@app.cell
 def _(CA_FIPS, COUNTIES_FP, gpd):
     counties_gdf = gpd.read_file(COUNTIES_FP)
     is_ca_county = counties_gdf["GEOID"].str.startswith(CA_FIPS)
@@ -328,20 +334,12 @@ def _(
     LATINO_VOTER_COLUMNS,
     RESULTS_COLUMNS,
     VOTERS_COLUMNS,
-    majority_threshold,
     pd,
 ):
     def transform_voters(voters_raw_df):
         _df = voters_raw_df[VOTERS_COLUMNS].copy()
         _df["_latino_voters"] = _df[LATINO_VOTER_COLUMNS].sum(axis=1)
         _df["_asian_voters"] = _df[ASIAN_VOTER_COLUMNS].sum(axis=1)
-        _df["_is_maj_latino_turnout"] = (
-            _df["_latino_voters"] / _df["totreg_r"]
-        ) > majority_threshold
-        _df["_is_maj_asian_turnout"] = (
-            _df["_asian_voters"] / _df["totreg_r"]
-        ) > majority_threshold
-        _df["_is_maj_latino_turnout"] = _df["_is_maj_latino_turnout"].fillna(False)
         return _df
 
 
@@ -424,10 +422,34 @@ def _(
     merged_df["turnout"] = calculate_pct(
         merged_df["total_votes"], merged_df["registered_voters"]
     )
-    merged_df = merged_df[COLUMNS_DICT.values()].copy()
+    merged_df = merged_df[
+        [col for col in COLUMNS_DICT.values() if col in list(merged_df)]
+    ].copy()
     merged_df = merged_df.to_crs(PROJECTED_CRS)
     merged_df
     return (merged_df,)
+
+
+@app.cell
+def _(RESULTS_2024, majority_threshold, merged_df):
+    def categorize_turnout_group(
+        df_results, categorize_threshold=majority_threshold
+    ):
+        _df = df_results.copy()
+        _df["_is_maj_latino_turnout"] = (
+            _df["_latino_voters"] / _df["total_votes"]
+        ) > categorize_threshold
+        _df["_is_maj_asian_turnout"] = (
+            _df["_asian_voters"] / _df["total_votes"]
+        ) > categorize_threshold
+        _df["_is_maj_latino_turnout"] = _df["_is_maj_latino_turnout"].fillna(False)
+        _df["_is_maj_asian_turnout"] = _df["_is_maj_asian_turnout"].fillna(False)
+        return _df
+
+
+    results_2024 = categorize_turnout_group(RESULTS_2024)
+    results_2025 = categorize_turnout_group(merged_df)
+    return results_2024, results_2025
 
 
 @app.cell
@@ -460,12 +482,12 @@ def _(MAJORITY_THRESHOLD_SLIDER):
 
 
 @app.cell
-def _(merged_df):
+def _(merged_df, results_2025):
     maj_latino_turnout = merged_df[
-        merged_df["_is_maj_latino_turnout"].notnull()
-        & merged_df["_is_maj_latino_turnout"]
+        results_2025["_is_maj_latino_turnout"].notnull()
+        & results_2025["_is_maj_latino_turnout"]
     ]
-    latino_precincts_2025 = int(merged_df["_is_maj_latino_turnout"].sum())
+    latino_precincts_2025 = len(maj_latino_turnout)
     yes_pct = calculate_pct(
         maj_latino_turnout["yes_votes"].sum(),
         maj_latino_turnout["total_votes"].sum(),
@@ -478,11 +500,10 @@ def _(merged_df):
 
 
 @app.cell
-def _(gpd, merged_df):
-    results_2024 = gpd.read_file("./outputs/precinct_results_2024.gpkg")
+def _(merged_df, results_2024):
     _maj_latino_results_2024 = results_2024[
-        results_2024["_is_maj_latino"].notnull()
-        & results_2024["_is_maj_latino"]
+        results_2024["_is_maj_latino_turnout"].notnull()
+        & results_2024["_is_maj_latino_turnout"]
         & (results_2024["county"].isin(merged_df["county"].unique()))
     ]
     latino_precincts_2024 = len(_maj_latino_results_2024)
