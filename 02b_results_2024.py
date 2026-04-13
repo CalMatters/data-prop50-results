@@ -100,7 +100,6 @@ def _():
         "HISPDCL",
         "HISPOTH",
     ]
-    MAJORITY_THRESHOLD = 0.500
     TOTAL_REGISTRATION_COLUMN = "TOTREG"
     return (
         ASIAN_VOTER_COLUMNS,
