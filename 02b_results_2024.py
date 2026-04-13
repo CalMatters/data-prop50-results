@@ -68,6 +68,32 @@ def _():
         "PRSPAF01",
         *MAJOR_PARTY_CAND_COLUMNS,
     ]
+    ASIAN_VOTER_COLUMNS = [
+        "KORDEM",
+        "KORREP",
+        "KORDCL",
+        "KOROTH",
+        "JPNDEM",
+        "JPNREP",
+        "JPNDCL",
+        "JPNOTH",
+        "CHIDEM",
+        "CHIREP",
+        "CHIDCL",
+        "CHIOTH",
+        "INDDEM",
+        "INDREP",
+        "INDDCL",
+        "INDOTH",
+        "VIETDEM",
+        "VIETREP",
+        "VIETDCL",
+        "VIETOTH",
+        "FILDEM",
+        "FILREP",
+        "FILDCL",
+        "FILOTH",
+    ]
     LATINO_COLUMNS = [
         "HISPDEM",
         "HISPREP",
@@ -77,9 +103,9 @@ def _():
     MAJORITY_THRESHOLD = 0.500
     TOTAL_REGISTRATION_COLUMN = "TOTREG"
     return (
+        ASIAN_VOTER_COLUMNS,
         INDEX_COLUMNS,
         LATINO_COLUMNS,
-        MAJORITY_THRESHOLD,
         MAJOR_PARTY_CAND_COLUMNS,
         PRES_RACE_CAND_COLUMNS,
         TOTAL_REGISTRATION_COLUMN,
@@ -150,9 +176,9 @@ def _(mo):
 
 @app.cell
 def _(
+    ASIAN_VOTER_COLUMNS,
     INDEX_COLUMNS,
     LATINO_COLUMNS,
-    MAJORITY_THRESHOLD,
     PRECINCTS_VOTERS_FP,
     pd,
 ):
@@ -162,7 +188,9 @@ def _(
         "GEO_TYPE",
         "TOTREG_R",
         *LATINO_COLUMNS,
+        *ASIAN_VOTER_COLUMNS,
     ]
+    VOTERS_MERGE_COLUMNS = ["SRPREC_KEY", "_latino_voters", "_asian_voters"]
 
     df_voters = pd.read_csv(
         PRECINCTS_VOTERS_FP, dtype={col: str for col in INDEX_COLUMNS}
@@ -171,11 +199,8 @@ def _(
         ["TOTREG_R", *LATINO_COLUMNS]
     ].apply(pd.to_numeric, errors="coerce")
     df_voters["_latino_voters"] = df_voters[LATINO_COLUMNS].sum(axis=1)
-    df_voters["_is_maj_latino"] = (
-        df_voters["_latino_voters"] / df_voters["TOTREG_R"]
-    ).round(3) > MAJORITY_THRESHOLD
-    df_voters[["SRPREC_KEY", "_is_maj_latino"]]
-    return (df_voters,)
+    df_voters["_asian_voters"] = df_voters[ASIAN_VOTER_COLUMNS].sum(axis=1)
+    return VOTERS_MERGE_COLUMNS, df_voters
 
 
 @app.cell(hide_code=True)
@@ -197,7 +222,8 @@ def _():
         "PRSDEM01",
         "PRSREP01",
         "total_votes",
-        "_is_maj_latino",
+        "_asian_voters",
+        "_latino_voters",
         "geometry",
     ]
     EXPORT_COLUMN_RENAMES = {
@@ -361,6 +387,7 @@ def _(
     EXPORT_COLUMN_RENAMES,
     EXPORT_DRIVER,
     EXPORT_FP,
+    VOTERS_MERGE_COLUMNS,
     df_results,
     df_voters,
     gdf_precincts,
@@ -381,7 +408,7 @@ def _(
     ].copy()
 
     gdf_precinct_results = gdf_precinct_results.merge(
-        df_voters[["SRPREC_KEY", "_is_maj_latino"]],
+        df_voters[VOTERS_MERGE_COLUMNS],
         on=["SRPREC_KEY"],
         validate="1:1",
         how="left",
