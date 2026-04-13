@@ -73,7 +73,7 @@ def _(mo):
 
 @app.cell
 def _():
-    RESULTS_FP = "./outputs/precinct_results.gpkg"
+    RESULTS_FP = "./outputs/precinct_results_latest.gpkg"
     return (RESULTS_FP,)
 
 
