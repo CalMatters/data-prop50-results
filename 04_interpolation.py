@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.20.2"
+__generated_with = "0.23.0"
 app = marimo.App(width="medium")
 
 
@@ -28,18 +28,33 @@ def _(mo):
 
 @app.cell
 def _():
-    # counties where the audit found a mismatch of 2 or fewer precincts
+    AUDIT_THRESHOLD = 5
+    # counties where the audit found a mismatch of 5 or more
     ADDTNL_COUNTIES_PASSING_AUIDIT = [
-        "Los Angeles",
+        "Contra Costa",  # 239 precincts in the results don't match the GIS, zero reg voter precincts
         "Imperial",  # 14 entries from the results file without a match record zero registered voters:
-        "Inyo",
-        "Marin",
-        "Merced",
-        "Orange",  # exception was made for OC due to many unpopulated precincts in GIS file and not in the results
+        "San Diego",  # VBM precincts not present in the geography
+        # Adhoc additions from data prep independent of statewide db
+        "Kern",
         "Shasta",
+        "Sierra",
+        "Siskiyou",
         "Tulare",
+        "Tuolumne",
     ]
-    return (ADDTNL_COUNTIES_PASSING_AUIDIT,)
+    # ADDTNL_COUNTIES_PASSING_AUIDIT = [
+    #     "Contra Costa",
+    #     "Los Angeles",
+    #     "Imperial",  # 14 entries from the results file without a match record zero registered voters:
+    #     "Inyo",
+    #     "Marin",
+    #     "Merced",
+    #     "Orange",  # exception was made for OC due to many unpopulated precincts in GIS file and not in the results
+    #     "Shasta",
+    #     "San Diego",
+    #     "Tulare",
+    # ]
+    return ADDTNL_COUNTIES_PASSING_AUIDIT, AUDIT_THRESHOLD
 
 
 @app.cell
@@ -351,22 +366,30 @@ def _(CVAP_BLOCKS_FP, PROJECTED_CRS, read_gis_data):
 
 
 @app.cell
-def _(ADDTNL_COUNTIES_PASSING_AUIDIT, AUDIT_SUMMARY_FILE_PREFIX, glob, pd):
+def _(
+    ADDTNL_COUNTIES_PASSING_AUIDIT,
+    AUDIT_SUMMARY_FILE_PREFIX,
+    AUDIT_THRESHOLD,
+    glob,
+    pd,
+):
     audits_fps = sorted(glob(AUDIT_SUMMARY_FILE_PREFIX), reverse=True)
     latest_audit_summary_fp = audits_fps[0] if audits_fps else ""
 
     if latest_audit_summary_fp:
         audit_summary_df = pd.read_csv(latest_audit_summary_fp, index_col=0)
 
+        missing_results = (
+            audit_summary_df["missing_in_gis"]
+            + audit_summary_df["missing_in_results"]
+        )
         counties_without_failed_matches = audit_summary_df[
-            (audit_summary_df["missing_in_gis"] == 0)
-            & (audit_summary_df["missing_in_results"] == 0)
+            missing_results < AUDIT_THRESHOLD
         ].index.tolist()
 
     counties_passing_audit = (
         ADDTNL_COUNTIES_PASSING_AUIDIT + counties_without_failed_matches
     )
-    counties_passing_audit
     counties_passing_audit
     return (counties_passing_audit,)
 
