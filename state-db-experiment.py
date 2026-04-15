@@ -747,10 +747,17 @@ def _(MAJORITY_THRESHOLD_SLIDER):
 
 
 @app.cell
-def _(merged_df, results_2025):
+def _():
+    LA_COUNTY = "Los Angeles"
+    return (LA_COUNTY,)
+
+
+@app.cell
+def _(LA_COUNTY, merged_df, results_2025):
     maj_latino_turnout = merged_df[
         results_2025["_is_maj_latino_turnout"].notnull()
         & results_2025["_is_maj_latino_turnout"]
+        & (results_2025["county"] == LA_COUNTY)
     ]
     latino_precincts_2025 = len(maj_latino_turnout)
     yes_pct = calculate_pct(
@@ -765,11 +772,12 @@ def _(merged_df, results_2025):
 
 
 @app.cell
-def _(merged_df, results_2024):
+def _(LA_COUNTY, merged_df, results_2024):
     _maj_latino_results_2024 = results_2024[
         results_2024["_is_maj_latino_turnout"].notnull()
         & results_2024["_is_maj_latino_turnout"]
         & (results_2024["county"].isin(merged_df["county"].unique()))
+        & (results_2024["county"] == LA_COUNTY)
     ]
     latino_precincts_2024 = len(_maj_latino_results_2024)
     dem_pct = calculate_pct(
@@ -853,6 +861,12 @@ def _(mo):
 
 
 @app.cell
+def _(export_gdf):
+    export_gdf["county"].nunique()
+    return
+
+
+@app.cell
 def _(DUPE_CHECK_COLUMNS, gpd, merged_df, pd):
     results_gdf = gpd.read_file("./outputs/precinct_results.gpkg")
     missing_county_names = set(results_gdf["county"]) - set(merged_df["county"])
@@ -872,65 +886,6 @@ def _(DUPE_CHECK_COLUMNS, gpd, merged_df, pd):
     )
     export_gdf.to_file("./outputs/precinct_results_latest.gpkg", driver="GPKG")
     return (export_gdf,)
-
-
-@app.cell
-def _(export_gdf):
-    exported = [
-        "Alameda",
-        "Alpine",
-        "Butte",
-        "Calaveras",
-        "Colusa",
-        "Contra Costa",
-        "Del Norte",
-        "El Dorado",
-        "Fresno",
-        "Glenn",
-        "Humboldt",
-        "Imperial",
-        "Inyo",
-        "Kings",
-        "Lake",
-        "Lassen",
-        "Los Angeles",
-        "Madera",
-        "Marin",
-        "Mariposa",
-        "Mendocino",
-        "Merced",
-        "Monterey",
-        "Napa",
-        "Nevada",
-        "Orange",
-        "Placer",
-        "Plumas",
-        "Riverside",
-        "Sacramento",
-        "San Benito",
-        "San Bernardino",
-        "San Diego",
-        "San Francisco",
-        "San Joaquin",
-        "San Luis Obispo",
-        "San Mateo",
-        "Santa Barbara",
-        "Santa Clara",
-        "Santa Cruz",
-        "Solano",
-        "Sonoma",
-        "Stanislaus",
-        "Sutter",
-        "Trinity",
-        "Ventura",
-        "Yolo",
-        "Yuba",
-    ]
-
-
-    working = list(export_gdf["county"].unique())
-    set(working) - set(exported)
-    return
 
 
 @app.cell
