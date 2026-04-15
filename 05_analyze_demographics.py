@@ -86,7 +86,7 @@ def _():
 
     shift_mode = mo.ui.radio(
         options=SHIFT_MODE_LABELS,
-        value=SHIFT_MODE_OPTION_LABEL_ONE_PARTY,
+        value=SHIFT_MODE_OPTION_LABEL_NET,
         label="### Vote shift definition",
     )
     shift_mode
