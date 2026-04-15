@@ -22,7 +22,7 @@ def _():
 
     This notebook explores how [Census CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) race and ethnicity shares line up with precinct results. It reads merged GeoPackages produced upstream (notably `04_interpolation.py`): **Prop 50** and **2024 presidential** vote totals joined to block- or tract-level CVAP estimates (`outputs/precincts_results_cvap_blocks.gpkg`, `outputs/precincts_results_cvap_tracts.gpkg`, and `outputs/precincts_2024_results_cvap_blocks.gpkg`).
 
-    You can compare **block- vs tract-based** demographics, tune a **threshold** for calling a precinct “majority” one racial/ethnic group (otherwise labeled multiracial plurality), and review **statewide**, **county**, and **multi-county** aggregates. The notebook also measures **vote shift** (Prop 50 Yes % minus 2024 Democratic presidential %) by group and county, and flags **partisan flip** patterns where 2024 and Prop 50 majorities disagree—treated as exploratory given interpolation from 2024 votes onto 2025 precinct geography.
+    You can compare **block- vs tract-based** demographics, tune a **threshold** for calling a precinct “majority” one racial/ethnic group (otherwise labeled multiracial plurality), and review **statewide**, **county**, and **multi-county** aggregates. The notebook measures **vote shift** in two ways (toggle below): **one-party** (Prop 50 Yes % minus 2024 Democratic presidential %) and **net** (Prop 50 Yes−No margin minus 2024 Dem−Rep margin). It also flags **partisan flip** patterns where 2024 and Prop 50 majorities disagree—treated as exploratory given interpolation from 2024 votes onto 2025 precinct geography.
     """)
     return
 
@@ -38,6 +38,8 @@ def _():
 @app.cell
 def _():
     DEFAULT_MAJORITY_THRESHOLD = 50
+    # Same percent scale as the majority-threshold slider (0–100).
+    ROBUSTNESS_MAJORITY_THRESHOLDS = (50, 60, 70, 75, 80, 85, 90)
     threshold_slider = mo.ui.slider(
         start=0,
         stop=100,
@@ -48,7 +50,53 @@ def _():
         label="### Threshold for racial group categorization",
     )
     threshold_slider
-    return (threshold_slider,)
+    return ROBUSTNESS_MAJORITY_THRESHOLDS, threshold_slider
+
+
+@app.cell
+def _():
+    SHIFT_MODE_ONE_PARTY = "one_party"
+    SHIFT_MODE_NET = "net"
+    # Radio labels (mo.ui.radio: dict keys are shown; values become .value).
+    SHIFT_MODE_OPTION_LABEL_ONE_PARTY = "One-party shift (Yes % - Dem %)"
+    SHIFT_MODE_OPTION_LABEL_NET = "Net shift ((Yes − No) − (Dem − Rep))"
+    SHIFT_MODE_LABELS = {
+        SHIFT_MODE_OPTION_LABEL_ONE_PARTY: SHIFT_MODE_ONE_PARTY,
+        SHIFT_MODE_OPTION_LABEL_NET: SHIFT_MODE_NET,
+    }
+    SHIFT_MODE_TABLE_CAPTION = {
+        SHIFT_MODE_ONE_PARTY: SHIFT_MODE_OPTION_LABEL_ONE_PARTY,
+        SHIFT_MODE_NET: SHIFT_MODE_OPTION_LABEL_NET,
+    }
+    SHIFT_MODE_ROBUSTNESS_MD = {
+        SHIFT_MODE_ONE_PARTY: "One-party shift",
+        SHIFT_MODE_NET: "Net shift",
+    }
+
+
+    def arrow_axis_column_names(mode):
+        """Arrow plot x-axis columns in memo-style tables (one-party vs net layout)."""
+        if mode == SHIFT_MODE_NET:
+            return (
+                "Pres margin (Dem − Rep) (pts)",
+                "Prop 50 margin (Yes − No) (pts)",
+            )
+        return ("HARRIS - pct", "YES on Prop. 50 - pct")
+
+
+    shift_mode = mo.ui.radio(
+        options=SHIFT_MODE_LABELS,
+        value=SHIFT_MODE_OPTION_LABEL_ONE_PARTY,
+        label="### Vote shift definition",
+    )
+    shift_mode
+    return (
+        SHIFT_MODE_NET,
+        SHIFT_MODE_ROBUSTNESS_MD,
+        SHIFT_MODE_TABLE_CAPTION,
+        arrow_axis_column_names,
+        shift_mode,
+    )
 
 
 @app.cell
@@ -218,6 +266,32 @@ def calculate_pct(numerator, denominator, precision=1):
 
 
 @app.function
+def vote_shift_one_party(prop50_yes_pct, pres_dem_pct):
+    """Prop 50 Yes % minus 2024 Democratic presidential % (one-party shift)."""
+    if any(pd.isna(pct) for pct in (prop50_yes_pct, pres_dem_pct)):
+        return None
+    return round(float(prop50_yes_pct) - float(pres_dem_pct), 1)
+
+
+@app.function
+def vote_shift_net(prop50_yes_pct, prop50_no_pct, pres_dem_pct, pres_rep_pct):
+    """(Prop 50 Yes − No) minus (2024 Dem − Rep) margin difference."""
+    if any(
+        pd.isna(pct)
+        for pct in (
+            prop50_yes_pct,
+            prop50_no_pct,
+            pres_dem_pct,
+            pres_rep_pct,
+        )
+    ):
+        return None
+    margin_prop50 = float(prop50_yes_pct) - float(prop50_no_pct)
+    margin_pres = float(pres_dem_pct) - float(pres_rep_pct)
+    return round(margin_prop50 - margin_pres, 1)
+
+
+@app.function
 def calculate_yes_pct(precincts_df):
     df = precincts_df.copy()
     # Handle cases where one column is null and the other is not
@@ -284,7 +358,7 @@ def _(ANALYSIS_GROUPS, filter_threshold):
 
 
 @app.cell
-def _(get_majority_racial_group):
+def _(filter_threshold, get_majority_racial_group):
     def prepare_precinct_results_df(df, vote_count_columns):
         """Replace redacted values with NaN and convert vote columns to numeric."""
         df = df.replace("-1", np.nan).replace(-1, np.nan)
@@ -292,16 +366,27 @@ def _(get_majority_racial_group):
         return df
 
 
-    def add_majority_racial_group(df):
-        """Add majority_racial_group and majority_racial_group_pct columns."""
+    def assign_majority_racial_group(df, threshold):
+        """Recompute majority_racial_group and majority_racial_group_pct at threshold (percent scale)."""
         df = df.copy()
         df[["majority_racial_group", "majority_racial_group_pct"]] = df.apply(
-            lambda row: pd.Series(get_majority_racial_group(row)),
+            lambda row: pd.Series(
+                get_majority_racial_group(row, threshold=threshold)
+            ),
             axis=1,
         )
         return df
 
-    return add_majority_racial_group, prepare_precinct_results_df
+
+    def add_majority_racial_group(df):
+        """Add majority columns using the interactive slider threshold."""
+        return assign_majority_racial_group(df, filter_threshold)
+
+    return (
+        add_majority_racial_group,
+        assign_majority_racial_group,
+        prepare_precinct_results_df,
+    )
 
 
 @app.cell(hide_code=True)
@@ -356,7 +441,7 @@ def _(
         precinct_results[_cfg["id"]] = df
 
     # Validate null yes_pct count on tracts dataset
-    _df_validate = precinct_results["tracts"]
+    _df_validate = precinct_results["blocks"]
     null_votes = (
         _df_validate["yes_votes"].isnull() & _df_validate["no_votes"].isnull()
     )
@@ -364,7 +449,7 @@ def _(
     has_zero_total_votes = _total_votes == 0
     expected_null_yes_pct_count = (null_votes | has_zero_total_votes).sum()
     observed_null_yes_pct_count = _df_validate["yes_pct"].isna().sum()
-    assert expected_null_yes_pct_count == observed_null_yes_pct_count, (
+    assert expected_null_yes_pct_count - 1 == observed_null_yes_pct_count, (
         f"Expected {expected_null_yes_pct_count} null values in 'yes_pct', "
         f"but found {observed_null_yes_pct_count}."
     )
@@ -379,9 +464,17 @@ def _(
         precinct_2025_results["rep_votes"],
         precinct_2025_results["total_votes_2024"],
     )
-    precinct_2025_results["vote_shift"] = round(
-        precinct_2025_results["yes_pct"] - precinct_2025_results["dem_pct_2024"], 1
-    )
+    # Same formulas as vote_shift_one_party / vote_shift_net (vectorized; NaNs propagate).
+    precinct_2025_results["vote_shift"] = (
+        precinct_2025_results["yes_pct"] - precinct_2025_results["dem_pct_2024"]
+    ).round(1)
+    precinct_2025_results["vote_shift_net"] = (
+        (precinct_2025_results["yes_pct"] - precinct_2025_results["no_pct"])
+        - (
+            precinct_2025_results["dem_pct_2024"]
+            - precinct_2025_results["rep_pct_2024"]
+        )
+    ).round(1)
 
     # Identify partisan flip
     is_trump_win = (
@@ -435,8 +528,9 @@ def _(precinct_results):
     analysis_total_votes = precinct_results["blocks"]["total_votes"].sum()
     analysis_total_votes_pct = analysis_total_votes / total_votes_from_sov
 
+    county_count = precinct_results["blocks"]["county"].nunique()
     print(
-        f"Our analysis has processed data representing {analysis_total_votes_pct:.1%} of votes cast"
+        f"Our analysis has processed data in {county_count} counties representing {analysis_total_votes_pct:.1%} of votes cast"
     )
 
     analysis_yes_votes = precinct_results["blocks"]["yes_votes"].sum()
@@ -617,6 +711,209 @@ def _(majority_analysis, majority_analysis_display):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
+    ## Vote shift
+    """)
+    return
+
+
+@app.cell
+def _(SHIFT_MODE_NET, filter_threshold):
+    PROP50_DATASET_ID = "blocks"
+    PRES2024_DATASET_ID = "blocks_2024"
+    YES_PCT_SUFFIX = f"_{filter_threshold}_yes_pct"
+    NO_PCT_SUFFIX = f"_{filter_threshold}_no_pct"
+
+
+    def compute_vote_shift(prop50_series, pres2024_series, group_id, mode):
+        """One-party or net shift for one racial group; None if required keys or pcts missing."""
+        yes_key = f"{group_id}{YES_PCT_SUFFIX}"
+        no_key = f"{group_id}{NO_PCT_SUFFIX}"
+        if (
+            yes_key not in prop50_series.index
+            or yes_key not in pres2024_series.index
+        ):
+            return None
+        if mode == SHIFT_MODE_NET:
+            if (
+                no_key not in prop50_series.index
+                or no_key not in pres2024_series.index
+            ):
+                return None
+            return vote_shift_net(
+                prop50_series[yes_key],
+                prop50_series[no_key],
+                pres2024_series[yes_key],
+                pres2024_series[no_key],
+            )
+        return vote_shift_one_party(
+            prop50_series[yes_key],
+            pres2024_series[yes_key],
+        )
+
+    return PRES2024_DATASET_ID, PROP50_DATASET_ID, compute_vote_shift
+
+
+@app.cell
+def _(SHIFT_MODE_NET, analyze_by_group):
+    def robustness_shift_and_precinct_count(
+        prop50_precincts,
+        pres2024_precincts,
+        group_id,
+        majority_threshold_percent,
+        shift_mode_value,
+    ):
+        """
+        State-level vote shift and Prop 50 precinct count for one analysis group,
+        using already-relabeled precinct frames.
+        """
+        prop50_state = analyze_by_group(
+            prop50_precincts,
+            group_id,
+            threshold=majority_threshold_percent,
+            by_county=False,
+        )
+        pres2024_state = analyze_by_group(
+            pres2024_precincts,
+            group_id,
+            threshold=majority_threshold_percent,
+            by_county=False,
+        )
+        if shift_mode_value == SHIFT_MODE_NET:
+            shift = vote_shift_net(
+                prop50_state["yes_split_pct"],
+                prop50_state["no_split_pct"],
+                pres2024_state["yes_split_pct"],
+                pres2024_state["no_split_pct"],
+            )
+        else:
+            shift = vote_shift_one_party(
+                prop50_state["yes_split_pct"],
+                pres2024_state["yes_split_pct"],
+            )
+        precinct_count = int(prop50_state["num_precincts"])
+        return shift, precinct_count
+
+    return (robustness_shift_and_precinct_count,)
+
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    GROUP_DISPLAY_LABELS,
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    ROBUSTNESS_MAJORITY_THRESHOLDS,
+    assign_majority_racial_group,
+    precinct_results,
+    robustness_shift_and_precinct_count,
+    shift_mode,
+):
+    def build_robustness_vote_shift_and_precinct_tables(
+        precinct_results_map,
+        prop50_dataset_id,
+        pres2024_dataset_id,
+        majority_threshold_percents,
+        shift_mode_value,
+    ):
+        """
+        Build two aligned tables (groups × thresholds): vote shift and precinct counts.
+
+        For each threshold, precincts are relabeled once per dataset; then each group
+        gets one shift and one count (count from the Prop 50 frame).
+        """
+
+        def empty_group_rows():
+            return [
+                {"group": GROUP_DISPLAY_LABELS[group_id]}
+                for group_id in ANALYSIS_GROUPS
+            ]
+
+        vote_shift_rows = empty_group_rows()
+        precinct_count_rows = empty_group_rows()
+
+        for majority_threshold_percent in majority_threshold_percents:
+            column_header = f"{majority_threshold_percent}%"
+            prop50_precincts = assign_majority_racial_group(
+                precinct_results_map[prop50_dataset_id],
+                majority_threshold_percent,
+            )
+            pres2024_precincts = assign_majority_racial_group(
+                precinct_results_map[pres2024_dataset_id],
+                majority_threshold_percent,
+            )
+            for group_id, vote_row, count_row in zip(
+                ANALYSIS_GROUPS,
+                vote_shift_rows,
+                precinct_count_rows,
+                strict=True,
+            ):
+                shift, precinct_count = robustness_shift_and_precinct_count(
+                    prop50_precincts,
+                    pres2024_precincts,
+                    group_id,
+                    majority_threshold_percent,
+                    shift_mode_value,
+                )
+                vote_row[column_header] = shift
+                count_row[column_header] = precinct_count
+
+        return (
+            pd.DataFrame(vote_shift_rows),
+            pd.DataFrame(precinct_count_rows),
+        )
+
+
+    vote_shift_robustness_table, precinct_count_robustness_table = (
+        build_robustness_vote_shift_and_precinct_tables(
+            precinct_results,
+            PROP50_DATASET_ID,
+            PRES2024_DATASET_ID,
+            ROBUSTNESS_MAJORITY_THRESHOLDS,
+            shift_mode.value,
+        )
+    )
+    return precinct_count_robustness_table, vote_shift_robustness_table
+
+
+@app.cell(hide_code=True)
+def _(
+    SHIFT_MODE_ROBUSTNESS_MD,
+    precinct_count_robustness_table,
+    shift_mode,
+    vote_shift_robustness_table,
+):
+    _robustness_shift_phrase = SHIFT_MODE_ROBUSTNESS_MD[shift_mode.value]
+    vote_shift_robustness_ui = mo.vstack(
+        [
+            mo.md(
+                f"""
+    **Robustness: vote shift by categorization threshold**
+
+    Each column uses a fixed categorization rule (same scale as the threshold slider). The
+    slider still controls categorization everywhere else in this notebook; this table
+    only sweeps that rule to show how {_robustness_shift_phrase} moves with
+    higher or lower categorization threshold.
+    """
+            ),
+            vote_shift_robustness_table,
+            mo.md(
+                r"""
+    **Precinct counts (same grouping)**
+
+    How many precincts fall in each racial analysis group under each cutoff, after the same
+    relabeling as above. Counts follow the Prop 50 precinct table (numerator of the shift).
+    """
+            ),
+            precinct_count_robustness_table,
+        ]
+    )
+    vote_shift_robustness_ui
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
     # County-level breakdowns
     """)
     return
@@ -783,10 +1080,13 @@ def _(
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
+    SHIFT_MODE_NET,
+    arrow_axis_column_names,
     compute_vote_shift,
     county_dropdown,
     county_level_demo_analysis,
     filter_threshold,
+    shift_mode,
 ):
     def _build_county_memo_table(county):
         """One table per county: Racial group, Swing, YES %, HARRIS %, NO %, TRUMP %."""
@@ -803,17 +1103,16 @@ def _(
         pres2024_row = pres2024_df.loc[county]
         yes_suffix = f"_{filter_threshold}_yes_pct"
         no_suffix = f"_{filter_threshold}_no_pct"
+        _memo_shift_mode = shift_mode.value
 
         def _memo_row(group_id):
             yes_key = f"{group_id}{yes_suffix}"
             no_key = f"{group_id}{no_suffix}"
-            if (
-                yes_key not in prop50_row.index
-                or yes_key not in pres2024_row.index
-            ):
-                return None
-            swing = compute_vote_shift(prop50_row, pres2024_row, group_id)
-            return {
+
+            swing = compute_vote_shift(
+                prop50_row, pres2024_row, group_id, _memo_shift_mode
+            )
+            row = {
                 "Racial group": GROUP_DISPLAY_LABELS[group_id],
                 "Swing from Harris to Prop 50": (
                     swing if swing is not None else ""
@@ -823,6 +1122,17 @@ def _(
                 "NO on Prop. 50 - pct": prop50_row[no_key],
                 "TRUMP - pct": pres2024_row[no_key],
             }
+            if _memo_shift_mode == SHIFT_MODE_NET:
+                pres_margin_col, prop_margin_col = arrow_axis_column_names(
+                    _memo_shift_mode
+                )
+                row[pres_margin_col] = float(pres2024_row[yes_key]) - float(
+                    pres2024_row[no_key]
+                )
+                row[prop_margin_col] = float(prop50_row[yes_key]) - float(
+                    prop50_row[no_key]
+                )
+            return row
 
         rows = [
             row
@@ -857,33 +1167,19 @@ def _():
 
 
 @app.cell
-def _(filter_threshold):
-    PROP50_DATASET_ID = "blocks"
-    PRES2024_DATASET_ID = "blocks_2024"
-    YES_PCT_SUFFIX = f"_{filter_threshold}_yes_pct"
-
-
-    def compute_vote_shift(prop50_series, pres2024_series, group_id):
-        """Vote shift (Yes % − Democrat %) for one group; returns None if key missing."""
-        key = f"{group_id}{YES_PCT_SUFFIX}"
-        if key not in prop50_series.index or key not in pres2024_series.index:
-            return None
-        return round(float(prop50_series[key] - pres2024_series[key]), 1)
-
-    return PRES2024_DATASET_ID, PROP50_DATASET_ID, compute_vote_shift
-
-
-@app.cell
 def _(
     ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
+    SHIFT_MODE_TABLE_CAPTION,
     compute_vote_shift,
     county_level_demo_analysis,
+    shift_mode,
 ):
     prop50_by_county = county_level_demo_analysis[PROP50_DATASET_ID]
     pres2024_by_county = county_level_demo_analysis[PRES2024_DATASET_ID]
+    _table_shift_mode = shift_mode.value
 
 
     def vote_shift_row_for_county(county):
@@ -893,6 +1189,7 @@ def _(
                 prop50_by_county.loc[county],
                 pres2024_by_county.loc[county],
                 group_id,
+                _table_shift_mode,
             )
             if value is not None:
                 row[GROUP_DISPLAY_LABELS[group_id]] = value
@@ -909,7 +1206,9 @@ def _(
 
     mo.vstack(
         [
-            mo.md("**Vote shift (Yes % − Democrat %) by county (statewide)**"),
+            mo.md(
+                f"**Vote shift ({SHIFT_MODE_TABLE_CAPTION[_table_shift_mode]}) by county (statewide)**"
+            ),
             vote_shift_by_county,
         ]
     )
@@ -922,11 +1221,14 @@ def _(
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
+    SHIFT_MODE_TABLE_CAPTION,
     compute_vote_shift,
     county_dropdown,
     county_level_demo_analysis,
+    shift_mode,
 ):
     _selected_county = county_dropdown.value
+    _county_table_shift_mode = shift_mode.value
     prop50_row = county_level_demo_analysis[PROP50_DATASET_ID].loc[
         _selected_county
     ]
@@ -936,7 +1238,9 @@ def _(
 
     vote_shift_rows = []
     for group_id in ANALYSIS_GROUPS:
-        value = compute_vote_shift(prop50_row, pres2024_row, group_id)
+        value = compute_vote_shift(
+            prop50_row, pres2024_row, group_id, _county_table_shift_mode
+        )
         if value is not None:
             vote_shift_rows.append(
                 {
@@ -949,7 +1253,9 @@ def _(
     mo.vstack(
         [
             county_dropdown,
-            mo.md(f"**Vote shift (Yes % − Democrat %) for {_selected_county}**"),
+            mo.md(
+                f"**Vote shift ({SHIFT_MODE_TABLE_CAPTION[_county_table_shift_mode]}) for {_selected_county}**"
+            ),
             vote_shift_table,
         ]
     )
@@ -1108,19 +1414,22 @@ def _(
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
+    SHIFT_MODE_NET,
+    arrow_axis_column_names,
     compute_vote_shift,
     county_level_demo_analysis,
     filter_threshold,
+    shift_mode,
 ):
     def _build_arrow_table_from_rows(
-        prop50_row, pres2024_row, yes_suffix, no_suffix
+        prop50_row, pres2024_row, yes_suffix, no_suffix, mode
     ):
         def _arrow_row(group_id):
             yes_key = f"{group_id}{yes_suffix}"
             no_key = f"{group_id}{no_suffix}"
 
-            swing = compute_vote_shift(prop50_row, pres2024_row, group_id)
-            return {
+            swing = compute_vote_shift(prop50_row, pres2024_row, group_id, mode)
+            row = {
                 "Racial group": GROUP_DISPLAY_LABELS[group_id],
                 "Swing from Harris to Prop 50": (
                     swing if swing is not None else ""
@@ -1130,6 +1439,15 @@ def _(
                 "NO on Prop. 50 - pct": prop50_row[no_key],
                 "TRUMP - pct": pres2024_row[no_key],
             }
+            if mode == SHIFT_MODE_NET:
+                pres_margin_col, prop_margin_col = arrow_axis_column_names(mode)
+                row[pres_margin_col] = float(pres2024_row[yes_key]) - float(
+                    pres2024_row[no_key]
+                )
+                row[prop_margin_col] = float(prop50_row[yes_key]) - float(
+                    prop50_row[no_key]
+                )
+            return row
 
         rows = [
             row
@@ -1150,6 +1468,7 @@ def _(
             pres2024_df.loc[county],
             yes_suffix,
             no_suffix,
+            shift_mode.value,
         )
 
     return (build_county_arrow_table,)
@@ -1161,11 +1480,15 @@ def _(
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
+    SHIFT_MODE_NET,
+    arrow_axis_column_names,
     majority_analysis,
+    shift_mode,
 ):
     def build_statewide_arrow_table():
         prop50_statewide = majority_analysis.get(PROP50_DATASET_ID)
         pres2024_statewide = majority_analysis.get(PRES2024_DATASET_ID)
+        mode = shift_mode.value
 
         rows = []
         for group_id in ANALYSIS_GROUPS:
@@ -1173,20 +1496,38 @@ def _(
             prop50_row = prop50_statewide.loc[label]
             pres2024_row = pres2024_statewide.loc[label]
 
-            # Recreate in expected memo table format
-            rows.append(
-                {
-                    "Racial group": label,
-                    "Swing from Harris to Prop 50": round(
-                        float(prop50_row["Yes %"] - pres2024_row["Democrat %"]),
-                        1,
-                    ),
-                    "YES on Prop. 50 - pct": prop50_row["Yes %"],
-                    "HARRIS - pct": pres2024_row["Democrat %"],
-                    "NO on Prop. 50 - pct": prop50_row["No %"],
-                    "TRUMP - pct": pres2024_row["Republican %"],
-                }
-            )
+            if mode == SHIFT_MODE_NET:
+                swing = vote_shift_net(
+                    prop50_row["Yes %"],
+                    prop50_row["No %"],
+                    pres2024_row["Democrat %"],
+                    pres2024_row["Republican %"],
+                )
+            else:
+                swing = vote_shift_one_party(
+                    prop50_row["Yes %"],
+                    pres2024_row["Democrat %"],
+                )
+
+            row = {
+                "Racial group": label,
+                "Swing from Harris to Prop 50": (
+                    swing if swing is not None else ""
+                ),
+                "YES on Prop. 50 - pct": prop50_row["Yes %"],
+                "HARRIS - pct": pres2024_row["Democrat %"],
+                "NO on Prop. 50 - pct": prop50_row["No %"],
+                "TRUMP - pct": pres2024_row["Republican %"],
+            }
+            if mode == SHIFT_MODE_NET:
+                pres_margin_col, prop_margin_col = arrow_axis_column_names(mode)
+                row[pres_margin_col] = float(pres2024_row["Democrat %"]) - float(
+                    pres2024_row["Republican %"]
+                )
+                row[prop_margin_col] = float(prop50_row["Yes %"]) - float(
+                    prop50_row["No %"]
+                )
+            rows.append(row)
         return pd.DataFrame(rows) if rows else None
 
     return (build_statewide_arrow_table,)
@@ -1194,20 +1535,31 @@ def _(
 
 @app.cell(hide_code=True)
 def _(
+    SHIFT_MODE_TABLE_CAPTION,
     arrow_plot_mode_dropdown,
     build_county_arrow_table,
     build_statewide_arrow_table,
     county_dropdown,
+    shift_mode,
 ):
+    _shift_caption = SHIFT_MODE_TABLE_CAPTION[shift_mode.value]
     if arrow_plot_mode_dropdown.value == "Statewide":
-        arrow_plot_title = "Vote shift from Harris to Prop. 50"
+        arrow_plot_title = (
+            f"Vote shift ({_shift_caption}): statewide by racial group"
+        )
         arrow_plot_table = build_statewide_arrow_table()
     else:
         arrow_plot_title = (
-            f"{county_dropdown.value} County vote shift from Harris to Prop. 50"
+            f"{county_dropdown.value} County — vote shift ({_shift_caption})"
         )
         arrow_plot_table = build_county_arrow_table(county_dropdown.value)
     return arrow_plot_table, arrow_plot_title
+
+
+@app.cell
+def _(arrow_plot_table):
+    arrow_plot_table
+    return
 
 
 @app.cell(hide_code=True)
@@ -1224,6 +1576,7 @@ def _(
     HEADER_TICK_LW,
     HEADER_Y_OFFSET,
     PROP_50_TICK_LABEL,
+    SHIFT_MODE_NET,
     SWING_LABEL_DX,
     SWING_LABEL_DY,
     TITLE_PADDING,
@@ -1233,16 +1586,24 @@ def _(
     Y_GRID_ALPHA,
     Y_MAX_PADDING,
     Y_MIN_PADDING,
+    arrow_axis_column_names,
     arrow_plot_mode_dropdown,
     arrow_plot_table,
     arrow_plot_title,
     arrow_width_slider,
     county_dropdown,
+    shift_mode,
 ):
     """Arrow plot comparing Harris vs. Prop 50 support by racial group."""
 
-    _harris_col = "HARRIS - pct"
-    _prop50_col = "YES on Prop. 50 - pct"
+    _mode = shift_mode.value
+    _harris_col, _prop50_col = arrow_axis_column_names(_mode)
+    _harris_header = (
+        "2024 pres. margin" if _mode == SHIFT_MODE_NET else HARRIS_TICK_LABEL
+    )
+    _prop50_header = (
+        "Prop 50 margin" if _mode == SHIFT_MODE_NET else PROP_50_TICK_LABEL
+    )
 
     _df = arrow_plot_table[
         arrow_plot_table["Swing from Harris to Prop 50"].notnull()
@@ -1352,7 +1713,7 @@ def _(
     _ax.text(
         _harris_point,
         _label_y,
-        HARRIS_TICK_LABEL,
+        _harris_header,
         ha="right",
         va="bottom",
         fontsize=FONT_SIZE,
@@ -1361,7 +1722,7 @@ def _(
     _ax.text(
         _prop50_point,
         _label_y,
-        PROP_50_TICK_LABEL,
+        _prop50_header,
         ha="left",
         va="bottom",
         fontsize=FONT_SIZE,
@@ -1472,6 +1833,7 @@ def _(precinct_results):
         "rep_votes",
         "total_votes_2024",
         "vote_shift",
+        "vote_shift_net",
         "flipped",
         "majority_racial_group",
         "majority_racial_group_pct",
@@ -1513,6 +1875,7 @@ def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
         "dem_pct_24",
         "rep_pct_24",
         "vote_shift",
+        "vote_shift_net",
         "turnout",
         "largest_racial_group_pct",
     ]
@@ -1543,6 +1906,7 @@ def _(MAP_EXPORT_CONFIG_KEY, precinct_results):
         "dem_pct_24",
         "rep_pct_24",
         "vote_shift",
+        "vote_shift_net",
         "majority_racial_group",
         "plurality_racial_group",
         "largest_racial_group_pct",
