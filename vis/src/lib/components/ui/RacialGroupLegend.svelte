@@ -13,12 +13,12 @@
 	const SATURATION_OPTIONS = [
 		{ value: 'yes_pct', label: 'Prop 50 yes %' },
 		{
-			value: 'vote_shift',
-			label: 'Vote shift (one-party: Yes % − Dem %)'
+			value: 'vote_shift_net',
+			label: 'Vote net shift (Prop 50 margin vs 2024 pres. margin)'
 		},
 		{
-			value: 'vote_shift_net',
-			label: 'Vote shift (net: margin vs margin)'
+			value: 'vote_shift',
+			label: 'Vote shift (one-party: Yes % − Dem %)'
 		},
 		{ value: 'flipped', label: 'Partisan flip' }
 	];
