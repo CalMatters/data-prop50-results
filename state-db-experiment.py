@@ -15,6 +15,7 @@ def _(mo):
 @app.cell
 def _():
     import time
+    from datetime import datetime
     from pathlib import Path
 
     import geopandas as gpd
@@ -22,7 +23,7 @@ def _():
     import pandas as pd
     import requests
 
-    return Path, gpd, mo, pd, requests, time
+    return Path, datetime, gpd, mo, pd, requests, time
 
 
 @app.cell
@@ -141,6 +142,18 @@ def _(INDEX_COLUMNS):
 
 
 @app.cell
+def _():
+    DUPE_CHECK_COLUMNS = [
+        "county",
+        "precinct_id",
+        "yes_votes",
+        "no_votes",
+        "total_votes",
+    ]
+    return (DUPE_CHECK_COLUMNS,)
+
+
+@app.cell
 def _(mo):
     MAJORITY_THRESHOLD_SLIDER = mo.ui.slider(
         start=0.0,
@@ -159,6 +172,12 @@ def _(mo):
 def _(MAJORITY_THRESHOLD_SLIDER):
     majority_threshold = MAJORITY_THRESHOLD_SLIDER.value
     return (majority_threshold,)
+
+
+@app.cell
+def _():
+    ROBUSTNESS_MAJORITY_THRESHOLDS = (50, 60, 70, 75, 80, 85, 90)
+    return (ROBUSTNESS_MAJORITY_THRESHOLDS,)
 
 
 @app.cell
@@ -356,11 +375,77 @@ def _(
 
 
 @app.cell
+def _(Path, datetime):
+    DEBUG_DIR = Path("debug")
+    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+    def get_current_timestamp():
+        return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    return DEBUG_DIR, get_current_timestamp
+
+
+@app.cell
+def _(DEBUG_DIR, get_current_timestamp, pd):
+    def audit_merged_precinct_data(
+        merged_gdf, debug_dir=DEBUG_DIR, *, results_entry_column="TOTVOTE"
+    ):
+        """Audit an outer-merged precincts-results GeoDataFrame (same summary as 03_precincts_merge)."""
+
+        def count_by_county(mask):
+            return merged_gdf.loc[mask, "county"].value_counts()
+
+        stamp = get_current_timestamp()
+        missing_geometry = merged_gdf["geometry"].isna()
+        missing_results = merged_gdf[results_entry_column].isna()
+        rows_missing_gis = merged_gdf[missing_geometry]
+        rows_missing_results = merged_gdf[missing_results]
+
+        gis_entries = count_by_county(merged_gdf["geometry"].notna())
+        results_entries = count_by_county(merged_gdf[results_entry_column].notna())
+        missing_gis_by_county = count_by_county(missing_geometry)
+        missing_results_by_county = count_by_county(missing_results)
+
+        all_counties = sorted(list(merged_gdf["county"].unique()))
+        audit_summary = {
+            county: {
+                "gis_entries": gis_entries.get(county, 0),
+                "results_entries": results_entries.get(county, 0),
+                "missing_in_gis": missing_gis_by_county.get(county, 0),
+                "missing_in_results": missing_results_by_county.get(county, 0),
+            }
+            for county in all_counties
+        }
+
+        audit_df = pd.DataFrame.from_dict(audit_summary, orient="index")
+        for rows, name in (
+            (rows_missing_gis, "missing_in_gis"),
+            (rows_missing_results, "missing_in_results"),
+        ):
+            if not rows.empty:
+                rows.to_csv(debug_dir / f"{name}_{stamp}.csv", index=False)
+
+        audit_df.to_csv(debug_dir / f"audit_summary_{stamp}.csv", index=True)
+        print(
+            f"Audit complete. {len(rows_missing_gis)} entries missing in GIS, "
+            f"{len(rows_missing_results)} missing in results. "
+            f"See exported audit debug data in {debug_dir}/"
+        )
+        return audit_df
+
+    return (audit_merged_precinct_data,)
+
+
+@app.cell
 def _(
+    DEBUG_DIR,
     INDEX_COLUMNS,
+    audit_merged_precinct_data,
     county_fips_to_name,
     download_and_read_county_data,
     gpd,
+    pd,
     selected_counties,
     transform_results,
     transform_voters,
@@ -375,23 +460,30 @@ def _(
             county_merged_df = transformed_results.merge(
                 transformed_voters, on=INDEX_COLUMNS, how="left", validate="1:1"
             )
+
             precincts_gdf = gpd.read_file(county_raw["gis"])
             precincts_gdf["county"] = precincts_gdf["COUNTY"].map(
                 county_fips_to_name
             )
-            if len(county_merged_df) != len(precincts_gdf):
-                print(
-                    f"Row count mismatch for county '{county}': merged frame has {len(county_merged_df)} rows, GIS frame has {len(precincts_gdf)} rows."
-                )
-
             precincts_gdf = precincts_gdf.merge(
                 county_merged_df, on=INDEX_COLUMNS, how="outer", validate="1:1"
             )
+
             merged_frames.append(precincts_gdf)
+
         except Exception as error:
             skipped_counties.append(
                 {"county": county, "county_fips": county_fips, "error": str(error)}
             )
+
+    if merged_frames:
+        combined_for_audit = pd.concat(merged_frames, ignore_index=True)
+        combined_for_audit = combined_for_audit[
+            combined_for_audit["county"].notnull()
+        ]
+        audit_summary_df = audit_merged_precinct_data(
+            combined_for_audit, DEBUG_DIR
+        )
     return merged_frames, skipped_counties
 
 
@@ -425,9 +517,182 @@ def _(
     merged_df = merged_df[
         [col for col in COLUMNS_DICT.values() if col in list(merged_df)]
     ].copy()
+    merged_df = merged_df[merged_df["county"].notnull()]
     merged_df = merged_df.to_crs(PROJECTED_CRS)
-    merged_df
     return (merged_df,)
+
+
+@app.function
+def turnout_majority_group_metrics(
+    prop50_merged_gdf,
+    presidential_2024_gdf,
+    group_key,
+    threshold_fraction,
+    counties_in_scope,
+):
+    group_voter_count_column = (
+        "_latino_voters" if group_key == "latino" else "_asian_voters"
+    )
+    presidential_2024_in_scope = presidential_2024_gdf[
+        presidential_2024_gdf["county"].isin(counties_in_scope)
+    ]
+
+    is_majority_on_prop50_frame = (
+        prop50_merged_gdf[group_voter_count_column]
+        / prop50_merged_gdf["total_votes"]
+    ) > threshold_fraction
+    is_majority_on_prop50_frame = is_majority_on_prop50_frame.fillna(False)
+    prop50_majority_precincts = prop50_merged_gdf.loc[
+        is_majority_on_prop50_frame
+    ]
+
+    is_majority_on_presidential_2024_frame = (
+        presidential_2024_in_scope[group_voter_count_column]
+        / presidential_2024_in_scope["total_votes"]
+    ) > threshold_fraction
+    is_majority_on_presidential_2024_frame = (
+        is_majority_on_presidential_2024_frame.fillna(False)
+    )
+    presidential_2024_majority_precincts = presidential_2024_in_scope.loc[
+        is_majority_on_presidential_2024_frame
+    ]
+
+    precinct_count_prop50 = len(prop50_majority_precincts)
+    precinct_count_presidential_2024 = len(
+        presidential_2024_majority_precincts
+    )
+    total_votes_prop50 = prop50_majority_precincts["total_votes"].sum()
+    total_votes_presidential_2024 = presidential_2024_majority_precincts[
+        "total_votes"
+    ].sum()
+    if (
+        precinct_count_prop50 == 0
+        or precinct_count_presidential_2024 == 0
+        or total_votes_prop50 == 0
+        or total_votes_presidential_2024 == 0
+    ):
+        return (
+            None,
+            precinct_count_prop50,
+            precinct_count_presidential_2024,
+            None,
+            None,
+        )
+
+    prop50_yes_pct = calculate_pct(
+        prop50_majority_precincts["yes_votes"].sum(), total_votes_prop50
+    )
+    prop50_no_pct = calculate_pct(
+        prop50_majority_precincts["no_votes"].sum(), total_votes_prop50
+    )
+    presidential_2024_dem_pct = calculate_pct(
+        presidential_2024_majority_precincts["dem_votes"].sum(),
+        total_votes_presidential_2024,
+    )
+    presidential_2024_rep_pct = calculate_pct(
+        presidential_2024_majority_precincts["rep_votes"].sum(),
+        total_votes_presidential_2024,
+    )
+    prop50_yes_minus_no_margin_pct = round(prop50_yes_pct - prop50_no_pct, 1)
+    presidential_2024_dem_minus_rep_margin_pct = round(
+        presidential_2024_dem_pct - presidential_2024_rep_pct, 1
+    )
+    net_democratic_shift = round(
+        (prop50_yes_pct - prop50_no_pct)
+        - (presidential_2024_dem_pct - presidential_2024_rep_pct),
+        1,
+    )
+    return (
+        net_democratic_shift,
+        precinct_count_prop50,
+        precinct_count_presidential_2024,
+        prop50_yes_minus_no_margin_pct,
+        presidential_2024_dem_minus_rep_margin_pct,
+    )
+
+
+@app.cell
+def _(RESULTS_2024, ROBUSTNESS_MAJORITY_THRESHOLDS, merged_df, pd):
+    counties_present_in_prop50_merge = merged_df["county"].unique()
+    turnout_group_specs = (
+        ("Latino majority (turnout)", "latino"),
+        ("Asian majority (turnout)", "asian"),
+    )
+    vote_shift_table_rows = []
+    prop50_yes_minus_no_table_rows = []
+    presidential_2024_dem_minus_rep_table_rows = []
+    precinct_count_prop50_table_rows = []
+    precinct_count_presidential_2024_table_rows = []
+    for group_display_label, group_key in turnout_group_specs:
+        vote_shift_row = {"group": group_display_label}
+        prop50_yes_minus_no_row = {"group": group_display_label}
+        presidential_2024_dem_minus_rep_row = {"group": group_display_label}
+        precinct_count_prop50_row = {"group": group_display_label}
+        precinct_count_presidential_2024_row = {"group": group_display_label}
+        for majority_threshold_percent in ROBUSTNESS_MAJORITY_THRESHOLDS:
+            threshold_column_label = f"{majority_threshold_percent}%"
+            threshold_as_fraction = majority_threshold_percent / 100.0
+            (
+                net_shift_at_threshold,
+                precinct_count_prop50,
+                precinct_count_presidential_2024,
+                prop50_yes_minus_no_at_threshold,
+                presidential_2024_dem_minus_rep_at_threshold,
+            ) = turnout_majority_group_metrics(
+                merged_df,
+                RESULTS_2024,
+                group_key,
+                threshold_as_fraction,
+                counties_present_in_prop50_merge,
+            )
+            vote_shift_row[threshold_column_label] = net_shift_at_threshold
+            prop50_yes_minus_no_row[threshold_column_label] = (
+                prop50_yes_minus_no_at_threshold
+            )
+            presidential_2024_dem_minus_rep_row[threshold_column_label] = (
+                presidential_2024_dem_minus_rep_at_threshold
+            )
+            precinct_count_prop50_row[threshold_column_label] = (
+                precinct_count_prop50
+            )
+            precinct_count_presidential_2024_row[threshold_column_label] = (
+                precinct_count_presidential_2024
+            )
+        vote_shift_table_rows.append(vote_shift_row)
+        prop50_yes_minus_no_table_rows.append(prop50_yes_minus_no_row)
+        presidential_2024_dem_minus_rep_table_rows.append(
+            presidential_2024_dem_minus_rep_row
+        )
+        precinct_count_prop50_table_rows.append(precinct_count_prop50_row)
+        precinct_count_presidential_2024_table_rows.append(
+            precinct_count_presidential_2024_row
+        )
+    turnout_robustness_shift_table = pd.DataFrame(vote_shift_table_rows)
+    turnout_robustness_prop50_yes_minus_no_table = pd.DataFrame(
+        prop50_yes_minus_no_table_rows
+    )
+    turnout_robustness_presidential_2024_dem_minus_rep_table = pd.DataFrame(
+        presidential_2024_dem_minus_rep_table_rows
+    )
+    turnout_robustness_precincts_2025_table = pd.DataFrame(
+        precinct_count_prop50_table_rows
+    )
+    turnout_robustness_precincts_2024_table = pd.DataFrame(
+        precinct_count_presidential_2024_table_rows
+    )
+    return (
+        turnout_robustness_precincts_2024_table,
+        turnout_robustness_precincts_2025_table,
+        turnout_robustness_presidential_2024_dem_minus_rep_table,
+        turnout_robustness_prop50_yes_minus_no_table,
+        turnout_robustness_shift_table,
+    )
+
+
+@app.cell
+def _(merged_df):
+    merged_df[merged_df["county"].isna()].to_file("test.geojson")
+    return
 
 
 @app.cell
@@ -535,6 +800,48 @@ def _(
     return
 
 
+@app.cell
+def _(
+    mo,
+    turnout_robustness_precincts_2024_table,
+    turnout_robustness_precincts_2025_table,
+    turnout_robustness_presidential_2024_dem_minus_rep_table,
+    turnout_robustness_prop50_yes_minus_no_table,
+    turnout_robustness_shift_table,
+):
+    mo.vstack(
+        [
+            mo.md(
+                r"""
+    **Robustness: fixed categorization cutoffs (50%–90%)**
+
+    Each column applies the same turnout-majority rule **separately** to the 2025 Prop 50 merge and to the 2024 presidential file, then compares two **state-level** margins. The qualifying precinct *sets* (and their vote weights) are not paired row-by-row, so net shift can move non-monotonically across cutoffs—especially for small groups (e.g. Asian at high thresholds) where either aggregate can swing when a few precincts enter or leave the filter.
+
+    The **slider** still drives the `NET DEMOCRACTIC SHIFT` line above; these tables do not. Set the slider to one of these cutoffs (e.g. 50%) to compare that column to the line for Latino.
+    """
+            ),
+            mo.md(
+                "**Net democratic shift** (Prop 50 yes−no margin minus 2024 Dem−Rep margin)"
+            ),
+            turnout_robustness_shift_table,
+            mo.md(
+                "**Margins that compose net shift** (same cutoff on each side; each value is aggregated only over precincts that pass that cutoff in *that* file)"
+            ),
+            mo.md("*Prop 50 (2025 merge): yes % − no %*"),
+            turnout_robustness_prop50_yes_minus_no_table,
+            mo.md("*Presidential 2024: Dem % − Rep %*"),
+            turnout_robustness_presidential_2024_dem_minus_rep_table,
+            mo.md("**Precinct counts (Prop 50 / 2025 merge)**"),
+            turnout_robustness_precincts_2025_table,
+            mo.md(
+                "**Precinct counts (Presidential 2024, counties present in 2025 merge)**"
+            ),
+            turnout_robustness_precincts_2024_table,
+        ]
+    )
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -546,7 +853,7 @@ def _(mo):
 
 
 @app.cell
-def _(gpd, merged_df, pd):
+def _(DUPE_CHECK_COLUMNS, gpd, merged_df, pd):
     results_gdf = gpd.read_file("./outputs/precinct_results.gpkg")
     missing_county_names = set(results_gdf["county"]) - set(merged_df["county"])
     print(
@@ -555,10 +862,84 @@ def _(gpd, merged_df, pd):
     missing_county_results_gdf = results_gdf[
         results_gdf["county"].isin(missing_county_names)
     ]
+    missing_county_results_gdf = missing_county_results_gdf.drop_duplicates(
+        subset=DUPE_CHECK_COLUMNS
+    )
+
+
     export_gdf = pd.concat(
         [merged_df, missing_county_results_gdf], ignore_index=True
     )
-    # export_gdf.to_file("./outputs/precinct_results_latest.gpkg", driver="GPKG")
+    export_gdf.to_file("./outputs/precinct_results_latest.gpkg", driver="GPKG")
+    return (export_gdf,)
+
+
+@app.cell
+def _(export_gdf):
+    exported = [
+        "Alameda",
+        "Alpine",
+        "Butte",
+        "Calaveras",
+        "Colusa",
+        "Contra Costa",
+        "Del Norte",
+        "El Dorado",
+        "Fresno",
+        "Glenn",
+        "Humboldt",
+        "Imperial",
+        "Inyo",
+        "Kings",
+        "Lake",
+        "Lassen",
+        "Los Angeles",
+        "Madera",
+        "Marin",
+        "Mariposa",
+        "Mendocino",
+        "Merced",
+        "Monterey",
+        "Napa",
+        "Nevada",
+        "Orange",
+        "Placer",
+        "Plumas",
+        "Riverside",
+        "Sacramento",
+        "San Benito",
+        "San Bernardino",
+        "San Diego",
+        "San Francisco",
+        "San Joaquin",
+        "San Luis Obispo",
+        "San Mateo",
+        "Santa Barbara",
+        "Santa Clara",
+        "Santa Cruz",
+        "Solano",
+        "Sonoma",
+        "Stanislaus",
+        "Sutter",
+        "Trinity",
+        "Ventura",
+        "Yolo",
+        "Yuba",
+    ]
+
+
+    working = list(export_gdf["county"].unique())
+    set(working) - set(exported)
+    return
+
+
+@app.cell
+def _(export_gdf):
+    TOTAL_VOTES_CAST = 11_584_393
+    TOTAL_YES_VOTES = 7_453_339
+    TOTAL_NO_VOTES = 4_116_998
+    total_votes_observed = export_gdf["total_votes"].sum()
+    total_votes_observed / TOTAL_VOTES_CAST
     return
 
 
