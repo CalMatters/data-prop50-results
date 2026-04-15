@@ -40,7 +40,7 @@
 	const SELECTED_COUNTY_STROKE_COLOR = '#212121';
 	const SELECTED_COUNTY_STROKE_WIDTH = 2;
 
-	/** Saturation metric for precinct fill: 'yes_pct' (0–100), 'vote_shift' (±15%), or 'flipped' (R/D vs no flip). */
+	/** Saturation metric for precinct fill: yes_pct, vote_shift (one-party ±15), vote_shift_net (net ±30), or flipped. */
 	let saturationMetric = $state('yes_pct');
 
 	// Shared vote_shift (and flipped) color stops
@@ -121,9 +121,10 @@
 	/**
 	 * Build MapLibre fill-color expression for precincts by metric.
 	 * - yes_pct: interpolate 0–100% → light to dark by racial group.
-	 * - vote_shift: interpolate −15 to +15% → light to dark (same palette as flipped).
+	 * - vote_shift: interpolate −15 to +15 (one-party Yes − Dem).
+	 * - vote_shift_net: interpolate −30 to +30 (margin difference); wider range than one-party.
 	 * - flipped: grey when no flip; D flip = dark (v2), R flip = light (v0), by group.
-	 * @param {'yes_pct' | 'vote_shift' | 'flipped'} metric
+	 * @param {'yes_pct' | 'vote_shift' | 'vote_shift_net' | 'flipped'} metric
 	 */
 	function buildPrecinctFillColorExpression(metric) {
 		// Flipped: three discrete outcomes; reuse vote_shift shades for consistency.
@@ -142,10 +143,19 @@
 		}
 
 		const isYesPct = metric === 'yes_pct';
+		const isVoteShiftNet = metric === 'vote_shift_net';
 		const value = isYesPct
 			? ['coalesce', ['get', 'yes_pct'], 0]
-			: ['coalesce', ['get', 'vote_shift'], 0];
-		const stops = isYesPct ? [0, 50, 100] : [-15, 0, 15];
+			: [
+					'coalesce',
+					['get', isVoteShiftNet ? 'vote_shift_net' : 'vote_shift'],
+					0
+				];
+		const stops = isYesPct
+			? [0, 50, 100]
+			: isVoteShiftNet
+				? [-30, 0, 30]
+				: [-15, 0, 15];
 
 		const branches = isYesPct
 			? [
@@ -440,15 +450,20 @@
 						const majorityGroup = feature.properties.majority_racial_group;
 						const majorityGroupPct = feature.properties.majority_racial_group_pct;
 						const yesPct = feature.properties.yes_pct;
-						const voteShift = feature.properties.vote_shift;
+						const voteShiftOneParty = feature.properties.vote_shift;
+						const voteShiftNet = feature.properties.vote_shift_net;
 						const flipped = feature.properties.flipped;
 
 						// Format the percentage values
 						const groupPctFormatted =
 							majorityGroupPct != null ? Math.round(majorityGroupPct) : 'N/A';
 						const yesPctFormatted = yesPct != null ? Math.round(yesPct) : 'N/A';
+						const shiftForPopup =
+							saturationMetric === 'vote_shift_net' ? voteShiftNet : voteShiftOneParty;
 						const voteShiftFormatted =
-							voteShift != null ? `${voteShift >= 0 ? '+' : ''}${Math.round(voteShift)}` : null;
+							shiftForPopup != null
+								? `${shiftForPopup >= 0 ? '+' : ''}${Math.round(shiftForPopup)}`
+								: null;
 
 						// Format the group label - for multiracial, move percentage into parentheses
 						let groupLabel;
@@ -473,11 +488,13 @@
 									? 'Flipped: Harris 2024 → No on Prop 50'
 									: '';
 
-						// Create popup HTML content
+						// Create popup HTML content (shift wording matches map metric when applicable)
 						const supportLine =
-							voteShiftFormatted != null
-								? `Prop 50 received <strong>${yesPctFormatted}%</strong> support; <strong>${voteShiftFormatted}%</strong> compared to Harris in 2024`
-								: `Prop 50 received <strong>${yesPctFormatted}%</strong> support`;
+							saturationMetric === 'vote_shift_net' && voteShiftFormatted != null
+								? `Prop 50 received <strong>${yesPctFormatted}%</strong> support; <strong>${voteShiftFormatted} pts</strong> net shift (Prop 50 margin vs 2024 pres. margin)`
+								: saturationMetric === 'vote_shift' && voteShiftFormatted != null
+									? `Prop 50 received <strong>${yesPctFormatted}%</strong> support; <strong>${voteShiftFormatted} pts</strong> one-party shift vs Harris 2024`
+									: `Prop 50 received <strong>${yesPctFormatted}%</strong> support`;
 						const popupContent = `
 							<div class="popup-content">
 								<p class="popup-line"><strong>${groupLabel}</strong> majority precinct</p>
