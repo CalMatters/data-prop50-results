@@ -867,35 +867,69 @@ def _(filter_threshold):
 
 
 @app.cell
+def _():
+    show_vote_shift_source_columns = mo.ui.switch(
+        label="Show source columns (Yes % and Democrat %)"
+    )
+    show_vote_shift_source_columns
+    return (show_vote_shift_source_columns,)
+
+
+@app.cell
 def _(
     ANALYSIS_GROUPS,
+    DATASET_CONFIG,
+    DEFAULT_MAJORITY_THRESHOLD,
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
     compute_vote_shift,
     county_level_demo_analysis,
+    show_vote_shift_source_columns,
 ):
     prop50_by_county = county_level_demo_analysis[PROP50_DATASET_ID]
     pres2024_by_county = county_level_demo_analysis[PRES2024_DATASET_ID]
 
+    prop50_yes_label = next(
+        c["vote_display_labels"]["yes"]
+        for c in DATASET_CONFIG
+        if c["id"] == PROP50_DATASET_ID
+    )
+    pres2024_yes_label = next(
+        c["vote_display_labels"]["yes"]
+        for c in DATASET_CONFIG
+        if c["id"] == PRES2024_DATASET_ID
+    )
+    yes_pct_suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+    show_sources = show_vote_shift_source_columns.value
 
     def vote_shift_row_for_county(county):
         row = {"county": county}
+        prop50_row = prop50_by_county.loc[county]
+        pres2024_row = pres2024_by_county.loc[county]
         for group_id in ANALYSIS_GROUPS:
-            value = compute_vote_shift(
-                prop50_by_county.loc[county],
-                pres2024_by_county.loc[county],
-                group_id,
-            )
+            key = f"{group_id}{yes_pct_suffix}"
+            value = compute_vote_shift(prop50_row, pres2024_row, group_id)
             if value is not None:
                 row[GROUP_DISPLAY_LABELS[group_id]] = value
+                if show_sources and key in prop50_row.index and key in pres2024_row.index:
+                    row[f"{GROUP_DISPLAY_LABELS[group_id]} ({prop50_yes_label})"] = (
+                        round(float(prop50_row[key]), 1)
+                    )
+                    row[f"{GROUP_DISPLAY_LABELS[group_id]} ({pres2024_yes_label})"] = (
+                        round(float(pres2024_row[key]), 1)
+                    )
         return row
-
 
     vote_shift_by_county = pd.DataFrame(
         [vote_shift_row_for_county(county) for county in prop50_by_county.index]
     )
-    column_order = ["county"] + [GROUP_DISPLAY_LABELS[g] for g in ANALYSIS_GROUPS]
+    column_order = ["county"]
+    for g in ANALYSIS_GROUPS:
+        column_order.append(GROUP_DISPLAY_LABELS[g])
+        if show_sources:
+            column_order.append(f"{GROUP_DISPLAY_LABELS[g]} ({prop50_yes_label})")
+            column_order.append(f"{GROUP_DISPLAY_LABELS[g]} ({pres2024_yes_label})")
     vote_shift_by_county = vote_shift_by_county[
         [c for c in column_order if c in vote_shift_by_county.columns]
     ]
@@ -912,12 +946,15 @@ def _(
 @app.cell
 def _(
     ANALYSIS_GROUPS,
+    DATASET_CONFIG,
+    DEFAULT_MAJORITY_THRESHOLD,
     GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
     compute_vote_shift,
     county_dropdown,
     county_level_demo_analysis,
+    show_vote_shift_source_columns,
 ):
     _selected_county = county_dropdown.value
     prop50_row = county_level_demo_analysis[PROP50_DATASET_ID].loc[
@@ -927,17 +964,38 @@ def _(
         _selected_county
     ]
 
+    _prop50_yes_label = next(
+        c["vote_display_labels"]["yes"]
+        for c in DATASET_CONFIG
+        if c["id"] == PROP50_DATASET_ID
+    )
+    _pres2024_yes_label = next(
+        c["vote_display_labels"]["yes"]
+        for c in DATASET_CONFIG
+        if c["id"] == PRES2024_DATASET_ID
+    )
+    _yes_pct_suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
+    _show_sources = show_vote_shift_source_columns.value
+
     vote_shift_rows = []
     for group_id in ANALYSIS_GROUPS:
+        key = f"{group_id}{_yes_pct_suffix}"
         value = compute_vote_shift(prop50_row, pres2024_row, group_id)
         if value is not None:
-            vote_shift_rows.append(
-                {
-                    "group": GROUP_DISPLAY_LABELS[group_id],
-                    "vote_shift": value,
-                }
-            )
+            row = {
+                "group": GROUP_DISPLAY_LABELS[group_id],
+                "vote_shift": value,
+            }
+            if _show_sources and key in prop50_row.index and key in pres2024_row.index:
+                row[_prop50_yes_label] = round(float(prop50_row[key]), 1)
+                row[_pres2024_yes_label] = round(float(pres2024_row[key]), 1)
+            vote_shift_rows.append(row)
     vote_shift_table = pd.DataFrame(vote_shift_rows)
+
+    if _show_sources and not vote_shift_table.empty:
+        vote_shift_table = vote_shift_table[
+            [c for c in ["group", "vote_shift", _prop50_yes_label, _pres2024_yes_label] if c in vote_shift_table.columns]
+        ]
 
     mo.vstack(
         [
