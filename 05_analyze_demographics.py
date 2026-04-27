@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.0"
+__generated_with = "0.23.3"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -50,7 +50,11 @@ def _():
         label="### Threshold for racial group categorization",
     )
     threshold_slider
-    return ROBUSTNESS_MAJORITY_THRESHOLDS, threshold_slider
+    return (
+        DEFAULT_MAJORITY_THRESHOLD,
+        ROBUSTNESS_MAJORITY_THRESHOLDS,
+        threshold_slider,
+    )
 
 
 @app.cell
@@ -1167,23 +1171,6 @@ def _():
 
 
 @app.cell
-def _(filter_threshold):
-    PROP50_DATASET_ID = "blocks"
-    PRES2024_DATASET_ID = "blocks_2024"
-    YES_PCT_SUFFIX = f"_{filter_threshold}_yes_pct"
-
-
-    def compute_vote_shift(prop50_series, pres2024_series, group_id):
-        """Vote shift (Yes % − Democrat %) for one group; returns None if key missing."""
-        key = f"{group_id}{YES_PCT_SUFFIX}"
-        if key not in prop50_series.index or key not in pres2024_series.index:
-            return None
-        return round(float(prop50_series[key] - pres2024_series[key]), 1)
-
-    return PRES2024_DATASET_ID, PROP50_DATASET_ID, compute_vote_shift
-
-
-@app.cell
 def _():
     show_vote_shift_source_columns = mo.ui.switch(
         label="Show source columns (Yes % and Democrat %)"
@@ -1203,6 +1190,7 @@ def _(
     SHIFT_MODE_TABLE_CAPTION,
     compute_vote_shift,
     county_level_demo_analysis,
+    key,
     shift_mode,
     show_vote_shift_source_columns,
 ):
@@ -1223,6 +1211,7 @@ def _(
     yes_pct_suffix = f"_{DEFAULT_MAJORITY_THRESHOLD}_yes_pct"
     show_sources = show_vote_shift_source_columns.value
 
+
     def vote_shift_row_for_county(county):
         row = {"county": county}
         prop50_row = prop50_by_county.loc[county]
@@ -1236,14 +1225,19 @@ def _(
             )
             if value is not None:
                 row[GROUP_DISPLAY_LABELS[group_id]] = value
-                if show_sources and key in prop50_row.index and key in pres2024_row.index:
-                    row[f"{GROUP_DISPLAY_LABELS[group_id]} ({prop50_yes_label})"] = (
-                        round(float(prop50_row[key]), 1)
-                    )
-                    row[f"{GROUP_DISPLAY_LABELS[group_id]} ({pres2024_yes_label})"] = (
-                        round(float(pres2024_row[key]), 1)
-                    )
+                if (
+                    show_sources
+                    and key in prop50_row.index
+                    and key in pres2024_row.index
+                ):
+                    row[
+                        f"{GROUP_DISPLAY_LABELS[group_id]} ({prop50_yes_label})"
+                    ] = round(float(prop50_row[key]), 1)
+                    row[
+                        f"{GROUP_DISPLAY_LABELS[group_id]} ({pres2024_yes_label})"
+                    ] = round(float(pres2024_row[key]), 1)
         return row
+
 
     vote_shift_by_county = pd.DataFrame(
         [vote_shift_row_for_county(county) for county in prop50_by_county.index]
@@ -1253,7 +1247,9 @@ def _(
         column_order.append(GROUP_DISPLAY_LABELS[g])
         if show_sources:
             column_order.append(f"{GROUP_DISPLAY_LABELS[g]} ({prop50_yes_label})")
-            column_order.append(f"{GROUP_DISPLAY_LABELS[g]} ({pres2024_yes_label})")
+            column_order.append(
+                f"{GROUP_DISPLAY_LABELS[g]} ({pres2024_yes_label})"
+            )
     vote_shift_by_county = vote_shift_by_county[
         [c for c in column_order if c in vote_shift_by_county.columns]
     ]
@@ -1281,6 +1277,7 @@ def _(
     compute_vote_shift,
     county_dropdown,
     county_level_demo_analysis,
+    key,
     shift_mode,
     show_vote_shift_source_columns,
 ):
@@ -1316,7 +1313,11 @@ def _(
                 "group": GROUP_DISPLAY_LABELS[group_id],
                 "vote_shift": value,
             }
-            if _show_sources and key in prop50_row.index and key in pres2024_row.index:
+            if (
+                _show_sources
+                and key in prop50_row.index
+                and key in pres2024_row.index
+            ):
                 row[_prop50_yes_label] = round(float(prop50_row[key]), 1)
                 row[_pres2024_yes_label] = round(float(pres2024_row[key]), 1)
             vote_shift_rows.append(row)
@@ -1324,7 +1325,16 @@ def _(
 
     if _show_sources and not vote_shift_table.empty:
         vote_shift_table = vote_shift_table[
-            [c for c in ["group", "vote_shift", _prop50_yes_label, _pres2024_yes_label] if c in vote_shift_table.columns]
+            [
+                c
+                for c in [
+                    "group",
+                    "vote_shift",
+                    _prop50_yes_label,
+                    _pres2024_yes_label,
+                ]
+                if c in vote_shift_table.columns
+            ]
         ]
 
     mo.vstack(
