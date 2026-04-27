@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.20.2"
+__generated_with = "0.23.0"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -18,7 +18,11 @@ with app.setup:
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Analyze demographics
+    # Demographics and precinct-level vote patterns (Prop 50 and 2024 presidential)
+
+    This notebook explores how [Census CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) race and ethnicity shares line up with precinct results. It reads merged GeoPackages produced upstream (notably `04_interpolation.py`): **Prop 50** and **2024 presidential** vote totals joined to block- or tract-level CVAP estimates (`outputs/precincts_results_cvap_blocks.gpkg`, `outputs/precincts_results_cvap_tracts.gpkg`, and `outputs/precincts_2024_results_cvap_blocks.gpkg`).
+
+    You can compare **block- vs tract-based** demographics, tune a **threshold** for calling a precinct “majority” one racial/ethnic group (otherwise labeled multiracial plurality), and review **statewide**, **county**, and **multi-county** aggregates. The notebook also measures **vote shift** (Prop 50 Yes % minus 2024 Democratic presidential %) by group and county, and flags **partisan flip** patterns where 2024 and Prop 50 majorities disagree—treated as exploratory given interpolation from 2024 votes onto 2025 precinct geography.
     """)
     return
 
@@ -168,7 +172,7 @@ def _(display_options):
     return (config_data_options_multiselect,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
     mo.md(r"""
     # Helper functions
@@ -209,7 +213,7 @@ def _(DEMOGRAPHIC_SOURCE_TO_STANDARD):
 
 
 @app.function
-def caclulate_pct(numerator, denominator, precision=1):
+def calculate_pct(numerator, denominator, precision=1):
     return round((numerator / denominator) * 100, precision)
 
 
@@ -240,11 +244,11 @@ def calculate_yes_pct(precincts_df):
 
     # Calculate yes_pct and no_pct only where total votes are > 0
     valid_total_mask = total_votes > 0
-    df.loc[valid_total_mask, "yes_pct"] = caclulate_pct(
+    df.loc[valid_total_mask, "yes_pct"] = calculate_pct(
         df.loc[valid_total_mask, "yes_votes"], total_votes[valid_total_mask]
     )
     df["no_pct"] = np.nan
-    df.loc[valid_total_mask, "no_pct"] = caclulate_pct(
+    df.loc[valid_total_mask, "no_pct"] = calculate_pct(
         df.loc[valid_total_mask, "no_votes"], total_votes[valid_total_mask]
     )
 
@@ -367,11 +371,11 @@ def _(
 
     # Calculate vote shift from Harris to YES on Prop. 50
     precinct_2025_results = precinct_results["blocks"]
-    precinct_2025_results["dem_pct_2024"] = caclulate_pct(
+    precinct_2025_results["dem_pct_2024"] = calculate_pct(
         precinct_2025_results["dem_votes"],
         precinct_2025_results["total_votes_2024"],
     )
-    precinct_2025_results["rep_pct_2024"] = caclulate_pct(
+    precinct_2025_results["rep_pct_2024"] = calculate_pct(
         precinct_2025_results["rep_votes"],
         precinct_2025_results["total_votes_2024"],
     )
@@ -449,15 +453,7 @@ def _(precinct_results):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Analysis
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Majority group precincts
+    # Majority group precincts
 
     - Groupby the results by the majority racial demographic group in each precinct
 
@@ -471,8 +467,8 @@ def _(filter_threshold):
     def _calculate_vote_stats(yes_votes, no_votes, total_votes=None):
         if total_votes is None:
             total_votes = yes_votes + no_votes
-        yes_pct = caclulate_pct(yes_votes, total_votes)
-        no_pct = caclulate_pct(no_votes, total_votes)
+        yes_pct = calculate_pct(yes_votes, total_votes)
+        no_pct = calculate_pct(no_votes, total_votes)
         return total_votes, yes_pct, no_pct
 
 
@@ -587,7 +583,9 @@ def _(build_majority_analysis_df, dataset_config, precinct_results):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### Aggregate
+    # Running Statewide majority-group
+
+    We only have a subset of counties but it includes the vast majority of votes cast.
     """)
     return
 
@@ -619,7 +617,57 @@ def _(majority_analysis, majority_analysis_display):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### County
+    # County-level breakdowns
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Population data
+    """)
+    return
+
+
+@app.cell
+def _(precinct_results):
+    POP_TOTAL_COLUMNS = [
+        "CVAP_TOT24",
+        "CVAP_HSP24",
+        "CVAP_WHT24",
+        "CVAP_BLK24",
+        "CVAP_2OM24",
+        "_cvap_api24",
+        "_cvap_amw24",
+    ]
+    precinct_results["blocks"].groupby("county")[POP_TOTAL_COLUMNS].sum()
+    return
+
+
+@app.cell
+def _(precinct_results):
+    def get_group_precinct_counts_by_county(df_precincts):
+        df = df_precincts.copy()
+        df["majority_racial_group"] = (
+            df["majority_racial_group"].str.split("(").str[0]
+        )
+        return df.pivot_table(
+            index="county",
+            columns="majority_racial_group",
+            aggfunc="size",
+            fill_value=0,
+        )
+
+
+    get_group_precinct_counts_by_county(precinct_results["blocks"])
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Results
     """)
     return
 
@@ -698,13 +746,12 @@ def _(
             for col in yes_pct_cols
         ]
         df = pd.DataFrame(data, index=display_labels)
-        df["total_votes_pct"] = caclulate_pct(
+        df["total_votes_pct"] = calculate_pct(
             df["total_votes"], df["total_votes"].sum()
         )
         return df
 
 
-    _county = county_dropdown.value
     mo.vstack(
         [
             county_dropdown,
@@ -713,14 +760,17 @@ def _(
                     [
                         mo.md(f"**{_cfg['display_name']}**"),
                         _transform_county_series_to_dataframe(
-                            county_level_demo_analysis[_cfg["id"]].loc[_county],
+                            county_level_demo_analysis[_cfg["id"]].loc[
+                                county_dropdown.value
+                            ],
                             _cfg["vote_display_labels"],
                             threshold=filter_threshold,
                         ),
                     ]
                 )
                 for _cfg in DATASET_CONFIG
-                if _county in county_level_demo_analysis[_cfg["id"]].index
+                if county_dropdown.value
+                in county_level_demo_analysis[_cfg["id"]].index
             ],
         ]
     )
@@ -782,12 +832,11 @@ def _(
         return pd.DataFrame(rows) if rows else None
 
 
-    _county = county_dropdown.value
-    memo_table = _build_county_memo_table(_county)
+    memo_table = _build_county_memo_table(county_dropdown.value)
     mo.vstack(
         [
             mo.md(
-                f"**{_county} County memo** — Prop 50 vs 2024 Presidential (Harris/Trump) by racial group"
+                f"**{county_dropdown.value} County memo** — Prop 50 vs 2024 Presidential (Harris/Trump) by racial group"
             ),
             memo_table
             if memo_table is not None
@@ -802,49 +851,7 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    #### Population data
-    """)
-    return
-
-
-@app.cell
-def _(precinct_results):
-    POP_TOTAL_COLUMNS = [
-        "CVAP_TOT24",
-        "CVAP_HSP24",
-        "CVAP_WHT24",
-        "CVAP_BLK24",
-        "CVAP_2OM24",
-        "_cvap_api24",
-        "_cvap_amw24",
-    ]
-    precinct_results["blocks"].groupby("county")[POP_TOTAL_COLUMNS].sum()
-    return
-
-
-@app.cell
-def _(precinct_results):
-    def get_group_precinct_counts_by_county(df_precincts):
-        df = df_precincts.copy()
-        df["majority_racial_group"] = (
-            df["majority_racial_group"].str.split("(").str[0]
-        )
-        return df.pivot_table(
-            index="county",
-            columns="majority_racial_group",
-            aggfunc="size",
-            fill_value=0,
-        )
-
-
-    get_group_precinct_counts_by_county(precinct_results["blocks"])
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ### Vote shift
+    ## Vote shift
     """)
     return
 
@@ -1010,7 +1017,7 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### County multiselect
+    ## County multiselect
     """)
     return
 
@@ -1091,7 +1098,7 @@ def _():
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
     FIG_SIZE = (8.5, 2.8)
     ARROW_COLOR = "#0077a3"
@@ -1153,7 +1160,7 @@ def _():
     )
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
@@ -1206,7 +1213,7 @@ def _(
     return (build_county_arrow_table,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     ANALYSIS_GROUPS,
     GROUP_DISPLAY_LABELS,
@@ -1243,7 +1250,7 @@ def _(
     return (build_statewide_arrow_table,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     arrow_plot_mode_dropdown,
     build_county_arrow_table,
@@ -1451,194 +1458,6 @@ def _(
             _arrow_plot_output,
         ]
     )
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Demographic scatterplot and linear regression
-
-    Linear regression is plotted for exploratory purposes. We would need to [validate the assumptions required](https://online.stat.psu.edu/stat200/lesson/12/12.3/12.3.2) to use linear regression in our final analysis. The results by majority group is currently the preferred analysis tool.
-    """)
-    return
-
-
-@app.function
-def plot_lnr_yes_pct_vs_cvap(
-    df,
-    cvap_column,
-    yes_pct_column,
-    group_label="White",
-    title_suffix="",
-    y_label="Yes Vote Percentage",
-):
-    plot_data = df.dropna(subset=[cvap_column, yes_pct_column])
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-
-    X = plot_data[cvap_column].values.reshape(-1, 1)
-    y = plot_data[yes_pct_column].values
-
-    model = LinearRegression()
-    model.fit(X, y)
-
-    X_range = np.linspace(0, 100, 100).reshape(-1, 1)
-    y_pred = model.predict(X_range)
-
-    ax.scatter(
-        plot_data[cvap_column],
-        plot_data[yes_pct_column],
-        alpha=0.6,
-        s=5,
-        edgecolor="none",
-        label="Precincts",
-    )
-
-    ax.plot(
-        X_range[:, 0],
-        y_pred,
-        color="red",
-        linewidth=1,
-        label=f"Linear fit: y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
-    )
-
-    ax.set_xlabel(f"Percent {group_label} Voters")
-    ax.set_ylabel(y_label)
-    ax.set_title(f"{y_label} vs. Percent {group_label} Voters {title_suffix}")
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 100)
-
-    return plt.gca()
-
-
-@app.cell
-def _(ANALYSIS_GROUPS):
-    demo_group_dropdown = mo.ui.dropdown(
-        options=[g for g in ANALYSIS_GROUPS if g != "multiracial"],
-        value="white",
-    )
-    return (demo_group_dropdown,)
-
-
-@app.cell
-def _(DATASET_CONFIG, demo_group_dropdown, precinct_results):
-    _group = demo_group_dropdown.value
-    _cvap_col = f"{_group}_pct"
-    _group_label = _group.replace("_", " ").title()
-    mo.vstack(
-        [
-            demo_group_dropdown,
-            *[
-                mo.vstack(
-                    [
-                        mo.md(f"**{_cfg['display_name']}**"),
-                        plot_lnr_yes_pct_vs_cvap(
-                            precinct_results[_cfg["id"]],
-                            _cvap_col,
-                            "yes_pct",
-                            _group_label,
-                            f"({_cfg['display_name']})",
-                            y_label=f"{_cfg['vote_display_labels']['yes'].removesuffix(' %')} Vote Percentage",
-                        ),
-                    ]
-                )
-                for _cfg in DATASET_CONFIG
-            ],
-        ]
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Demographic correlation coefficient
-
-    [User's guide to correlation coefficients](https://pmc.ncbi.nlm.nih.gov/articles/PMC6107969/#sec2)
-
-    Correlation coefficient is a fine exploratory tool, but our data likely does not meet the requirements for this test.
-    """)
-    return
-
-
-@app.cell
-def _(DATASET_CONFIG, demo_group_dropdown, precinct_results):
-    _group = demo_group_dropdown.value
-    _cvap_col = f"{_group}_pct"
-    mo.vstack(
-        [
-            demo_group_dropdown,
-            *[
-                mo.vstack(
-                    [
-                        mo.md(f"**{_cfg['display_name']}**"),
-                        precinct_results[_cfg["id"]][[_cvap_col, "yes_pct"]]
-                        .dropna()
-                        .corr(method="pearson"),
-                    ]
-                )
-                for _cfg in DATASET_CONFIG
-            ],
-        ]
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ## Hypothesis testing
-
-    For both of the following hypothesis, we are looking at how specific demographic groups voted. I first output how precincts where the majority of voting-age citizens belong to that racial demographic group, then I output a scatter plot with a linear regression plotted.
-
-    The linear regression is an exploration tool, not a thorough analysis of the relation between racial demographics and support for Prop 50.
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ### Hypothesis #1:
-
-    > The more Hispanic or Latino voters (%) there are in a precinct, the higher the vote share for "Yes" on Prop. 50
-    """)
-    return
-
-
-@app.cell
-def _():
-    # what were the results in majority hispanic or latino precincts?
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    ### Hypothesis #2:
-
-    > If there are more white voters in a precinct, then there will be a higher vote share for "No" on Prop. 50
-    """)
-    return
-
-
-@app.cell
-def _():
-    # what were the results in majority white precincts?
-    return
-
-
-@app.cell
-def _():
     return
 
 
