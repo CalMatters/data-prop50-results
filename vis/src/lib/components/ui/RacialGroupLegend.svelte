@@ -12,7 +12,14 @@
 
 	const SATURATION_OPTIONS = [
 		{ value: 'yes_pct', label: 'Prop 50 yes %' },
-		{ value: 'vote_shift', label: 'Vote shift vs Harris 2024' },
+		{
+			value: 'vote_shift_net',
+			label: 'Net shift (Prop 50 margin vs 2024 pres. margin)'
+		},
+		{
+			value: 'vote_shift',
+			label: 'Dem vote shift (one-party: Yes % − Dem %)'
+		},
 		{ value: 'flipped', label: 'Partisan flip' }
 	];
 
@@ -77,12 +84,16 @@
 				<strong>D</strong> = precinct flipped from Trump (R) to Prop 50 Yes (D);<br />
 				<strong>R</strong>
 				= precinct flipped from Harris (D) to Prop 50 No (R).<br />
-				Flipped precincts use the same color scale as "Vote shift vs Harris 2024" (lighter = R flip,
-				darker = D flip).
+				Flipped precincts use the same color scale as one-party vote shift (lighter = R flip, darker =
+				D flip).
+			{:else if saturationMetric === 'vote_shift_net'}
+				Colors reflect <strong>net</strong> shift: Prop 50 (Yes − No) margin minus 2024 presidential
+				(Dem − Rep) margin, in percentage points. The map uses a ±30 pt scale (wider than one-party
+				shift). Darker = more relative movement toward Prop 50 Yes.
 			{:else}
-				The saturation of each color varies based on the shift in support from Harris (2024) to Prop
-				50 (2025). Darker colors indicate more shift toward Prop 50; lighter colors indicate less
-				shift or shift away.
+				Colors reflect <strong>one-party</strong> shift: Prop 50 Yes % minus 2024 Democratic
+				presidential % (Harris). Darker colors indicate more shift toward Prop 50 relative to that Dem
+				share; lighter indicates less or negative shift.
 			{/if}
 		</p>
 		<div class="saturation-example">
@@ -96,7 +107,9 @@
 						class="midpoint-indicator"
 						title={saturationMetric === 'yes_pct'
 							? '50% - Yes wins above this line'
-							: '0% - No shift'}
+							: saturationMetric === 'vote_shift_net'
+								? '0 pts — no net margin shift'
+								: '0 pts — no one-party shift'}
 					></div>
 				{/if}
 			</div>
@@ -109,10 +122,14 @@
 					<span>R flip (lighter)</span>
 					<span class="midpoint-label">No flip = grey</span>
 					<span>D flip (darker)</span>
+				{:else if saturationMetric === 'vote_shift_net'}
+					<span>−30 pts</span>
+					<span class="midpoint-label">0</span>
+					<span>+30 pts</span>
 				{:else}
-					<span>−15%</span>
-					<span class="midpoint-label">0%</span>
-					<span>+15%</span>
+					<span>−15 pts</span>
+					<span class="midpoint-label">0</span>
+					<span>+15 pts</span>
 				{/if}
 			</div>
 		</div>
