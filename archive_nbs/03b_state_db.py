@@ -537,6 +537,14 @@ def _(merged_df, mo, selected_counties, skipped_counties):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Analysis
+    """)
+    return
+
+
 @app.function
 def turnout_majority_group_metrics(
     prop50_merged_gdf,
