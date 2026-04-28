@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.0"
+__generated_with = "0.23.3"
 app = marimo.App(width="medium")
 
 
@@ -42,18 +42,6 @@ def _():
         "Tulare",
         "Tuolumne",
     ]
-    # ADDTNL_COUNTIES_PASSING_AUIDIT = [
-    #     "Contra Costa",
-    #     "Los Angeles",
-    #     "Imperial",  # 14 entries from the results file without a match record zero registered voters:
-    #     "Inyo",
-    #     "Marin",
-    #     "Merced",
-    #     "Orange",  # exception was made for OC due to many unpopulated precincts in GIS file and not in the results
-    #     "Shasta",
-    #     "San Diego",
-    #     "Tulare",
-    # ]
     return ADDTNL_COUNTIES_PASSING_AUIDIT, AUDIT_THRESHOLD
 
 
@@ -88,7 +76,7 @@ def _(mo):
 
 @app.cell
 def _():
-    RESULTS_FP = "./outputs/precinct_results_latest.gpkg"
+    RESULTS_FP = "./outputs/precinct_results.gpkg"
     return (RESULTS_FP,)
 
 
@@ -387,7 +375,7 @@ def _(
             missing_results < AUDIT_THRESHOLD
         ].index.tolist()
 
-    counties_passing_audit = (
+    counties_passing_audit = set(
         ADDTNL_COUNTIES_PASSING_AUIDIT + counties_without_failed_matches
     )
     counties_passing_audit

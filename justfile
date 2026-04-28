@@ -9,10 +9,10 @@ generate-cvap-file:
     uv run 00_census.py
 
 interpolate-cvap:
-    uv run 04_interpolation.py
+    uv run 03_interpolation.py
 
 generate-analysis-exports:
-    uv run 05_analyze_demographics.py
+    uv run 04_analysis.py
 
 generate-all-data:
     rm -rf outputs
