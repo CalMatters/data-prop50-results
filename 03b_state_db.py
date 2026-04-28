@@ -704,11 +704,6 @@ def _(RESULTS_2024, ROBUSTNESS_MAJORITY_THRESHOLDS, merged_df, pd):
     )
 
 
-@app.cell
-def _(merged_df):
-    merged_df[merged_df["county"].isna()].to_file("test.geojson")
-    return
-
 
 @app.cell
 def _(RESULTS_2024, majority_threshold, merged_df):
