@@ -522,6 +522,21 @@ def _(
     return (merged_df,)
 
 
+@app.cell
+def _(merged_df, mo, selected_counties, skipped_counties):
+    total_counties = len(selected_counties)
+    processed_counties = total_counties - len(skipped_counties)
+    status_lines = [
+        f"Processed counties: {processed_counties}/{total_counties}",
+        f"Merged precinct rows: {len(merged_df):,}",
+    ]
+    if skipped_counties:
+        skipped_names = ", ".join([item["county"] for item in skipped_counties])
+        status_lines.append(f"Skipped counties: {skipped_names}")
+    mo.md("<br>".join(status_lines))
+    return
+
+
 @app.function
 def turnout_majority_group_metrics(
     prop50_merged_gdf,
@@ -715,21 +730,6 @@ def _(RESULTS_2024, majority_threshold, merged_df):
     results_2024 = categorize_turnout_group(RESULTS_2024)
     results_2025 = categorize_turnout_group(merged_df)
     return results_2024, results_2025
-
-
-@app.cell
-def _(merged_df, mo, selected_counties, skipped_counties):
-    total_counties = len(selected_counties)
-    processed_counties = total_counties - len(skipped_counties)
-    status_lines = [
-        f"Processed counties: {processed_counties}/{total_counties}",
-        f"Merged precinct rows: {len(merged_df):,}",
-    ]
-    if skipped_counties:
-        skipped_names = ", ".join([item["county"] for item in skipped_counties])
-        status_lines.append(f"Skipped counties: {skipped_names}")
-    mo.md("<br>".join(status_lines))
-    return
 
 
 @app.cell(hide_code=True)
