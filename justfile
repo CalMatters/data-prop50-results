@@ -8,9 +8,6 @@ generate-results-file:
 generate-cvap-file:
     uv run 00_census.py
 
-merge-precinct-results:
-    uv run 03_precincts_merge.py
-
 interpolate-cvap:
     uv run 04_interpolation.py
 
@@ -22,7 +19,6 @@ generate-all-data:
     mkdir -p outputs
     just generate-precincts-file
     just generate-results-file
-    just merge-precinct-results
     just generate-cvap-file
     just interpolate-cvap
     just generate-analysis-exports
@@ -31,7 +27,6 @@ generate-all-data:
 update-election-data:
     just generate-precincts-file
     just generate-results-file
-    just merge-precinct-results
     just interpolate-cvap
     just generate-analysis-exports
     mv outputs/county_precincts.json vis/static/
