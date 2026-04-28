@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.20.2"
+__generated_with = "0.23.3"
 app = marimo.App(width="medium")
 
 
@@ -22,18 +22,35 @@ def _(mo):
 
 @app.cell
 def _():
+    from datetime import datetime
     import json
     from pathlib import Path
     import re
+    import time
     import warnings
 
     from esridump.dumper import EsriDumper
+    import geopandas as gpd
     import marimo as mo
     import numpy as np
     import pandas as pd
     import pdfplumber
+    import requests
 
-    return EsriDumper, Path, json, mo, pd, pdfplumber, re, warnings
+    return (
+        EsriDumper,
+        Path,
+        datetime,
+        gpd,
+        json,
+        mo,
+        pd,
+        pdfplumber,
+        re,
+        requests,
+        time,
+        warnings,
+    )
 
 
 @app.cell
@@ -105,8 +122,9 @@ def _():
 
 @app.cell
 def _():
-    OUTPUT_FP = "outputs/results.csv"
-    return (OUTPUT_FP,)
+    DATA_EXPORT_FP = "./outputs/precinct_results.gpkg"
+    EXPORT_DRIVER = "GPKG"
+    return DATA_EXPORT_FP, EXPORT_DRIVER
 
 
 @app.cell(hide_code=True)
@@ -397,18 +415,568 @@ def _(
 
 
 @app.cell
-def _(COUNTIES_TO_COMBINE, INDEX_COLUMNS, OUTPUT_FP, pd):
-    combined = pd.concat(COUNTIES_TO_COMBINE).reset_index(drop=True)
-    assert ~combined[INDEX_COLUMNS].duplicated().any(), (
+def _(COUNTIES_TO_COMBINE, gpd, merged_df, pd):
+    _precincts_gdf = gpd.read_file(
+        "./outputs/precincts.gpkg", columns=["precinct_id", "county", "geometry"]
+    )
+    combined = pd.concat(COUNTIES_TO_COMBINE, ignore_index=True)
+
+    missing_county_names = set(combined["county"]) - set(merged_df["county"])
+    print(
+        f"Counties in results_gdf but not in merged_df: {sorted(missing_county_names)}"
+    )
+
+    _combined = combined[combined["county"].isin(missing_county_names)]
+    _precincts_gdf = _precincts_gdf[
+        _precincts_gdf["county"].isin(missing_county_names)
+    ]
+
+    missing_county_results_gdf = _combined.merge(_precincts_gdf)
+    missing_county_results_gdf["yes_pct"] = calculate_pct(
+        missing_county_results_gdf["yes_votes"],
+        missing_county_results_gdf["total_votes"],
+    )
+    missing_county_results_gdf["no_pct"] = calculate_pct(
+        missing_county_results_gdf["no_votes"],
+        missing_county_results_gdf["total_votes"],
+    )
+    return (missing_county_results_gdf,)
+
+
+@app.cell
+def _(
+    DATA_EXPORT_FP,
+    EXPORT_DRIVER,
+    INDEX_COLUMNS,
+    PROJECTED_CRS,
+    merged_df,
+    missing_county_results_gdf,
+    pd,
+):
+    export_results = pd.concat(
+        [merged_df, missing_county_results_gdf], ignore_index=True
+    )
+    assert ~export_results[INDEX_COLUMNS].duplicated().any(), (
         f"Export failed becasue duplicate {INDEX_COLUMNS} pair found in combined data"
     )
-    combined.to_csv(OUTPUT_FP, index=False)
-    unique_counties = (
-        combined["county"].unique() if "county" in combined.columns else []
+
+    export_results.to_crs(PROJECTED_CRS).to_file(
+        DATA_EXPORT_FP, driver=EXPORT_DRIVER
     )
-    print(f"Exported results for {len(COUNTIES_TO_COMBINE)} counties.")
+
+    unique_counties = list(export_results["county"].unique())
+    print(f"Exported results for {len(unique_counties)} counties.")
     print("Counties in exported results:")
-    print(list(unique_counties))
+    print(unique_counties)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Statewide Database results and geography
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Constants
+    """)
+    return
+
+
+@app.cell
+def _(Path):
+    COUNTIES_FP = Path("./inputs/census/tl_2020_us_county.zip")
+    ELECTION_DATA_DIR = Path("./inputs/statewide_db/S25")
+    CA_FIPS = "06"
+    return CA_FIPS, COUNTIES_FP, ELECTION_DATA_DIR
+
+
+@app.cell
+def _():
+    PROJECTED_CRS = (
+        "EPSG:3310"  # NAD83 / California Albers (good for area calculations in CA)
+    )
+    return (PROJECTED_CRS,)
+
+
+@app.cell
+def _():
+    USER_AGENT = {"User-Agent": "Mozilla/5.0"}
+    return (USER_AGENT,)
+
+
+@app.cell
+def _():
+    STATE_DB_INDEX_COLUMNS = ["county", "srprec"]
+    return (STATE_DB_INDEX_COLUMNS,)
+
+
+@app.cell
+def _():
+    COUNTY_AGG_RESULTS_ID = "CNTYTOT"
+    return (COUNTY_AGG_RESULTS_ID,)
+
+
+@app.cell
+def _():
+    COLUMNS_DICT = {
+        "county": "county",  # The county containing the precinct
+        "srprec": "precinct_id",  # Unique ID for the precinct
+        "PR_50_Y": "yes_votes",  # the number of votes for "Yes" on Prop. 50 in the precinct
+        "PR_50_N": "no_votes",  # the number of votes for "No" on Prop. 50 in the precinct
+        "no_pct": "no_pct",
+        "yes_pct": "yes_pct",
+        "TOTVOTE": "total_votes",
+        "TOTREG": "registered_voters",
+        "turnout": "turnout",  # the percent of the voters who cast a ballot in the precinct
+        "election": "election",
+        "_latino_voters": "_latino_voters",
+        "_asian_voters": "_asian_voters",
+        "_is_maj_latino_turnout": "_is_maj_latino_turnout",
+        "_is_maj_asian_turnout": "_is_maj_asian_turnout",
+        "geometry": "geometry",
+    }
+    return (COLUMNS_DICT,)
+
+
+@app.cell
+def _(STATE_DB_INDEX_COLUMNS):
+    ASIAN_VOTER_COLUMNS = [
+        "kordem",
+        "korrep",
+        "kordcl",
+        "koroth",
+        "jpndem",
+        "jpnrep",
+        "jpndcl",
+        "jpnoth",
+        "chidem",
+        "chirep",
+        "chidcl",
+        "chioth",
+        "inddem",
+        "indrep",
+        "inddcl",
+        "indoth",
+        "vietdem",
+        "vietrep",
+        "vietdcl",
+        "vietoth",
+        "fildem",
+        "filrep",
+        "fildcl",
+        "filoth",
+    ]
+
+    LATINO_VOTER_COLUMNS = [
+        "hispdem",
+        "hisprep",
+        "hispdcl",
+        "hispoth",
+    ]
+
+    VOTERS_COLUMNS = [
+        *STATE_DB_INDEX_COLUMNS,
+        "election",
+        "type",
+        "totreg_r",
+        *LATINO_VOTER_COLUMNS,
+        *ASIAN_VOTER_COLUMNS,
+    ]
+    return ASIAN_VOTER_COLUMNS, LATINO_VOTER_COLUMNS, VOTERS_COLUMNS
+
+
+@app.cell
+def _(STATE_DB_INDEX_COLUMNS):
+    RESULTS_COLUMNS = [
+        *STATE_DB_INDEX_COLUMNS,
+        "TOTREG",
+        "TOTVOTE",
+        "PR_50_N",
+        "PR_50_Y",
+    ]
+    return (RESULTS_COLUMNS,)
+
+
+@app.cell
+def _():
+    DUPE_CHECK_COLUMNS = [
+        "county",
+        "precinct_id",
+        "yes_votes",
+        "no_votes",
+        "total_votes",
+    ]
+    return
+
+
+@app.cell
+def _(Path, USER_AGENT, requests, time):
+    # URL is consistent with the filename prefix representing county
+    def get_results_url(county_fips: str):
+        return f"https://statewidedatabase.org/pub/data/S25/c{county_fips}/c{county_fips}_s25_sov_data_by_s25_srprec.csv"
+
+
+    def get_voters_url(county_fips: str):
+        return f"https://statewidedatabase.org/pub/data/S25/c{county_fips}/c{county_fips}_s25_voters_by_s25_srprec.csv"
+
+
+    def get_gis_url(county_fips: str):
+        return f"https://statewidedatabase.org/pub/data/S25/c{county_fips}/srprec_{county_fips}_s25_v01.gpkg.zip"
+
+
+    def snake_case(_in: str):
+        return _in.replace(" ", "_").lower()
+
+
+    def download_file(url: str, save_path: Path):
+        response = requests.get(url, headers=USER_AGENT)
+        response.raise_for_status()
+        time.sleep(1)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        save_path.write_bytes(response.content)
+        print(f"Saved {url} to {save_path}")
+        return response.ok
+
+    return (
+        download_file,
+        get_gis_url,
+        get_results_url,
+        get_voters_url,
+        snake_case,
+    )
+
+
+@app.function
+def calculate_pct(numerator, denominator, rounding_place=1):
+    return round((numerator / denominator) * 100, rounding_place)
+
+
+@app.cell
+def _(Path, datetime):
+    DEBUG_DIR = Path("debug")
+    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+    def get_current_timestamp():
+        return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    return DEBUG_DIR, get_current_timestamp
+
+
+@app.cell
+def _(DEBUG_DIR, get_current_timestamp, pd):
+    def audit_merged_precinct_data(
+        merged_gdf, debug_dir=DEBUG_DIR, *, results_entry_column="TOTVOTE"
+    ):
+        """Audit an outer-merged precincts-results GeoDataFrame (same summary as 03_precincts_merge)."""
+
+        def count_by_county(mask):
+            return merged_gdf.loc[mask, "county"].value_counts()
+
+        stamp = get_current_timestamp()
+        missing_geometry = merged_gdf["geometry"].isna()
+        missing_results = merged_gdf[results_entry_column].isna()
+        rows_missing_gis = merged_gdf[missing_geometry]
+        rows_missing_results = merged_gdf[missing_results]
+
+        gis_entries = count_by_county(merged_gdf["geometry"].notna())
+        results_entries = count_by_county(merged_gdf[results_entry_column].notna())
+        missing_gis_by_county = count_by_county(missing_geometry)
+        missing_results_by_county = count_by_county(missing_results)
+
+        all_counties = sorted(list(merged_gdf["county"].unique()))
+        audit_summary = {
+            county: {
+                "gis_entries": gis_entries.get(county, 0),
+                "results_entries": results_entries.get(county, 0),
+                "missing_in_gis": missing_gis_by_county.get(county, 0),
+                "missing_in_results": missing_results_by_county.get(county, 0),
+            }
+            for county in all_counties
+        }
+
+        audit_df = pd.DataFrame.from_dict(audit_summary, orient="index")
+        for rows, name in (
+            (rows_missing_gis, "missing_in_gis"),
+            (rows_missing_results, "missing_in_results"),
+        ):
+            if not rows.empty:
+                rows.to_csv(debug_dir / f"{name}_{stamp}.csv", index=False)
+
+        audit_df.to_csv(debug_dir / f"audit_summary_{stamp}.csv", index=True)
+        print(
+            f"Audit complete. {len(rows_missing_gis)} entries missing in GIS, "
+            f"{len(rows_missing_results)} missing in results. "
+            f"See exported audit debug data in {debug_dir}/"
+        )
+        return audit_df
+
+    return (audit_merged_precinct_data,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Read and prepare data
+
+    Read California county names and fips from Census to build data download urls
+    """)
+    return
+
+
+@app.cell
+def _(CA_FIPS, COUNTIES_FP, gpd):
+    counties_gdf = gpd.read_file(COUNTIES_FP)
+    is_ca_county = counties_gdf["GEOID"].str.startswith(CA_FIPS)
+    ca_counties_gdf = counties_gdf[is_ca_county].copy()
+    del counties_gdf
+    ca_counties_gdf = ca_counties_gdf.sort_values("NAME")
+    county_name_to_fips = dict(
+        zip(ca_counties_gdf["NAME"], ca_counties_gdf["COUNTYFP"])
+    )
+    county_fips_to_name = {
+        fips: name for name, fips in county_name_to_fips.items()
+    }
+    del ca_counties_gdf
+    return county_fips_to_name, county_name_to_fips
+
+
+@app.cell
+def _(county_name_to_fips, mo):
+    data_scope_dropdown = mo.ui.dropdown(
+        options=["county", "statewide"], value="statewide", label="## Data scope:"
+    )
+    county_selection_dropdown = mo.ui.dropdown(
+        county_name_to_fips.keys(), value="Alameda", label="County:"
+    )
+    return county_selection_dropdown, data_scope_dropdown
+
+
+@app.cell
+def _(county_selection_dropdown, data_scope_dropdown, mo):
+    dropdowns = (
+        [data_scope_dropdown, county_selection_dropdown]
+        if data_scope_dropdown.value == "county"
+        else [data_scope_dropdown]
+    )
+    mo.vstack(dropdowns)
+    return
+
+
+@app.cell
+def _(county_name_to_fips, county_selection_dropdown, data_scope_dropdown):
+    selected_counties = (
+        list(county_name_to_fips.items())
+        if data_scope_dropdown.value == "statewide"
+        else [
+            (
+                county_selection_dropdown.value,
+                county_name_to_fips[county_selection_dropdown.value],
+            )
+        ]
+    )
+    return (selected_counties,)
+
+
+@app.cell
+def _(
+    ELECTION_DATA_DIR,
+    Path,
+    get_gis_url,
+    get_results_url,
+    get_voters_url,
+    snake_case,
+):
+    def build_county_meta(county: str, county_fips: str):
+        results_url = get_results_url(county_fips)
+        voters_url = get_voters_url(county_fips)
+        gis_url = get_gis_url(county_fips)
+        county_dir = ELECTION_DATA_DIR / snake_case(county)
+        return {
+            "results": {
+                "url": results_url,
+                "fp": county_dir / Path(results_url).name,
+            },
+            "voters": {
+                "url": voters_url,
+                "fp": county_dir / Path(voters_url).name,
+            },
+            "gis": {
+                "url": gis_url,
+                "fp": county_dir / Path(gis_url).name,
+            },
+        }
+
+    return (build_county_meta,)
+
+
+@app.cell
+def _(build_county_meta, download_file, pd):
+    def download_and_read_county_data(county: str, county_fips: str):
+        county_meta = build_county_meta(county, county_fips)
+        county_raw = {}
+        for key, meta in county_meta.items():
+            if not meta["fp"].exists():
+                download_file(str(meta["url"]), meta["fp"])
+            if key == "gis":
+                county_raw[key] = meta["fp"]
+                continue
+
+            county_df = pd.read_csv(
+                meta["fp"], dtype={"srprec": str, "county": str}
+            )
+            county_df["county"] = county
+            county_raw[key] = county_df
+        return county_raw
+
+    return (download_and_read_county_data,)
+
+
+@app.cell
+def _(
+    ASIAN_VOTER_COLUMNS,
+    COUNTY_AGG_RESULTS_ID,
+    LATINO_VOTER_COLUMNS,
+    RESULTS_COLUMNS,
+    VOTERS_COLUMNS,
+    pd,
+):
+    def transform_voters(voters_raw_df):
+        _df = voters_raw_df[VOTERS_COLUMNS].copy()
+        _df["_latino_voters"] = _df[LATINO_VOTER_COLUMNS].sum(axis=1)
+        _df["_asian_voters"] = _df[ASIAN_VOTER_COLUMNS].sum(axis=1)
+        return _df
+
+
+    def transform_results(results_raw_df):
+        _df = results_raw_df[RESULTS_COLUMNS].copy()
+        _df = _df[_df["srprec"] != COUNTY_AGG_RESULTS_ID].copy()
+        _df["PR_50_Y"] = pd.to_numeric(_df["PR_50_Y"], errors="coerce")
+        _df["PR_50_N"] = pd.to_numeric(_df["PR_50_N"], errors="coerce")
+        _df["yes_pct"] = calculate_pct(_df["PR_50_Y"], _df["TOTVOTE"])
+        _df["no_pct"] = calculate_pct(_df["PR_50_N"], _df["TOTVOTE"])
+        return _df
+
+    return transform_results, transform_voters
+
+
+@app.cell
+def _(
+    STATE_DB_INDEX_COLUMNS,
+    county_fips_to_name,
+    download_and_read_county_data,
+    gpd,
+    selected_counties,
+    transform_results,
+    transform_voters,
+):
+    merged_frames = []
+    skipped_counties = []
+    for county, county_fips in selected_counties:
+        try:
+            county_raw = download_and_read_county_data(county, county_fips)
+            transformed_results = transform_results(county_raw["results"])
+            transformed_voters = transform_voters(county_raw["voters"])
+            county_merged_df = transformed_results.merge(
+                transformed_voters,
+                on=STATE_DB_INDEX_COLUMNS,
+                how="left",
+                validate="1:1",
+            )
+
+            precincts_gdf = gpd.read_file(county_raw["gis"])
+            precincts_gdf["county"] = precincts_gdf["COUNTY"].map(
+                county_fips_to_name
+            )
+            precincts_gdf = precincts_gdf.merge(
+                county_merged_df,
+                on=STATE_DB_INDEX_COLUMNS,
+                how="outer",
+                validate="1:1",
+            )
+
+            merged_frames.append(precincts_gdf)
+
+        except Exception as error:
+            skipped_counties.append(
+                {"county": county, "county_fips": county_fips, "error": str(error)}
+            )
+    return merged_frames, skipped_counties
+
+
+@app.cell
+def _(DEBUG_DIR, audit_merged_precinct_data, merged_frames, pd):
+    if merged_frames:
+        combined_for_audit = pd.concat(merged_frames, ignore_index=True)
+        combined_for_audit = combined_for_audit[
+            combined_for_audit["county"].notnull()
+        ]
+        audit_summary_df = audit_merged_precinct_data(
+            combined_for_audit, DEBUG_DIR
+        )
+    return
+
+
+@app.cell
+def _(
+    COLUMNS_DICT,
+    PROJECTED_CRS,
+    RESULTS_COLUMNS,
+    STATE_DB_INDEX_COLUMNS,
+    VOTERS_COLUMNS,
+    merged_frames,
+    pd,
+):
+    expected_columns = list(
+        dict.fromkeys(
+            RESULTS_COLUMNS
+            + ["yes_pct", "no_pct"]
+            + VOTERS_COLUMNS[len(STATE_DB_INDEX_COLUMNS) :]
+            + ["_latino_voters", "_is_maj_latino"]
+        )
+    )
+    merged_df = (
+        pd.concat(merged_frames, ignore_index=True)
+        if merged_frames
+        else pd.DataFrame(columns=expected_columns)
+    )
+    merged_df = merged_df.rename(columns=COLUMNS_DICT)
+    merged_df["turnout"] = calculate_pct(
+        merged_df["total_votes"], merged_df["registered_voters"]
+    )
+    merged_df = merged_df[
+        [col for col in COLUMNS_DICT.values() if col in list(merged_df)]
+    ].copy()
+    merged_df = merged_df[merged_df["county"].notnull()]
+    merged_df = merged_df.to_crs(PROJECTED_CRS)
+    return (merged_df,)
+
+
+@app.cell
+def _(merged_df, mo, selected_counties, skipped_counties):
+    total_counties = len(selected_counties)
+    processed_counties = total_counties - len(skipped_counties)
+    status_lines = [
+        f"Processed counties: {processed_counties}/{total_counties}",
+        f"Merged precinct rows: {len(merged_df):,}",
+    ]
+    if skipped_counties:
+        skipped_names = ", ".join([item["county"] for item in skipped_counties])
+        status_lines.append(f"Skipped counties: {skipped_names}")
+    mo.md("<br>".join(status_lines))
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # CalMatters workflow
+    """)
     return
 
 
