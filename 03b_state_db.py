@@ -704,7 +704,6 @@ def _(RESULTS_2024, ROBUSTNESS_MAJORITY_THRESHOLDS, merged_df, pd):
     )
 
 
-
 @app.cell
 def _(RESULTS_2024, majority_threshold, merged_df):
     def categorize_turnout_group(
