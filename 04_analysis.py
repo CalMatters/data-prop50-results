@@ -298,6 +298,80 @@ def vote_shift_net(prop50_yes_pct, prop50_no_pct, pres_dem_pct, pres_rep_pct):
 
 
 @app.function
+def turnout_majority_group_vote_pcts(
+    prop50_gdf,
+    presidential_2024_gdf,
+    group_key,
+    threshold_fraction,
+    counties_in_scope,
+):
+    """
+    Ballot-weighted state-level vote shares among precincts where the share of
+    Latino or Asian *registered-roll* voters exceeds ``threshold_fraction`` of
+    ballots cast (``total_votes``), evaluated separately on each dataframe.
+
+    The presidential frame must already use standardized ``yes_votes`` /
+    ``no_votes`` (Dem / Rep under ``blocks_2024``).
+
+    Returns ``(yes%, no%, dem%, rep%, n_precincts_p50, n_precincts_pres)``. The
+    four percentages are ``None`` when either side has no ballots to aggregate.
+    """
+    group_col = "_latino_voters" if group_key == "latino" else "_asian_voters"
+    pres_scope = presidential_2024_gdf[
+        presidential_2024_gdf["county"].isin(counties_in_scope)
+    ]
+
+    p50_majority_mask = (prop50_gdf[group_col] / prop50_gdf["total_votes"]).gt(
+        threshold_fraction
+    )
+    p50_majority_mask = p50_majority_mask.fillna(False)
+    prop50_sel = prop50_gdf.loc[p50_majority_mask]
+
+    pres_majority_mask = (
+        pres_scope[group_col] / pres_scope["total_votes"]
+    ).gt(threshold_fraction)
+    pres_majority_mask = pres_majority_mask.fillna(False)
+    pres_sel = pres_scope.loc[pres_majority_mask]
+
+    precinct_count_prop50 = int(len(prop50_sel))
+    precinct_count_pres = int(len(pres_sel))
+    total_votes_p50 = prop50_sel["total_votes"].sum()
+    total_votes_pres = pres_sel["total_votes"].sum()
+    if (
+        precinct_count_prop50 == 0
+        or precinct_count_pres == 0
+        or total_votes_p50 == 0
+        or total_votes_pres == 0
+    ):
+        # Still return counts so sparse filters show up like ``03b_state_db`` tables.
+        return (
+            None,
+            None,
+            None,
+            None,
+            precinct_count_prop50,
+            precinct_count_pres,
+        )
+
+    prop50_yes_pct = calculate_pct(
+        prop50_sel["yes_votes"].sum(), total_votes_p50
+    )
+    prop50_no_pct = calculate_pct(
+        prop50_sel["no_votes"].sum(), total_votes_p50
+    )
+    pres_dem_pct = calculate_pct(pres_sel["yes_votes"].sum(), total_votes_pres)
+    pres_rep_pct = calculate_pct(pres_sel["no_votes"].sum(), total_votes_pres)
+    return (
+        prop50_yes_pct,
+        prop50_no_pct,
+        pres_dem_pct,
+        pres_rep_pct,
+        precinct_count_prop50,
+        precinct_count_pres,
+    )
+
+
+@app.function
 def calculate_yes_pct(precincts_df):
     df = precincts_df.copy()
     # Handle cases where one column is null and the other is not
@@ -1303,7 +1377,9 @@ def _(
                     f"{GROUP_DISPLAY_LABELS[g]} ({pres_net_source_label})"
                 )
             else:
-                column_order.append(f"{GROUP_DISPLAY_LABELS[g]} ({prop50_yes_label})")
+                column_order.append(
+                    f"{GROUP_DISPLAY_LABELS[g]} ({prop50_yes_label})"
+                )
                 column_order.append(
                     f"{GROUP_DISPLAY_LABELS[g]} ({pres2024_yes_label})"
                 )
@@ -1404,8 +1480,7 @@ def _(
                             1,
                         )
                 elif (
-                    _yes_key in prop50_row.index
-                    and _yes_key in pres2024_row.index
+                    _yes_key in prop50_row.index and _yes_key in pres2024_row.index
                 ):
                     row[_prop50_yes_label] = round(float(prop50_row[_yes_key]), 1)
                     row[_pres2024_yes_label] = round(
@@ -1942,6 +2017,172 @@ def _(
             _county_dropdown,
             arrow_width_slider,
             _arrow_plot_output,
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    # Voter roll turnout
+    """)
+    return
+
+
+@app.cell
+def _(PROP50_DATASET_ID, precinct_results):
+    _df = precinct_results[PROP50_DATASET_ID]
+    _df = _df[_df["_latino_voters"].notnull()]
+    counties_in_prop50_merge = _df["county"].dropna().unique()
+    return (counties_in_prop50_merge,)
+
+
+@app.cell
+def _(
+    PRES2024_DATASET_ID,
+    PROP50_DATASET_ID,
+    ROBUSTNESS_MAJORITY_THRESHOLDS,
+    SHIFT_MODE_NET,
+    counties_in_prop50_merge,
+    precinct_results,
+    shift_mode,
+):
+    turnout_group_specs = (
+        ("Latino majority (turnout)", "latino"),
+        ("Asian majority (turnout)", "asian"),
+    )
+    _prop50_frame = precinct_results[PROP50_DATASET_ID]
+    _pres2024_frame = precinct_results[PRES2024_DATASET_ID]
+
+    _shift_rows = []
+    _prop50_comp_rows = []
+    _pres_comp_rows = []
+    _n_p50_rows = []
+    _n_pres_rows = []
+
+    _mode = shift_mode.value
+    for group_label, group_key in turnout_group_specs:
+        _shift_row = {"group": group_label}
+        _prop50_comp_row = {"group": group_label}
+        _pres_comp_row = {"group": group_label}
+        _n_p50_row = {"group": group_label}
+        _n_pres_row = {"group": group_label}
+
+        for majority_pct in ROBUSTNESS_MAJORITY_THRESHOLDS:
+            col = f"{majority_pct}%"
+            pct_frac = majority_pct / 100.0
+            (
+                pyes,
+                pno,
+                pdem,
+                prep,
+                n_p50,
+                n_pres,
+            ) = turnout_majority_group_vote_pcts(
+                _prop50_frame,
+                _pres2024_frame,
+                group_key,
+                pct_frac,
+                counties_in_prop50_merge,
+            )
+            _n_p50_row[col] = n_p50
+            _n_pres_row[col] = n_pres
+            if pyes is None:
+                _shift_row[col] = None
+                _prop50_comp_row[col] = None
+                _pres_comp_row[col] = None
+                continue
+
+            _shift_row[col] = (
+                vote_shift_net(pyes, pno, pdem, prep)
+                if _mode == SHIFT_MODE_NET
+                else vote_shift_one_party(pyes, pdem)
+            )
+            if _mode == SHIFT_MODE_NET:
+                _prop50_comp_row[col] = round(float(pyes) - float(pno), 1)
+                _pres_comp_row[col] = round(float(pdem) - float(prep), 1)
+            else:
+                _prop50_comp_row[col] = pyes
+                _pres_comp_row[col] = pdem
+
+        _shift_rows.append(_shift_row)
+        _prop50_comp_rows.append(_prop50_comp_row)
+        _pres_comp_rows.append(_pres_comp_row)
+        _n_p50_rows.append(_n_p50_row)
+        _n_pres_rows.append(_n_pres_row)
+
+    turnout_roll_robustness_shift_table = pd.DataFrame(_shift_rows)
+    turnout_roll_robustness_prop50_component_table = pd.DataFrame(
+        _prop50_comp_rows
+    )
+    turnout_roll_robustness_pres2024_component_table = pd.DataFrame(
+        _pres_comp_rows
+    )
+    turnout_roll_robustness_precincts_prop50_table = pd.DataFrame(_n_p50_rows)
+    turnout_roll_robustness_precincts_pres2024_table = pd.DataFrame(_n_pres_rows)
+    return (
+        turnout_roll_robustness_precincts_pres2024_table,
+        turnout_roll_robustness_precincts_prop50_table,
+        turnout_roll_robustness_pres2024_component_table,
+        turnout_roll_robustness_prop50_component_table,
+        turnout_roll_robustness_shift_table,
+    )
+
+
+@app.cell(hide_code=True)
+def _(
+    SHIFT_MODE_NET,
+    SHIFT_MODE_ROBUSTNESS_MD,
+    SHIFT_MODE_TABLE_CAPTION,
+    shift_mode,
+    turnout_roll_robustness_precincts_pres2024_table,
+    turnout_roll_robustness_precincts_prop50_table,
+    turnout_roll_robustness_pres2024_component_table,
+    turnout_roll_robustness_prop50_component_table,
+    turnout_roll_robustness_shift_table,
+):
+    _shift_phrase = SHIFT_MODE_ROBUSTNESS_MD[shift_mode.value]
+    _mode_caption = SHIFT_MODE_TABLE_CAPTION[shift_mode.value]
+    _prop50_comp_md = (
+        "*Prop 50 (blocks CVAP merge): Yes % − No %*"
+        if shift_mode.value == SHIFT_MODE_NET
+        else "*Prop 50 (blocks CVAP merge): Yes %*"
+    )
+    _pres_comp_md = (
+        "*Presidential 2024 (blocks CVAP): Dem % − Rep %*"
+        if shift_mode.value == SHIFT_MODE_NET
+        else "*Presidential 2024 (blocks CVAP): Democratic % (Yes-equivalent)*"
+    )
+
+    mo.vstack(
+        [
+            mo.md(
+                f"""
+    **Robustness: voter-roll turnout majors, fixed cutoffs (50%–90%)**
+
+    Each column applies the same rule **separately** to Prop 50 (blocks) and to 2024 presidential (blocks): keep precincts where Latino or Asian *registered-roll* voters exceed the cutoff share of **ballots cast** in that contest. State-level aggregates use only those precincts in each file; the two sets are not paired row-by-row, so {_shift_phrase.lower()} can move non-monotonically across cutoffs (especially for small Asian slices at high thresholds).
+
+    The **threshold slider** and **vote shift definition** above still drive the rest of this notebook; these tables only sweep fixed cutoffs. Set the slider to match a column (e.g. 50%) when comparing interactively.
+    """
+            ),
+            mo.md(
+                f"**{_mode_caption}** (turnout-majority filter; same cutoff in each file)"
+            ),
+            turnout_roll_robustness_shift_table,
+            mo.md(
+                "**Components** (each value is aggregated only over precincts that pass the cutoff in *that* file)"
+            ),
+            mo.md(_prop50_comp_md),
+            turnout_roll_robustness_prop50_component_table,
+            mo.md(_pres_comp_md),
+            turnout_roll_robustness_pres2024_component_table,
+            mo.md("**Precinct counts (Prop 50 / blocks CVAP merge)**"),
+            turnout_roll_robustness_precincts_prop50_table,
+            mo.md(
+                "**Precinct counts (Presidential 2024 blocks CVAP, counties present in Prop 50 merge)**"
+            ),
+            turnout_roll_robustness_precincts_pres2024_table,
         ]
     )
     return
