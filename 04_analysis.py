@@ -614,25 +614,22 @@ def _():
 
 
 @app.cell
-def _(threshold_slider):
+def _(shift_mode, threshold_slider):
     threshold_slider
-    return
-
-
-@app.cell
-def _(shift_mode):
     shift_mode
     return
 
 
 @app.cell
-def _(filter_threshold):
-    def _calculate_vote_stats(yes_votes, no_votes, total_votes=None):
+def _(calculate_pct, filter_threshold, pd):
+    def _build_vote_summary(yes_votes, no_votes, total_votes=None):
         if total_votes is None:
             total_votes = yes_votes + no_votes
-        yes_pct = calculate_pct(yes_votes, total_votes)
-        no_pct = calculate_pct(no_votes, total_votes)
-        return total_votes, yes_pct, no_pct
+        return {
+            "total_votes": total_votes,
+            "yes_pct": calculate_pct(yes_votes, total_votes),
+            "no_pct": calculate_pct(no_votes, total_votes),
+        }
 
 
     def _get_majority_precincts(df, group_key):
@@ -652,10 +649,12 @@ def _(filter_threshold):
         majority_precincts = _get_majority_precincts(df, group_key)
         total_yes_votes = majority_precincts["yes_votes"].sum()
         total_no_votes = majority_precincts["no_votes"].sum()
-        total_votes_grouped = majority_precincts["total_votes"].sum()
-        total_votes, yes_split_pct, no_split_pct = _calculate_vote_stats(
-            total_yes_votes, total_no_votes, total_votes_grouped
+        vote_summary = _build_vote_summary(
+            total_yes_votes,
+            total_no_votes,
+            majority_precincts["total_votes"].sum(),
         )
+        total_votes = vote_summary["total_votes"]
         return {
             "group": group_key,
             "threshold": threshold,
@@ -663,8 +662,8 @@ def _(filter_threshold):
             "total_votes": total_votes,
             "yes_votes": total_yes_votes,
             "no_votes": total_no_votes,
-            "yes_split_pct": yes_split_pct,
-            "no_split_pct": no_split_pct,
+            "yes_split_pct": vote_summary["yes_pct"],
+            "no_split_pct": vote_summary["no_pct"],
         }
 
 
@@ -685,10 +684,12 @@ def _(filter_threshold):
         precinct_counts = grouped.size()
         yes_votes = grouped["yes_votes"].sum()
         no_votes = grouped["no_votes"].sum()
-        total_votes_grouped = grouped["total_votes"].sum()
-        total_votes, yes_pct, no_pct = _calculate_vote_stats(
-            yes_votes, no_votes, total_votes_grouped
+        vote_summary = _build_vote_summary(
+            yes_votes, no_votes, grouped["total_votes"].sum()
         )
+        total_votes = vote_summary["total_votes"]
+        yes_pct = vote_summary["yes_pct"]
+        no_pct = vote_summary["no_pct"]
 
         return pd.DataFrame(
             {
