@@ -100,17 +100,6 @@ This will:
 
 **Note**: Marimo notebooks are just Python files - you can edit them in any editor, but the browser interface makes it easier to run and visualize results.
 
-Notebooks include:
-
-* `00_census.py` - Census ETL: county bounds, CVAP by tract, CVAP by block
-* `01_geography.py` - Precinct geographic data cleaning
-* `02a_results_2025.py` - 2025 precinct result data cleaning
-* `02b_results_2024.py` - 2024 precinct result data cleaning
-* `03_interpolation.py` - Interpolate CVAP and 2024 results to analysis precinct geometries
-* `04_analysis.py` - Explore and export analysis outputs from interpolated datasets
-
-All notebooks read data from `inputs/` and write data to `outputs/`. See the "Data Processing Workflow" section above for details on how they connect.
-
 #### Development Workflow
 
 1. Open the notebook: `uv run marimo edit FILENAME`
@@ -127,24 +116,25 @@ Reproject the voting precincts from each county into NAD83/California Albers and
 
 #### `00_census.py` - Census ETL
 
-Produces three GIS outputs: California county boundaries (`outputs/county_bounds.geojson`), [CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) by census tract (`outputs/cvap_tracts.gpkg`), and CVAP by block (`outputs/cvap_blocks.gpkg`). All use NAD83/California Albers (EPSG:3310). Run with `just generate-cvap-file`.
+Produces three GIS outputs in NAD83/California Albers (EPSG:3310): California county boundaries (`outputs/county_bounds.geojson`), [CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) by census tract (`outputs/cvap_tracts.gpkg`), and CVAP by block (`outputs/cvap_blocks.gpkg`). Run with `just generate-cvap-file`.
 
-#### `02a_results_2025.py` and `02b_results_2024.py` - Precinct result data cleaning
+#### `02a_results_2025.py` and `02b_results_2024.py` - Precinct-level results standardization
 
-Make sure that the precinct-level results data has the following columns for consistency:
-* `county` - The county containing the precinct
-* `precinct_id` - Unique ID for the precinct
-* `yes_votes` - the number of votes for "Yes" on Prop. 50 in the precinct
-* `no_votes` - the number of votes for "No" on Prop. 50 in the precinct
-* `turnout` - the percent of the voters who cast a ballot in the precinct, included if included by the county; range is 0 to 100
+Standardizes statewide election results into a consistent schema for downstream geospatial analysis. 
 
-#### `03_precincts_merge.py` - Merge precinct geography with results
+#### `03_interpolation.py` - Merge and interpolate CVAP to precinct geography
 
-Merges the standardized precinct geography file (`outputs/precincts.gpkg`) with the cleaned results data (`outputs/results.csv`) to create a combined GeoPackage file. The merge is performed on `county` and `precinct_id` columns. The notebook includes:
+Builds precinct-level analysis layers by combining election results with CVAP inputs and running tract/block interpolation workflows. The notebook includes:
 
-* Duplicate detection and reporting
-* Audit functions to identify missing entries
-* Export of merged data to `outputs/precinct_results.gpkg`
+* Geometry/data validation and reprojection checks
+* Merge audits and county-level mismatch diagnostics
+* Export of precinct-level CVAP-enriched outputs (including `outputs/precincts_2024_results_cvap_blocks.gpkg`)
+
+#### `04_analysis.py` - Demographics and precinct-level results analysis
+
+Runs exploratory and comparative analysis on the merged precinct datasets, including statewide and county-level majority-group summaries, vote-shift calculations, and dataset-specific breakouts.
+
+
 
 ## Output Files
 
