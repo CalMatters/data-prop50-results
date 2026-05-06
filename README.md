@@ -5,7 +5,7 @@ An analysis of 2025 election results for Prop. 50 using precinct-level data from
 * Precinct results, geographic, and voter demographics files from the [Statewide Database](https://statewidedatabase.org/).
 * [Census Voting Age Population](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) (CVAP) disaggregated by the [Redistricting Voting Hub](https://redistrictingdatahub.org/dataset/california-cvap-data-disaggregated-to-the-2020-block-level-2024/).
 
-## Reproducible input vintages (publication release)
+### Filepaths
 
 - `./inputs/census/CVAP_2020-2024_ACS_csv_files.zip`  
   - Census CVAP special tabulation zip consumed by `00_census.py` (`CVAP_ZIPPED_DATA_FP`)
@@ -21,14 +21,14 @@ An analysis of 2025 election results for Prop. 50 using precinct-level data from
 - `./inputs/statewide_db/S25/` Special Election 2025 files
   - Expected county-level 2025 election results, voter demographics, and precinct boundaries inputs used by the 2025 results workflow
 
-## Network-dependent data fallbacks
+### Network-dependent data
 
 These files were excluded from version control due to file size limits. If missing, notebooks will try and fetch them over the network:
 
-- `00_census.py` fallback
+- `00_census.py`
   - Local expected file: `./inputs/census/tl_2020_06_tabblock20.zip`
   - Fallback URL: `https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/tl_2020_06_tabblock20.zip`
-- `02b_results_2024.py` fallback
+- `02b_results_2024.py`
   - Local expected file: `./inputs/statewide_db/srprec_state_g24_v01_shp.zip`
   - Fallback URL: `https://statewidedatabase.org/pub/data/G24/state/srprec_state_g24_v01_shp.zip`
 
