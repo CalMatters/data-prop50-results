@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.3"
+__generated_with = "0.23.5"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -16,13 +16,26 @@ with app.setup:
 
 
 @app.cell(hide_code=True)
-def _():
-    mo.md(r"""
-    # Demographics and precinct-level vote patterns (Prop 50 and 2024 presidential)
+def _(county_count):
+    mo.md(rf"""
+    # Demographics and precinct-level results analysis
 
-    This notebook explores how [Census CVAP](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) race and ethnicity shares line up with precinct results. It reads merged GeoPackages produced upstream (notably `04_interpolation.py`): **Prop 50** and **2024 presidential** vote totals joined to block- or tract-level CVAP estimates (`outputs/precincts_results_cvap_blocks.gpkg`, `outputs/precincts_results_cvap_tracts.gpkg`, and `outputs/precincts_2024_results_cvap_blocks.gpkg`).
+    This notebook analyzes precinct-level results and demographics in the 2025 Special Election and the 2024 Presidential Election. It focuses on precinct-level data from {county_count} of 58 California counties (covering 99.9% of the statewide vote), using data that joins vote totals with [Citizen Voting Age Population (CVAP)](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) estimates and voter demographics.
 
-    You can compare **block- vs tract-based** demographics, tune a **threshold** for calling a precinct “majority” one racial/ethnic group (otherwise labeled multiracial plurality), and review **statewide**, **county**, and **multi-county** aggregates. The notebook measures **vote shift** in two ways (toggle below): **one-party** (Prop 50 Yes % minus 2024 Democratic presidential %) and **net** (Prop 50 Yes−No margin minus 2024 Dem−Rep margin). It also flags **partisan flip** patterns where 2024 and Prop 50 majorities disagree—treated as exploratory given interpolation from 2024 votes onto 2025 precinct geography.
+    Demographic estimates are based on 2024 ACS CVAP data disaggregated to Census blocks, then allocated to 2025 precincts via areal interpolation. The notebook also compares a tract-based variant so you can assess sensitivity to geography. For vote comparisons, 2024 presidential results are interpolated onto 2025 precinct boundaries and used only for within-precinct change analysis.
+
+    Precincts are grouped by predominant racial/ethnic composition using a configurable majority threshold (default 50%). If no group meets the threshold, the precinct is classified as multiracial plurality. Results are summarized at statewide, county, and custom multi-county levels.
+
+    Voter demographics data is sourced from [Statewide Database](https://statewidedatabase.org/). Statewide Database derives ethnicity using surname matching, [read more](https://statewidedatabase.org/info/metadata/surname.html).
+
+    The notebook reports two shift metrics, net shift is our preferred method:
+
+    - **Net shift**: `(Prop 50 Yes % - Prop 50 No %) - (2024 Dem % - 2024 Rep %)`
+    - **One-party shift**: `Prop 50 Yes % - 2024 Democratic presidential %`
+
+    It also tracks exploratory partisan-flip patterns where 2024 and 2025 majority outcomes differ.
+
+    Interpretation notes: this is a geographic proxy analysis, not an individual-level estimate of how voters in each racial group voted. Comparisons across a presidential general election and an off-year special election should be read with turnout context in mind. Areal interpolation and changing precinct boundaries can also introduce measurement uncertainty (including MAUP risk), so findings should be interpreted as directional rather than causal.
     """)
     return
 
@@ -49,8 +62,13 @@ def _():
         include_input=True,
         label="### Threshold for racial group categorization",
     )
-    threshold_slider
     return ROBUSTNESS_MAJORITY_THRESHOLDS, threshold_slider
+
+
+@app.cell
+def _(threshold_slider):
+    filter_threshold = threshold_slider.value
+    return (filter_threshold,)
 
 
 @app.cell
@@ -89,7 +107,6 @@ def _():
         value=SHIFT_MODE_OPTION_LABEL_NET,
         label="### Vote shift definition",
     )
-    shift_mode
     return (
         SHIFT_MODE_NET,
         SHIFT_MODE_ROBUSTNESS_MD,
@@ -100,16 +117,9 @@ def _():
 
 
 @app.cell
-def _(threshold_slider):
+def _():
     VOTE_STANDARD = ("yes_votes", "no_votes", "total_votes")
-    DEMOGRAPHIC_STANDARD = (
-        "asian_pct",
-        "black_or_african_american_pct",
-        "hispanic_or_latino_pct",
-        "white_pct",
-    )
-    filter_threshold = threshold_slider.value
-    return VOTE_STANDARD, filter_threshold
+    return (VOTE_STANDARD,)
 
 
 @app.cell
@@ -130,12 +140,6 @@ def _():
         "multiracial": "Multiracial",
     }
     return ANALYSIS_GROUPS, GROUP_DISPLAY_LABELS
-
-
-@app.cell
-def _(precinct_2025_results):
-    [col for col in list(precinct_2025_results) if col.endswith("pct")]
-    return
 
 
 @app.cell
@@ -201,11 +205,20 @@ def _():
             "vote_display_labels": VOTE_DISPLAY_PROP50,
         },
     ]
+    return (DATASET_CONFIG,)
 
+
+@app.cell
+def _(DATASET_CONFIG):
     display_options = [
         config_option["display_name"] for config_option in DATASET_CONFIG
     ]
-    return DATASET_CONFIG, display_options
+    default_display_value = [
+        config_option["display_name"]
+        for config_option in DATASET_CONFIG
+        if config_option["id"] != "tracts"
+    ]
+    return default_display_value, display_options
 
 
 @app.cell
@@ -219,9 +232,10 @@ def _(DATASET_CONFIG, config_data_options_multiselect):
 
 
 @app.cell
-def _(display_options):
+def _(default_display_value, display_options):
     config_data_options_multiselect = mo.ui.multiselect(
-        options=display_options, value=display_options
+        options=display_options,
+        value=default_display_value,
     )
     return (config_data_options_multiselect,)
 
@@ -307,7 +321,7 @@ def turnout_majority_group_vote_pcts(
 ):
     """
     Vote shares after filtering separately to precincts whose Latino or Asian
-    *registered-roll* count exceeds ``threshold_fraction`` of ``total_votes``
+    votes-cast count exceeds ``threshold_fraction`` of ``total_votes``
     (ballots cast) in that election.
 
     ``presidential_precincts`` must use standardized ``yes_votes`` /
@@ -321,15 +335,30 @@ def turnout_majority_group_vote_pcts(
     """
     voter_col = "_latino_voters" if group_key == "latino" else "_asian_voters"
     TOTAL_VOTES = "total_votes"
+    YES_VOTES = "yes_votes"
+    NO_VOTES = "no_votes"
 
-    def exceeds_turnout_majority_turnout(frame):
-        """True where ballots > 0 and (rollout subgroup / ballots) > cutoff."""
-        total_votes = frame[TOTAL_VOTES]
+    def exceeds_turnout_majority_turnout(df):
+        """True where ballots > 0 AND (turnout subgroup / ballots) > cutoff."""
+        total_votes = df[TOTAL_VOTES]
         eligible = total_votes.gt(0) & total_votes.notna()
-        share = frame[voter_col] / total_votes
+        share = df[voter_col] / total_votes
         majority = eligible & share.gt(threshold_fraction)
         return majority.fillna(False)
 
+    def summarize_filtered_results(df):
+        """Return precinct count and ballot sum for a filtered election frame."""
+        precinct_count = int(len(df))
+        ballot_sum = df[TOTAL_VOTES].sum()
+        return precinct_count, ballot_sum
+
+    def compute_yes_no_percentages(df, ballot_sum):
+        """Compute yes/no percentages for a filtered election frame."""
+        yes_pct = calculate_pct(df[YES_VOTES].sum(), ballot_sum)
+        no_pct = calculate_pct(df[NO_VOTES].sum(), ballot_sum)
+        return yes_pct, no_pct
+
+    # align counties from election, some counties have not released precinct-level data for prop. 50 yet
     presidential_in_merge = presidential_precincts[
         presidential_precincts["county"].isin(counties_in_merge)
     ]
@@ -341,10 +370,12 @@ def turnout_majority_group_vote_pcts(
         exceeds_turnout_majority_turnout(presidential_in_merge)
     ]
 
-    precinct_count_prop50 = int(len(prop50_filtered))
-    precinct_count_pres = int(len(pres_filtered))
-    sum_ballots_prop50 = prop50_filtered[TOTAL_VOTES].sum()
-    sum_ballots_pres = pres_filtered[TOTAL_VOTES].sum()
+    precinct_count_prop50, sum_ballots_prop50 = summarize_filtered_results(
+        prop50_filtered
+    )
+    precinct_count_pres, sum_ballots_pres = summarize_filtered_results(
+        pres_filtered
+    )
     if (
         precinct_count_prop50 == 0
         or precinct_count_pres == 0
@@ -360,17 +391,11 @@ def turnout_majority_group_vote_pcts(
             precinct_count_pres,
         )
 
-    prop50_yes_pct = calculate_pct(
-        prop50_filtered["yes_votes"].sum(), sum_ballots_prop50
+    prop50_yes_pct, prop50_no_pct = compute_yes_no_percentages(
+        prop50_filtered, sum_ballots_prop50
     )
-    prop50_no_pct = calculate_pct(
-        prop50_filtered["no_votes"].sum(), sum_ballots_prop50
-    )
-    pres_dem_pct = calculate_pct(
-        pres_filtered["yes_votes"].sum(), sum_ballots_pres
-    )
-    pres_rep_pct = calculate_pct(
-        pres_filtered["no_votes"].sum(), sum_ballots_pres
+    pres_dem_pct, pres_rep_pct = compute_yes_no_percentages(
+        pres_filtered, sum_ballots_pres
     )
     return (
         prop50_yes_pct,
@@ -380,44 +405,6 @@ def turnout_majority_group_vote_pcts(
         precinct_count_prop50,
         precinct_count_pres,
     )
-
-
-@app.function
-def calculate_yes_pct(precincts_df):
-    df = precincts_df.copy()
-    # Handle cases where one column is null and the other is not
-    yes_null = df["yes_votes"].isna()
-    no_null = df["no_votes"].isna()
-
-    # Replace null with zero when a yes or no vote tally is null
-    # but the opposing vote tally is not null (using XOR)
-    yes_no_null_xor_mask = yes_null ^ no_null
-    df.loc[yes_no_null_xor_mask, ["yes_votes", "no_votes"]] = df.loc[
-        yes_no_null_xor_mask, ["yes_votes", "no_votes"]
-    ].fillna(0)
-
-    # Only recalculate total_votes for entries that match the xor mask, otherwise use the original total_votes column
-    total_votes = df["total_votes"].copy()
-    total_votes.loc[yes_no_null_xor_mask] = (
-        df.loc[yes_no_null_xor_mask, "yes_votes"]
-        + df.loc[yes_no_null_xor_mask, "no_votes"]
-    )
-
-    # Initialize yes_pct as null (NaN) where both yes_votes and no_votes are null
-    both_null = yes_null & no_null
-    df["yes_pct"] = np.nan
-
-    # Calculate yes_pct and no_pct only where total votes are > 0
-    valid_total_mask = total_votes > 0
-    df.loc[valid_total_mask, "yes_pct"] = calculate_pct(
-        df.loc[valid_total_mask, "yes_votes"], total_votes[valid_total_mask]
-    )
-    df["no_pct"] = np.nan
-    df.loc[valid_total_mask, "no_pct"] = calculate_pct(
-        df.loc[valid_total_mask, "no_votes"], total_votes[valid_total_mask]
-    )
-
-    return df
 
 
 @app.cell
@@ -494,15 +481,9 @@ def _(config_data_options_multiselect):
         [
             mo.md("## Select datasets"),
             config_data_options_multiselect,
-            mo.md(f"**Datasets: {config_data_options_multiselect.value}**"),
+            mo.md(f"**Selected: {config_data_options_multiselect.value}**"),
         ]
     )
-    return
-
-
-@app.cell
-def _(precinct_2025_results):
-    precinct_2025_results
     return
 
 
@@ -522,7 +503,6 @@ def _(
         df = standardize_vote_columns(df, _cfg["vote_source_to_standard"])
         df = standardize_demographic_columns(df, _cfg["demographic_schema"])
         df = prepare_precinct_results_df(df, list(VOTE_STANDARD))
-        df = calculate_yes_pct(df)
         df = add_majority_racial_group(df)
         precinct_results[_cfg["id"]] = df
 
@@ -581,16 +561,6 @@ def _(
 
     precinct_2025_results.loc[is_trump_win & is_prop50_win, "flipped"] = "D"
     precinct_2025_results.loc[is_harris_win & is_prop50_loss, "flipped"] = "R"
-
-    # Debug: county distribution of precincts with null yes_pct (validation opportunity)
-    mo.vstack(
-        [
-            mo.md("## County distribution of precincts with null yes_pct"),
-            precinct_results["blocks"]
-            .loc[precinct_results["blocks"]["yes_pct"].isna(), "county"]
-            .value_counts(),
-        ]
-    )
     return (
         is_harris_win,
         is_prop50_loss,
@@ -605,6 +575,7 @@ def _(
 def _(precinct_results):
     TOTAL_YES_VOTES = 7453339
     TOTAL_NO_VOTES = 4116998
+    # less than total calculated votes from statewide db
     total_votes_from_sov = TOTAL_YES_VOTES + TOTAL_NO_VOTES
 
     print(
@@ -627,7 +598,7 @@ def _(precinct_results):
 
     print(f"YES VOTES: {analysis_yes_proportion:.1%}")
     print(f"NO VOTES: {analysis_no_proportion:.1%}")
-    return
+    return (county_count,)
 
 
 @app.cell(hide_code=True)
@@ -639,6 +610,18 @@ def _():
 
     For example, the first row in each output dataframe represent the aggregate result data for all of the Asian-majority precincts available in our analysis.
     """)
+    return
+
+
+@app.cell
+def _(threshold_slider):
+    threshold_slider
+    return
+
+
+@app.cell
+def _(shift_mode):
+    shift_mode
     return
 
 
@@ -765,13 +748,13 @@ def _():
     mo.md(r"""
     # Running Statewide majority-group
 
-    We only have a subset of counties but it includes the vast majority of votes cast.
+    We only have a subset of counties but it includes over 99.9% of votes cast.
     """)
     return
 
 
-@app.cell
-def _(dataset_config):
+@app.cell(hide_code=True)
+def _(dataset_config, majority_analysis):
     def majority_analysis_display(analysis_dict):
         return mo.vstack(
             [
@@ -785,13 +768,9 @@ def _(dataset_config):
             ]
         )
 
-    return (majority_analysis_display,)
 
-
-@app.cell
-def _(majority_analysis, majority_analysis_display):
     majority_analysis_display(majority_analysis)
-    return
+    return (majority_analysis_display,)
 
 
 @app.cell(hide_code=True)
@@ -1186,13 +1165,16 @@ def _(
         """One table per county: Racial group, Swing, YES %, HARRIS %, NO %, TRUMP %."""
         prop50_df = county_level_demo_analysis.get(PROP50_DATASET_ID)
         pres2024_df = county_level_demo_analysis.get(PRES2024_DATASET_ID)
-        if (
+
+        no_county_data_present = (
             prop50_df is None
             or pres2024_df is None
             or county not in prop50_df.index
             or county not in pres2024_df.index
-        ):
+        )
+        if no_county_data_present:
             return None
+
         prop50_row = prop50_df.loc[county]
         pres2024_row = pres2024_df.loc[county]
         yes_suffix = f"_{filter_threshold}_yes_pct"
@@ -1208,9 +1190,7 @@ def _(
             )
             row = {
                 "Racial group": GROUP_DISPLAY_LABELS[group_id],
-                "Swing from Harris to Prop 50": (
-                    swing if swing is not None else ""
-                ),
+                f"{_memo_shift_mode} shift": (swing if swing is not None else ""),
                 "YES on Prop. 50 - pct": prop50_row[yes_key],
                 "HARRIS - pct": pres2024_row[yes_key],
                 "NO on Prop. 50 - pct": prop50_row[no_key],
@@ -1255,46 +1235,79 @@ def _(
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ### County multiselect
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    mo.md(r"""
     ## Vote shift
     """)
     return
 
 
 @app.cell
+def _(
+    GROUP_DISPLAY_LABELS,
+    SHIFT_MODE_NET,
+    pres2024_yes_label,
+    pres_net_source_label,
+    prop50_net_source_label,
+    prop50_yes_label,
+):
+    def has_keys(series, *keys):
+        return all(key in series.index for key in keys)
+
+
+    def source_column_names(group_id):
+        group_label = GROUP_DISPLAY_LABELS[group_id]
+        if _table_shift_mode == SHIFT_MODE_NET:
+            return (
+                f"{group_label} ({prop50_net_source_label})",
+                f"{group_label} ({pres_net_source_label})",
+            )
+        return (
+            f"{group_label} ({prop50_yes_label})",
+            f"{group_label} ({pres2024_yes_label})",
+        )
+
+
+    def source_values_for_group(prop50_row, pres2024_row, yes_key, no_key):
+        if _table_shift_mode == SHIFT_MODE_NET:
+            if not has_keys(prop50_row, yes_key, no_key) or not has_keys(
+                pres2024_row, yes_key, no_key
+            ):
+                return None
+            return (
+                round(float(prop50_row[yes_key]) - float(prop50_row[no_key]), 1),
+                round(
+                    float(pres2024_row[yes_key]) - float(pres2024_row[no_key]), 1
+                ),
+            )
+        if not has_keys(prop50_row, yes_key) or not has_keys(
+            pres2024_row, yes_key
+        ):
+            return None
+        return (
+            round(float(prop50_row[yes_key]), 1),
+            round(float(pres2024_row[yes_key]), 1),
+        )
+
+    return source_column_names, source_values_for_group
+
+
+@app.cell
 def _():
-    show_vote_shift_source_columns = mo.ui.switch(
-        label="Show source columns (Yes % and Democrat %)"
-    )
+    show_vote_shift_source_columns = mo.ui.switch(label="Show source columns")
     show_vote_shift_source_columns
     return (show_vote_shift_source_columns,)
 
 
 @app.cell
 def _(
-    ANALYSIS_GROUPS,
     DATASET_CONFIG,
-    GROUP_DISPLAY_LABELS,
     PRES2024_DATASET_ID,
     PROP50_DATASET_ID,
-    SHIFT_MODE_NET,
-    SHIFT_MODE_TABLE_CAPTION,
-    compute_vote_shift,
     county_level_demo_analysis,
     filter_threshold,
-    shift_mode,
     show_vote_shift_source_columns,
 ):
     prop50_by_county = county_level_demo_analysis[PROP50_DATASET_ID]
     pres2024_by_county = county_level_demo_analysis[PRES2024_DATASET_ID]
-    _table_shift_mode = shift_mode.value
 
     prop50_yes_label = next(
         c["vote_display_labels"]["yes"]
@@ -1321,6 +1334,34 @@ def _(
     yes_pct_suffix = f"_{filter_threshold}_yes_pct"
     no_pct_suffix = f"_{filter_threshold}_no_pct"
     show_sources = show_vote_shift_source_columns.value
+    return (
+        no_pct_suffix,
+        pres2024_by_county,
+        pres2024_yes_label,
+        pres_net_source_label,
+        prop50_by_county,
+        prop50_net_source_label,
+        prop50_yes_label,
+        show_sources,
+        yes_pct_suffix,
+    )
+
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    GROUP_DISPLAY_LABELS,
+    compute_vote_shift,
+    no_pct_suffix,
+    pres2024_by_county,
+    prop50_by_county,
+    shift_mode,
+    show_sources,
+    source_column_names,
+    source_values_for_group,
+    yes_pct_suffix,
+):
+    _table_shift_mode = shift_mode.value
 
 
     def vote_shift_row_for_county(county):
@@ -1339,43 +1380,38 @@ def _(
             if value is not None:
                 row[GROUP_DISPLAY_LABELS[group_id]] = value
                 if show_sources:
-                    if _table_shift_mode == SHIFT_MODE_NET:
-                        if (
-                            _yes_key in prop50_row.index
-                            and _no_key in prop50_row.index
-                            and _yes_key in pres2024_row.index
-                            and _no_key in pres2024_row.index
-                        ):
-                            row[
-                                f"{GROUP_DISPLAY_LABELS[group_id]} ({prop50_net_source_label})"
-                            ] = round(
-                                float(prop50_row[_yes_key])
-                                - float(prop50_row[_no_key]),
-                                1,
-                            )
-                            row[
-                                f"{GROUP_DISPLAY_LABELS[group_id]} ({pres_net_source_label})"
-                            ] = round(
-                                float(pres2024_row[_yes_key])
-                                - float(pres2024_row[_no_key]),
-                                1,
-                            )
-                    elif (
-                        _yes_key in prop50_row.index
-                        and _yes_key in pres2024_row.index
-                    ):
-                        row[
-                            f"{GROUP_DISPLAY_LABELS[group_id]} ({prop50_yes_label})"
-                        ] = round(float(prop50_row[_yes_key]), 1)
-                        row[
-                            f"{GROUP_DISPLAY_LABELS[group_id]} ({pres2024_yes_label})"
-                        ] = round(float(pres2024_row[_yes_key]), 1)
+                    source_values = source_values_for_group(
+                        prop50_row, pres2024_row, _yes_key, _no_key
+                    )
+                    if source_values is not None:
+                        source_col_prop50, source_col_pres2024 = (
+                            source_column_names(group_id)
+                        )
+                        source_val_prop50, source_val_pres2024 = source_values
+                        row[source_col_prop50] = source_val_prop50
+                        row[source_col_pres2024] = source_val_pres2024
         return row
 
+    return (vote_shift_row_for_county,)
 
-    vote_shift_by_county = pd.DataFrame(
-        [vote_shift_row_for_county(county) for county in prop50_by_county.index]
-    )
+
+@app.cell
+def _(
+    ANALYSIS_GROUPS,
+    GROUP_DISPLAY_LABELS,
+    SHIFT_MODE_NET,
+    SHIFT_MODE_TABLE_CAPTION,
+    pres2024_yes_label,
+    pres_net_source_label,
+    prop50_by_county,
+    prop50_net_source_label,
+    prop50_yes_label,
+    shift_mode,
+    show_sources,
+    vote_shift_row_for_county,
+):
+    _table_shift_mode = shift_mode.value
+
     column_order = ["county"]
     for g in ANALYSIS_GROUPS:
         column_order.append(GROUP_DISPLAY_LABELS[g])
@@ -1394,6 +1430,10 @@ def _(
                 column_order.append(
                     f"{GROUP_DISPLAY_LABELS[g]} ({pres2024_yes_label})"
                 )
+
+    vote_shift_by_county = pd.DataFrame(
+        [vote_shift_row_for_county(county) for county in prop50_by_county.index]
+    )
     vote_shift_by_county = vote_shift_by_county[
         [c for c in column_order if c in vote_shift_by_county.columns]
     ]
@@ -1406,7 +1446,7 @@ def _(
             vote_shift_by_county,
         ]
     )
-    return (vote_shift_by_county,)
+    return
 
 
 @app.cell
@@ -1427,6 +1467,7 @@ def _(
 ):
     _selected_county = county_dropdown.value
     _county_table_shift_mode = shift_mode.value
+
     prop50_row = county_level_demo_analysis[PROP50_DATASET_ID].loc[
         _selected_county
     ]
@@ -1644,7 +1685,7 @@ def _():
 
     arrow_plot_mode_dropdown = mo.ui.dropdown(
         options=["County", "Statewide"],
-        value="County",
+        value="Statewide",
         label="Arrow plot view:",
     )
     arrow_width_slider = mo.ui.slider(
@@ -2254,25 +2295,30 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## County county
+    ## Null results values
     """)
     return
 
 
 @app.cell
-def _(vote_shift_by_county):
-    ANALYSIS_COUNTIES = [
-        "Alameda",
-        "Contra Costa",
-        "Fresno",
-        "Los Angeles",
-        "Orange",
-        "Sacramento",
-        "San Diego",
-        "San Francisco",
-        "Santa Clara",
-    ]
-    vote_shift_by_county[vote_shift_by_county["county"].isin(ANALYSIS_COUNTIES)]
+def _(precinct_results):
+    # Debug: county distribution of precincts with null yes_pct (validation opportunity)
+    mo.vstack(
+        [
+            mo.md("## County distribution of precincts with null yes_pct"),
+            precinct_results["blocks"]
+            .loc[precinct_results["blocks"]["yes_pct"].isna(), "county"]
+            .value_counts(),
+        ]
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## County precinct count
+    """)
     return
 
 
@@ -2280,26 +2326,6 @@ def _(vote_shift_by_county):
 def _(precinct_2025_results):
     county_precinct_count = precinct_2025_results.groupby("county").apply(len)
     county_precinct_count
-    return
-
-
-@app.cell
-def _(county_dropdown, precinct_2025_results):
-    (
-        county_dropdown,
-        precinct_2025_results[
-            precinct_2025_results["county"] == county_dropdown.value
-        ],
-    )
-    return
-
-
-@app.cell
-def _(precinct_2025_results):
-    precinct_2025_results[
-        (precinct_2025_results["yes_pct"] > 50)
-        & (precinct_2025_results["rep_pct_2024"] > 50)
-    ]
     return
 
 
