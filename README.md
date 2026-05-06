@@ -2,9 +2,35 @@
 An analysis of 2025 election results for Prop. 50 using precinct-level data from counties. We are keeping track of what each county publishes and where [in this Google spreadsheet](https://docs.google.com/spreadsheets/d/1TRuXAbeOSlQe1VakQSi42ijHQiILivoAg4rlw7vG0fY/edit?gid=1241525250#gid=1241525250). 
 
 ## Data sources
-* Precinct results and geographic files - [from each county](https://docs.google.com/spreadsheets/d/1TRuXAbeOSlQe1VakQSi42ijHQiILivoAg4rlw7vG0fY/edit?gid=0#gid=0)
-* Current congressional district geographic files - [We Draw the Lines, the independent redistricting commission](https://wedrawthelines.ca.gov)
-* Census Voting Age Population (CVAP) - [Census](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html)
+* Precinct results, geographic, and voter demographics files from the [Statewide Database](https://statewidedatabase.org/).
+* [Census Voting Age Population](https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.html) (CVAP) disaggregated by the [Redistricting Voting Hub](https://redistrictingdatahub.org/dataset/california-cvap-data-disaggregated-to-the-2020-block-level-2024/).
+
+## Reproducible input vintages (publication release)
+
+- `./inputs/census/CVAP_2020-2024_ACS_csv_files.zip`  
+  - Census CVAP special tabulation zip consumed by `00_census.py` (`CVAP_ZIPPED_DATA_FP`)
+  - Data used for validation and experimentation
+- `./inputs/rdh/ca_cvap_2024_2020_b_csv/ca_cvap_2024_2020_b.csv`  
+  - Redistricting Data Hub 2024 CVAP block-level extract consumed by `00_census.py` (`RDH_CVAP_DATA_FP`)
+  - Data used for interpolating precinct demographics
+- `./inputs/statewide_db/` General Election 2024 files
+  - Expected core files used by `02b_results_2024.py`:
+    - Election results: `state_g24_sov_data_by_g24_srprec.zip` 
+    - Voter demographics: `state_g24_voters_by_g24_srprec.zip`
+    - Precinct geographic boundaries: `srprec_state_g24_v01_shp.zip`
+- `./inputs/statewide_db/S25/` Special Election 2025 files
+  - Expected county-level 2025 election results, voter demographics, and precinct boundaries inputs used by the 2025 results workflow
+
+## Network-dependent data fallbacks
+
+These files were excluded from version control due to file size limits. If missing, notebooks will try and fetch them over the network:
+
+- `00_census.py` fallback
+  - Local expected file: `./inputs/census/tl_2020_06_tabblock20.zip`
+  - Fallback URL: `https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/tl_2020_06_tabblock20.zip`
+- `02b_results_2024.py` fallback
+  - Local expected file: `./inputs/statewide_db/srprec_state_g24_v01_shp.zip`
+  - Fallback URL: `https://statewidedatabase.org/pub/data/G24/state/srprec_state_g24_v01_shp.zip`
 
 ## Quick Start
 
@@ -48,13 +74,16 @@ The notebooks follow a sequential pipeline:
    - Run with: `just generate-precincts-file`
 
 3. **`02a_results_2025.py`** and **`02b_results_2024.py`** - Clean and standardize precinct-level election results
-   - Output: `02a` → `outputs/results.csv`; `02b` → `outputs/precinct_results_2024.gpkg` (and county-level outputs in `outputs/counties/`)
+   - Output: `02a` → `outputs/precinct_results.gpkg`; `02b` → `outputs/precinct_results_2024.gpkg`
    - Run with: `uv run marimo edit 02a_results_2025.py` or `uv run marimo edit 02b_results_2024.py` (interactive), or `just generate-results-file` to run both
 
-4. **`03_precincts_merge.py`** - Merges geography and results data
-   - Input: `outputs/precincts.gpkg` and `outputs/results.csv`
-   - Output: `outputs/precinct_results.gpkg`
-   - Run with: `just merge-precinct-results`
+4. **`03_interpolation.py`** - Interpolates Census CVAP demographics to precincts and 2024 vote data to 2025 precincts
+   - Input: `outputs/precinct_results.gpkg`, `outputs/precinct_results_2024.gpkg`, `outputs/cvap_tracts.gpkg`, `outputs/cvap_blocks.gpkg`
+   - Output: `outputs/precincts_results_cvap_tracts.gpkg`, `outputs/precincts_results_cvap_blocks.gpkg`, `outputs/precincts_2024_results_cvap_blocks.gpkg`
+
+5. **`04_analysis.py`** - Analysis and exports from interpolated datasets
+   - Input: merged/interpolated GeoPackages from `03_interpolation.py`
+   - Output: `outputs/precinct_results_plus_demographics_*.gpkg`, `outputs/partner_export.csv`
 
 ### Notebooks
 
@@ -77,7 +106,8 @@ Notebooks include:
 * `01_geography.py` - Precinct geographic data cleaning
 * `02a_results_2025.py` - 2025 precinct result data cleaning
 * `02b_results_2024.py` - 2024 precinct result data cleaning
-* `03_precincts_merge.py` - Merge precinct geography with results data
+* `03_interpolation.py` - Interpolate CVAP and 2024 results to analysis precinct geometries
+* `04_analysis.py` - Explore and export analysis outputs from interpolated datasets
 
 All notebooks read data from `inputs/` and write data to `outputs/`. See the "Data Processing Workflow" section above for details on how they connect.
 
