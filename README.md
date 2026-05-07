@@ -2,6 +2,8 @@
 
 An analysis of 2025 election results for Prop. 50 using precinct-level data. This repository contains the **code and processing pipeline** used to build precinct-level datasets. For the full narrative methodology and findings framing, see [Show Your Work](https://calmatters.org/show-your-work/2026/05/latino-voters-shifted-towards-prop-50-heres-how-we-analyzed-it). 
 
+Published story: [Latinos in California are mad at Trump. Their votes for Democrats’ gerrymandering show it](https://calmatters.org/politics/2026/05/california-latino-voters-prop50-analysis)
+
 ## Data sources
 
 - Precinct results, geographic, and voter demographics files from the [Statewide Database](https://statewidedatabase.org/).
@@ -203,13 +205,15 @@ Percent columns in the CSV are stored as **fractions** between 0 and 1 (for exam
 
 For interpretation of demographic groupings, net shift, and limitations, rely on our [Show Your Work](https://calmatters.org/show-your-work/2026/05/latino-voters-shifted-towards-prop-50-heres-how-we-analyzed-it)
 
-## Citation and credit
+## Data use
 
-This work is by **CalMatters** / **The Markup**. If you use this data or code, crediting the newsroom is appreciated. We also like hearing how people reuse the material—open an [issue](https://github.com/CalMatters/data-prop50-results/issues) or otherwise get in touch if you publish something based on it.
+While the contents of this repo are shared under an Apache 2.0 license, CalMatters/The Markup would appreciate any credit or attribution you're willing to give. We're also interested to learn how you used it, so feel free to [send us a message](john@calmatters.org) or open an issue if you do. If you have any questions, feel free to [contact us](john@calmatters.org) as well.
+
+CalMatters is a nonpartisan, nonprofit journalism venture committed to explaining how California’s state Capitol works and why it matters.
 
 ## Contact and issues
 
-For bugs, unclear documentation, or questions about the pipeline, use [GitHub Issues](https://github.com/CalMatters/data-prop50-results/issues). For editorial inquiries, email data@calmatters.org.
+For bugs, unclear documentation, or questions about the pipeline, use [GitHub Issues](https://github.com/CalMatters/data-prop50-results/issues) or send us an [email](data@calmatters.org).
 
 ## Note on AI-assisted work
 
@@ -217,4 +221,4 @@ For bugs, unclear documentation, or questions about the pipeline, use [GitHub Is
 
 ## License
 
-Code in this repository is licensed under the Apache License, Version 2.0; see [LICENSE](LICENSE) (same text as [LICENSE-2.0.txt](LICENSE-2.0.txt)). Dependency licenses are managed by PyPI packages; see [NOTICE](NOTICE).
+Code in this repository is licensed under the Apache License, Version 2.0; see [LICENSE](LICENSE). Dependency licenses are managed by PyPI packages; see [NOTICE](NOTICE).
