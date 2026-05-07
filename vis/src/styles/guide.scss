@@ -1,0 +1,381 @@
+/* Visit https://calmatters-visual-style-guide.netlify.app/ for more guidance */
+
+:root {
+	/* heading-01 is used for article and page titles on desktop. */
+	--heading_1-size: 40px;
+	--heading_1-height: 44px;
+
+	/* heading-02 is used for pull quotes on desktop. */
+	--heading_2-size: 32px;
+	--heading_2-height: 40px;
+
+	/* heading-03 is used for article and page titles on mobile.  */
+	--heading_3-size: 28px;
+	--heading_3-height: 32px;
+
+	/* heading-04 is used for article subheadings on desktop & pull quotes on mobile. */
+	--heading_4-size: 24px;
+	--heading_4-height: 32px;
+
+	/* heading-05 is used for article subheadings on mobile & article titles on the desktop homepage. */
+	--heading_5-size: 20px;
+	--heading_5-height: 24px;
+
+	/* heading-06 is used for article titles on the mobile homepage & titles of in-page cards and modules. */
+	--heading_6-size: 18px;
+	--heading_6-height: 20px;
+
+	/* The description is directly below the headline. */
+	--descrip-size: 18px;
+	--descrip-height: 26px;
+
+	/* The description is directly below the headline if appearing below the section headline */
+	--descrip-large-size: 20px;
+	--descrip-large-height: 28px;
+
+	/* Labels appear next to visual elements like bars, lines or dots, next to legend scales or swatches, and as in-graphic subheds. If necessary, increase the weight to 600 for semibold emphasis. */
+	--label-size: 16px;
+	--label-height: 20px;
+
+	/* Smaller details such as axis tick labels and tooltip text. If necessary, increase the weight to 600 for semibold emphasis. */
+	--detail-size: 15px;
+	--detail-height: 18px;
+
+	/* Footnotes include a graphic's note, source and byline fields. This is the smallest acceptable type size. */
+	--footnote-size: 14px;
+	--footnote-height: 16px;
+
+	/* Big Button  */
+	--button_1-size: 16px;
+	--button_1-height: 20px;
+
+	/* Small Button */
+	--button_2-size: 14px;
+	--button_2-height: 16px;
+
+	--font-family: 'Source Sans Pro', 'Helvetica', 'sans-serif';
+
+	/*
+			PRIMARY PALETTE
+			Our primary colors are Aqua and Gold, and these two colors comprise the majority of all color use cases across the website. 
+
+			We useaqua-500 for our primary CTA buttons, as well as links, actions, and all other clickable elements. aqua-600 is the corresponding hover state for all clickable elements.
+
+			All shades of gold are used for embellishments, backgrounds, contrasts, dividers, and other visual UI elements.
+	*/
+	--gold_100: #fffaf0;
+	--gold_200: #fef6e5;
+	--gold_300: #fae6b2;
+	--gold_400: #f2b92e;
+	--gold_500: #ed9e00;
+	--gold_600: #ce7105;
+
+	--aqua_100: #f3f9fa;
+	--aqua_200: #e2f0f3;
+	--aqua_300: #c3f6fe;
+	--aqua_400: #0a819f;
+	--aqua_500: #075e73;
+	--aqua_600: #074150;
+
+	/*
+			NEUTRAL PALETTE
+			Neutral grays form the foundation of the design system. Their use cases range from subtle dividers to subheadings, backgrounds, captions, and our main text color. 
+
+			We use grey-100 and grey-200 for secondary and tertiary buttons, and grey-300 is often used as a stroke color for cards, modules, and buttons. 
+
+			We use grey-400 for captions and other metadata text, while grey-500 is used for cards and modules with a dark background (previously onyx).
+
+			Finally, all the copy on our website is in the color grey-600.
+	*/
+	--gray_000: #ffffff;
+	--gray_100: #eeeeee;
+	--gray_200: #dddddd;
+	--gray_300: #cccccc;
+	--gray_400: #666666;
+	--gray_500: #3d3d3d;
+	--gray_600: #212121;
+
+	/*
+			SECONDARY PALETTE
+			This collection of secondary colors is used almost entirely for charts, graphs, data, alerts, and other miscellaneous use cases. As a political news organization, we consistently have the need for data visualizations, and it’s important that we can display data in a salient and meaningful way. 
+
+			These shades provide additional richness to our graphics and visuals. The tokens are labeled by their saturation and hue from 100 to 500.
+	*/
+
+	--red_100: #fde7e7;
+	--red_200: #f9dddb;
+	--red_300: #f2b4ab;
+	--red_400: #e58a7c;
+	--red_500: #d35f4f;
+	--red_600: #cc4839;
+	--red_700: #be2c25;
+	--red_800: #8e1f1b;
+	--red_900: #63100e;
+
+	--orange_100: #fff1e2;
+	--orange_200: #fddfc0;
+	--orange_300: #f8cb95;
+	--orange_400: #f0ae6a;
+	--orange_500: #e58f40;
+	--orange_600: #d47c24;
+	--orange_700: #bf5d11;
+	--orange_800: #9f4906;
+	--orange_900: #743600;
+
+	--yellow_100: #fff4db;
+	--yellow_200: #fee6ac;
+	--yellow_300: #f7d078;
+	--yellow_400: #ebba54;
+	--yellow_500: #e3ab33;
+	--yellow_600: #d5991b;
+	--yellow_700: #b98000;
+	--yellow_800: #895e00;
+	--yellow_900: #4c3201;
+
+	--green_100: #eef9ea;
+	--green_200: #cee9c2;
+	--green_300: #90be77;
+	--green_400: #6faa52;
+	--green_500: #5a9f3a;
+	--green_600: #498a2a;
+	--green_700: #386f1f;
+	--green_800: #264e14;
+
+	--blue_100: #e7f0fe;
+	--blue_200: #cfe0f6;
+	--blue_300: #acc5e7;
+	--blue_400: #86abda;
+	--blue_500: #5b92ce;
+	--blue_600: #2f7ac5;
+	--blue_700: #1b67ae;
+	--blue_800: #10508d;
+	--blue_900: #0a3258;
+
+	--violet_100: #f4edf9;
+	--violet_200: #e8d7f4;
+	--violet_300: #d6bde9;
+	--violet_400: #c4a3da;
+	--violet_500: #b18dcc;
+	--violet_600: #9f77bf;
+	--violet_700: #885ca5;
+	--violet_800: #643b80;
+	--violet_900: #391d4c;
+
+	--indigo_100: #ebe9fe;
+	--indigo_200: #c4c1e5;
+	--indigo_300: #a19fd2;
+	--indigo_400: #8381be;
+	--indigo_500: #6663a9;
+	--indigo_600: #6663a9;
+	--indigo_700: #494490;
+	--indigo_800: #342c7e;
+	--indigo_900: #220e51;
+
+	--desert_100: #fffbd4;
+	--desert_200: #fed98e;
+	--desert_300: #fe9929;
+	--desert_400: #d95f0e;
+	--desert_500: #993404;
+
+	--ocean_100: #f0f9e8;
+	--ocean_200: #bae4bc;
+	--ocean_300: #7bccc4;
+	--ocean_400: #43a2ca;
+	--ocean_500: #0868ac;
+
+	--space_100: #edf8fb;
+	--space_200: #b3cde3;
+	--space_300: #8c96c6;
+	--space_400: #8856a7;
+	--space_500: #810f7c;
+
+	/*
+			STATUS PALETTE
+
+			Status indicator colors are useful when presenting different types of notifications to a user. Typically, red or error represents errors or dangerous states, yellow or warning represents warnings, green or success represents success, and blue and purple, or info and note, can be used for passive notifications, such as additional information.
+	*/
+
+	--error_000: #fff1f1;
+	--error_100: #da1e28;
+
+	--warning_000: #fff8e1;
+	--warning_100: #f1c21b;
+
+	--success_000: #defbe6;
+	--success_100: #24a148;
+
+	--info_000: #edf5ff;
+	--info_100: #0043ce;
+
+	--note_000: #eae6ff;
+	--note_100: #403294;
+}
+
+.graphic {
+	* {
+		box-sizing: border-box;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		margin: 0;
+		color: var(--gray_600);
+	}
+
+	h1 {
+		font-weight: 700;
+		font-size: var(--heading_1-size);
+		line-height: var(--heading_1-height);
+		font-family: var(--font-family);
+		margin: 0;
+
+		@media screen and (max-width: 767px) {
+			font-size: var(--heading_3-size);
+			line-height: var(--heading_3-height);
+		}
+	}
+
+	h2 {
+		font-weight: 600;
+		font-size: var(--heading_2-size);
+		line-height: var(--heading_2-height);
+		font-family: var(--font-family);
+
+		@media screen and (max-width: 767px) {
+			font-size: var(--heading_4-size);
+			line-height: var(--heading_4-height);
+		}
+	}
+
+	h3 {
+		font-weight: 700;
+		font-size: var(--heading_3-size);
+		line-height: var(--heading_3-height);
+		font-family: var(--font-family);
+	}
+
+	h4 {
+		font-weight: 600;
+		font-size: var(--heading_4-size);
+		line-height: var(--heading_4-height);
+		font-family: var(--font-family);
+
+		@media screen and (max-width: 767px) {
+			font-size: var(--heading_5-size);
+			line-height: var(--heading_5-height);
+		}
+	}
+
+	h5 {
+		font-weight: 600;
+		font-size: var(--heading_5-size);
+		line-height: var(--heading_5-height);
+		font-family: var(--font-family);
+
+		@media screen and (max-width: 767px) {
+			font-size: var(--heading_6-size);
+			line-height: var(--heading_6-height);
+		}
+	}
+
+	h6 {
+		font-weight: 600;
+		font-size: var(--heading_6-size);
+		line-height: var(--heading_6-height);
+		font-family: var(--font-family);
+	}
+
+	p,
+	li,
+	th,
+	td {
+		font-weight: 400;
+		font-size: var(--descrip-size);
+		line-height: var(--descrip-height);
+		font-family: var(--font-family);
+		margin: 0;
+
+		a {
+			color: var(--gray_600);
+		}
+
+		&.footnote {
+			font-size: var(--footnote-size);
+			line-height: var(--footnote-height);
+		}
+
+		&.detail {
+			font-size: var(--detail-size);
+			line-height: var(--detail-height);
+		}
+
+		&.large {
+			font-size: var(--descrip-large-size);
+			line-height: var(--descrip-large-height);
+		}
+
+		&.label {
+			font-size: var(--label-size);
+			line-height: var(--label-height);
+		}
+	}
+
+	/*
+		HYPERLINK COLORS
+
+		Hyperlink colors follow the same styles as hyperlinks on the CalMatters Website
+	*/
+
+	a {
+		color: #05a0c4;
+		cursor: pointer;
+		text-decoration: underline !important;
+
+		&:hover {
+			color: #04bad8;
+			text-decoration: underline;
+		}
+	}
+
+	ul {
+		padding: 0.75em 2em 0 2em;
+		list-style-type: square;
+	}
+
+	button {
+		display: inline-block;
+		padding: 7px 16px;
+		border-radius: 2px;
+		border: none;
+		background-color: var(--aqua_500);
+		transition: 0.1s background-color ease;
+		font-family: var(--font-family);
+		font-weight: 600;
+		margin-bottom: 16px;
+		font-size: var(--button_2-size);
+		line-height: var(--button_2-height);
+		color: var(--gray_000);
+		text-transform: none;
+		cursor: pointer;
+
+		&:hover,
+		&:focus,
+		&.active {
+			background-color: var(--aqua_600);
+		}
+
+		&.large {
+			font-size: var(--button_1-size);
+			line-height: var(--button_1-height);
+		}
+
+		&.small {
+			font-size: var(--button_2-size);
+			line-height: var(--button_2-height);
+		}
+	}
+}

@@ -1,0 +1,26 @@
+[project]
+name = "data-prop50-results"
+version = "0.1.0"
+description = "California Proposition 50 precinct-level results: Marimo notebooks for ETL, CVAP interpolation, and demographic analysis."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "esridump>=1.13.0",
+    "folium>=0.12",
+    "geopandas>=1.1.1",
+    "mapclassify>=2.10.0",
+    "marimo[recommended]>=0.17.8",
+    "matplotlib>=3.10.7",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "pdfplumber>=0.11.8",
+    "python-lsp-server>=1.13.1",
+    "pyzmq>=27.1.0",
+    "tobler>=0.12.1",
+    "ty>=0.0.11",
+    "xlrd>=2.0.2",
+]
+
+[project.urls]
+Repository = "https://github.com/CalMatters/data-prop50-results"
