@@ -94,6 +94,9 @@ The notebooks follow a sequential pipeline:
 5. `04_analysis.py` — Analysis and exports from interpolated datasets
   - Input: merged/interpolated GeoPackages from `03_interpolation.py`  
   - Output: `outputs/precinct_results_plus_demographics_*.gpkg`, `outputs/partner_export.csv`, GeoJSON used for optional map tiles (see notebook)
+6. `05_fact_check.py` — Fact-check workbook for story and methodology claims
+  - Input: `outputs/precincts_results_cvap_blocks.gpkg`, `outputs/precincts_2024_results_cvap_blocks.gpkg`, `inputs/statewide_db/state_g24_sr_blk_map.csv`
+  - Output: in-notebook verification text/metrics used to validate published statements (no data export)
 
 ### Notebooks
 
@@ -141,6 +144,10 @@ Builds precinct-level analysis layers by combining election results with CVAP in
 #### `04_analysis.py` — Demographics and precinct-level results analysis
 
 Runs exploratory and comparative analysis on the merged precinct datasets, including statewide and county-level majority-group summaries, vote-shift calculations, and dataset-specific breakouts.
+
+#### `05_fact_check.py` — Fact-check checks for editorial claims
+
+Recomputes core published facts values from the merged precinct datasets. This notebook is for validation of published facts and presents dynamic claim markdown text reproducing the published. If you are looking to trace the data and analysis for our published report, you should start in this notebook.
 
 ## Output files
 
