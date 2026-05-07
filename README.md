@@ -79,19 +79,19 @@ Individual notebooks can be opened interactively with `uv run marimo edit <noteb
 
 The notebooks follow a sequential pipeline:
 
-1. `**00_census.py`** — Census ETL: county bounds, CVAP by tract, CVAP by block
+1. `00_census.py` — Census ETL: county bounds, CVAP by tract, CVAP by block
   - Output: `outputs/county_bounds.geojson`, `outputs/cvap_tracts.gpkg`, `outputs/cvap_blocks.gpkg`  
   - Run with: `just generate-cvap-file`
-2. `**01_geography.py`** — Processes precinct geographic files from all counties
+2. `01_geography.py` — Processes precinct geographic files from all counties
   - Output: `outputs/precincts.gpkg`  
   - Run with: `just generate-precincts-file`
-3. `**02a_results_2025.py`** and `**02b_results_2024.py**` — Clean and standardize precinct-level election results
+3. `02a_results_2025.py` and `02b_results_2024.py` — Clean and standardize precinct-level election results
   - Output: `02a` → `outputs/precinct_results.gpkg`; `02b` → `outputs/precinct_results_2024.gpkg`  
   - Run with: `uv run marimo edit 02a_results_2025.py` or `uv run marimo edit 02b_results_2024.py` (interactive), or `just generate-results-file` to run both
-4. `**03_interpolation.py**` — Interpolates Census CVAP demographics to precincts and 2024 vote data to 2025 precincts
+4. `03_interpolation.py` — Interpolates Census CVAP demographics to precincts and 2024 vote data to 2025 precincts
   - Input: `outputs/precinct_results.gpkg`, `outputs/precinct_results_2024.gpkg`, `outputs/cvap_tracts.gpkg`, `outputs/cvap_blocks.gpkg`  
   - Output: `outputs/precincts_results_cvap_tracts.gpkg`, `outputs/precincts_results_cvap_blocks.gpkg`, `outputs/precincts_2024_results_cvap_blocks.gpkg`
-5. `**04_analysis.py**` — Analysis and exports from interpolated datasets
+5. `04_analysis.py` — Analysis and exports from interpolated datasets
   - Input: merged/interpolated GeoPackages from `03_interpolation.py`  
   - Output: `outputs/precinct_results_plus_demographics_*.gpkg`, `outputs/partner_export.csv`, GeoJSON used for optional map tiles (see notebook)
 
