@@ -205,6 +205,11 @@ Percent columns in the CSV are stored as **fractions** between 0 and 1 (for exam
 
 For interpretation of demographic groupings, net shift, and limitations, rely on our [Show Your Work](https://calmatters.org/show-your-work/2026/05/latino-voters-shifted-towards-prop-50-heres-how-we-analyzed-it)
 
+## Examples of Use
+
+- [Latinos in California are mad at Trump. Their votes for Democrats’ gerrymandering show it](https://calmatters.org/politics/2026/05/california-latino-voters-prop50-analysis/)
+- [Latino voters shifted towards Democrats on Prop. 50. Here’s how we analyzed it.](https://calmatters.org/show-your-work/2026/05/latino-voters-shifted-towards-prop-50-heres-how-we-analyzed-it/)
+
 ## Data use
 
 While the contents of this repo are shared under an Apache 2.0 license, CalMatters/The Markup would appreciate any credit or attribution you're willing to give. We're also interested to learn how you used it, so feel free to [send us a message](john@calmatters.org) or open an issue if you do. If you have any questions, feel free to [contact us](john@calmatters.org) as well.
